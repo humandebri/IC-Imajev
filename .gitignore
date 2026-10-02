@@ -1,0 +1,29 @@
+/checkpoints/
+/artifacts/
+/vendor/
+/target/
+/.venv/
+/.icp/
+/.cache/
+/build/
+__pycache__/
+*.pyc
+*.pem
+*.seed
+.DS_Store
+/.pytest_cache/
+
+# Generated measurements and exported interfaces (keep Markdown reports and input fixtures).
+/docs/*.json
+/benchmarks/laya_baseline.json
+/canisters/inference/inference.did
+
+# Build outputs, tensor dumps, logs, and incomplete atomic writes.
+*.wasm
+*.bin
+*.npy
+*.npz
+*.pack
+*.safetensors
+*.log
+*.part

@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+"""Separate first-prefix preparation, cache-hit inference, precision, and budget arithmetic."""
+import hashlib,json,math,pathlib
+ROOT=pathlib.Path(__file__).resolve().parents[1]
+def read(p):return json.loads((ROOT/p/'first-report.json').read_text())
+def totals(r):return {k:r[k] for k in ['tokens','query_count','total_instructions','total_candid_bytes','wall_seconds_this_run','max_query_instructions','max_observed_heap_bytes']}
+old=read('artifacts/mlp-wide-full-617');normal=read('artifacts/layout-full-617');prepare=read('artifacts/prefix-45-preparation');hit=read('artifacts/prefix-hit-617');metadata=json.loads((ROOT/'artifacts/prefix-45-preparation/queries/cache.json').read_text());cases=[]
+for case,d,comparison in [('617','artifacts/prefix-hit-617','docs/prefix-hit-results.json'),('insufficient','artifacts/prefix-hit-diagnostics/record-19','docs/prefix-insufficient-results.json'),('maximum','artifacts/prefix-hit-diagnostics/record-11','docs/prefix-maximum-results.json')]:
+ r=read(d);c=json.loads((ROOT/comparison).read_text())['fusion_comparison']
+ assert all(c[k] for k in ['all_layers_bitwise_equal','all_states_bitwise_equal','raw_logits_identical','probabilities_identical','unknown_identical'])
+ assert not r['replayed_queries'] and not list((ROOT/d/'queries').glob('*.failed-width-*.request.bin'))
+ for p,h in r['implementation_hashes'].items():assert hashlib.sha256((ROOT/p).read_bytes()).hexdigest()==h,p
+ cases.append(dict(case=case,**totals(r),processed_tokens=r['processed_tokens'],all_hidden_and_states_bitwise_equal=True,logits_and_probabilities_identical=True,value=r['comparison']['value'],typed_output_valid=r['comparison']['typed_output_valid'],cache_load_seconds=r['prefix_cache_load_seconds'],end_to_end_seconds_excluding_process_startup=r['end_to_end_seconds_excluding_process_startup'],failed_query_requests=0))
+metrics=['query_count','total_instructions','total_candid_bytes']
+report=dict(scope='Single selected local canister; cache-hit and first-prefix costs separate; no general accuracy or wall-time improvement claim',before=totals(old),standalone_after=totals(normal),prefix_preparation=totals(prepare),prefix_hit=totals(hit),first_question_with_preparation={k:prepare[k]+hit[k] for k in metrics},instruction_reduction_without_cache=1-normal['total_instructions']/old['total_instructions'],hit_instruction_reduction_vs_before=1-hit['total_instructions']/old['total_instructions'],hit_instruction_reduction_vs_standalone=1-hit['total_instructions']/normal['total_instructions'],hit_communication_reduction=1-hit['total_candid_bytes']/normal['total_candid_bytes'],amortization_question_count_for_identical_617_cost={k:math.ceil(prepare[k]/(normal[k]-hit[k])) for k in metrics},cache_data_bytes=sum((ROOT/'artifacts/prefix-45-preparation/queries'/f).stat().st_size for f in metadata['files']),prefix_tokens=45,model=hit['model'],pack_hash=hit['pack_hash'],wasm_sha256=hit['wasm_sha256'],canister=hit['canister'],cases=cases,target_50_achieved=False,ideal_hit_instruction_budget_only_queries=math.ceil(hit['total_instructions']/5000000000),remaining_hit_instruction_reduction_to_50_budget=1-250000000000/hit['total_instructions'])
+(ROOT/'docs/prefix-costs.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(report,indent=2))

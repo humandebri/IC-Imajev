@@ -1,0 +1,138 @@
+[
+  {
+    "id": "historical-617",
+    "split": "diagnostic",
+    "kind": "historical",
+    "proposal_id": 617,
+    "question": "Could this change reduce voter participation or concentrate voting power?",
+    "options": [
+      "unlikely",
+      "possible",
+      "likely"
+    ],
+    "state": "Minimum voting dissolve delay changes from 1 day to 20000 days, a 20000-fold increase.",
+    "gold": null,
+    "reason": "Historical risk question has no uniquely adjudicated ground truth; compare labels only."
+  },
+  {
+    "id": "historical-620",
+    "split": "diagnostic",
+    "kind": "historical",
+    "proposal_id": 620,
+    "question": "Could this change reduce voter participation or concentrate voting power?",
+    "options": [
+      "unlikely",
+      "possible",
+      "likely"
+    ],
+    "state": "Minimum voting dissolve delay changes from 1 day to 2 days, a 2-fold increase.",
+    "gold": null,
+    "reason": "Historical risk question has no uniquely adjudicated ground truth; compare labels only."
+  },
+  {
+    "id": "historical-653",
+    "split": "diagnostic",
+    "kind": "historical",
+    "proposal_id": 653,
+    "question": "Could this token mint concentrate token control?",
+    "options": [
+      "unlikely",
+      "possible",
+      "likely"
+    ],
+    "state": "This proposal mints 250,000,000 tokens to one account.",
+    "gold": null,
+    "reason": "Historical risk question has no uniquely adjudicated ground truth; compare labels only."
+  },
+  {
+    "id": "minimum",
+    "split": "evaluation",
+    "kind": "controlled",
+    "question": "Does this change raise the minimum lock duration needed for voting?",
+    "options": [
+      "yes",
+      "no"
+    ],
+    "state": "The minimum dissolve delay needed to vote changes from 1 day to 20000 days. Neurons below the new minimum cannot vote.",
+    "gold": "yes",
+    "reason": "Explicit voting eligibility rule and a 20000-fold increase."
+  },
+  {
+    "id": "maximum",
+    "split": "evaluation",
+    "kind": "controlled",
+    "question": "Does this proposal increase the maximum permitted lock duration?",
+    "options": [
+      "yes",
+      "no"
+    ],
+    "state": "Maximum permitted dissolve delay increases from 2629800 seconds to 2629800000 seconds. Minimum voting delay is unchanged.",
+    "gold": "yes",
+    "reason": "Explicit maximum increases 1000-fold."
+  },
+  {
+    "id": "stake",
+    "split": "evaluation",
+    "kind": "controlled",
+    "question": "Does this proposal raise the minimum stake required to create a neuron?",
+    "options": [
+      "yes",
+      "no"
+    ],
+    "state": "Minimum stake needed to create a neuron increases from 10 to 10000 tokens.",
+    "gold": "yes",
+    "reason": "Explicit minimum stake increases 1000-fold."
+  },
+  {
+    "id": "mint",
+    "split": "evaluation",
+    "kind": "controlled",
+    "question": "Does this proposal create new tokens?",
+    "options": [
+      "yes",
+      "no"
+    ],
+    "state": "The proposal mints 250000000 new tokens to one account. Existing total supply is not provided.",
+    "gold": "yes",
+    "reason": "Explicit mint; concentration relative to existing supply is a separate unknown."
+  },
+  {
+    "id": "unchanged",
+    "split": "evaluation",
+    "kind": "controlled",
+    "question": "Does this proposal increase the minimum lock duration needed for voting?",
+    "options": [
+      "yes",
+      "no"
+    ],
+    "state": "Minimum voting delay was 86400 seconds and remains 86400 seconds. No other parameter changes.",
+    "gold": "no",
+    "reason": "Identical old/new values; tests false alerts."
+  },
+  {
+    "id": "insufficient",
+    "split": "evaluation",
+    "kind": "controlled",
+    "question": "Does this proposal increase the minimum lock duration needed for voting?",
+    "options": [
+      "yes",
+      "no"
+    ],
+    "state": "The proposal specifies a new minimum voting delay of 86400 seconds. The old minimum is not provided.",
+    "gold": "__unknown__",
+    "reason": "Cannot establish direction without old value."
+  },
+  {
+    "id": "maximum-not-minimum",
+    "split": "evaluation",
+    "kind": "controlled",
+    "question": "Does this proposal increase the minimum lock duration needed for voting?",
+    "options": [
+      "yes",
+      "no"
+    ],
+    "state": "Maximum permitted lock duration increases 1000-fold. Minimum voting delay stays 1 day.",
+    "gold": "no",
+    "reason": "Maximum and minimum are distinct; tests false alerts."
+  }
+]

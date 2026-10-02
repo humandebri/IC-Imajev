@@ -1,0 +1,17 @@
+[package]
+name = "imajev-inference"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+[lib]
+crate-type = ["cdylib", "rlib"]
+[dependencies]
+imajev-runtime = { path = "../../crates/imajev-runtime" }
+ic-cdk.workspace = true
+candid.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+
+[features]
+instruction-profile = ["imajev-runtime/instruction-profile"]

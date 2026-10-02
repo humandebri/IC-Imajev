@@ -1,0 +1,12 @@
+canisters:
+  - name: imajev-inference
+    build:
+      steps:
+        - type: script
+          command: cargo build --release --target wasm32-unknown-unknown -p imajev-inference
+
+networks:
+  - name: local
+    mode: managed
+    gateway:
+      port: 8001
