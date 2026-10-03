@@ -24,13 +24,38 @@ def int8_prefix(header,count):
         if count==n*v+k*v:return n*v
         raise ValueError('INT8 delta payload')
     return count
+def frame_digest(header,body):
+    version=header.get('version',1)
+    if type(version) is not int:raise ValueError('unsupported frame version')
+    if version==1:return hashlib.sha256(body).digest()
+    if version==2:
+        import blake3
+        return blake3.blake3(body).digest()
+    raise ValueError('unsupported frame version')
 def encode(header,values):
     h=json.dumps(header,separators=(',',':'),allow_nan=False).encode();v=np.asarray(values,dtype='<f4').ravel()
-    codec=header.get('encoding','');limit=900000 if codec in ('bf16-exact','int8-block256-v1') else 450000
+    codec=header.get('encoding','');limit=900000 if codec in ('bf16-exact','bf16-block256-exact-v1','int8-block256-v1','projection-block256-exact-v1') else 450000
+    if codec=='mlp-down-state-exact-v1':
+        from mlp_codec import layout
+        _,c,q,tail=layout(header);limit=c+q+tail
     if header.get('op')=='delta_heads_bf16' and codec=='int8-block256-v1':limit=1200000
     if v.size>limit or not np.isfinite(v).all():raise ValueError('activation bounds')
     if len(h)>16384:raise ValueError('header size')
-    if codec=='bf16-exact':
+    if codec=='mlp-down-state-exact-v1':
+        from mlp_codec import encode_payload
+        payload=encode_payload(header,v)
+    elif codec=='projection-block256-exact-v1':
+        from projection_codec import encode_payload
+        payload=encode_payload(header,v)
+    elif codec=='bf16-block256-exact-v1':
+        bits=v.view('<u4');blocks=(v.size+255)//256
+        padded=np.zeros(blocks*256,dtype=bool);padded[:v.size]=(bits&65535)!=0
+        flags=padded.reshape(blocks,256).any(axis=1);full=np.repeat(flags,256)[:v.size]
+        pos=np.arange(v.size)+np.cumsum(full,dtype=np.int64)-full
+        words=np.empty(v.size+int(full.sum()),dtype='<u2');words[pos]=(bits>>16).astype('<u2')
+        words[pos[full]]=(bits[full]&65535).astype('<u2');words[pos[full]+1]=(bits[full]>>16).astype('<u2')
+        payload=struct.pack('<I',v.size)+np.packbits(flags,bitorder='little').tobytes()+words.tobytes()
+    elif codec=='bf16-exact':
         bits=v.view('<u4');full=(bits & 0xffff)!=0
         pos=np.arange(v.size)+np.cumsum(full,dtype=np.int64)-full
         words=np.empty(v.size+int(full.sum()),dtype='<u2')
@@ -51,13 +76,41 @@ def encode(header,values):
     else:raise ValueError('unsupported encoding')
     b=struct.pack('<I',len(h))+h+payload
     if len(b)+32>2000000:raise ValueError('state size')
-    return b+hashlib.sha256(b).digest()
+    return b+frame_digest(header,b)
 def decode(b):
-    if not 36<=len(b)<=2000000 or hashlib.sha256(b[:-32]).digest()!=b[-32:]:raise ValueError('state checksum/size')
+    if not 36<=len(b)<=2000000:raise ValueError('state size')
     n,=struct.unpack('<I',b[:4])
     if n>16384 or n+36>len(b):raise ValueError('header size')
-    h=json.loads(b[4:4+n]);payload=b[4+n:-32];codec=h.get('encoding','')
-    if codec=='bf16-exact':
+    h=json.loads(b[4:4+n])
+    if not isinstance(h,dict):raise ValueError('header shape')
+    if frame_digest(h,b[:-32])!=b[-32:]:raise ValueError('state checksum')
+    payload=b[4+n:-32];codec=h.get('encoding','')
+    if codec=='prefix-start-exact-v1':
+        from prefix_start import decode_reply
+        return h,decode_reply(h,payload)
+    if codec in ('delta-hybrid-prefix-exact-v1','mlp-delta-log-carry-exact-v1','mlp-delta-huffman-carry-exact-v1'):
+        if payload[:1]!=b'\x00':raise ValueError('hybrid reply direction')
+        payload=payload[1:];codec='bf16-block256-exact-v1'
+    if codec=='mlp-down-state-exact-v1':
+        from mlp_codec import decode_payload
+        v=decode_payload(h,payload)
+    elif codec=='projection-block256-exact-v1':
+        from projection_codec import decode_payload
+        v=decode_payload(h,payload)
+    elif codec=='bf16-block256-exact-v1':
+        if len(payload)<4:raise ValueError('block codec count')
+        count,=struct.unpack('<I',payload[:4]);blocks=(count+255)//256;blen=(blocks+7)//8
+        if count>900000 or len(payload)<4+blen:raise ValueError('block codec bounds')
+        raw=np.frombuffer(payload[4:4+blen],dtype=np.uint8)
+        if blocks%8 and int(raw[-1])>>(blocks%8):raise ValueError('block codec padding')
+        flags=np.unpackbits(raw,bitorder='little')[:blocks].astype(bool);full=np.repeat(flags,256)[:count]
+        if len(payload)!=4+blen+2*(count+int(full.sum())):raise ValueError('block codec length')
+        words=np.frombuffer(payload[4+blen:],dtype='<u2');pos=np.arange(count)+np.cumsum(full,dtype=np.int64)-full
+        bits=words[pos+full].astype('<u4')<<16;bits[full]|=words[pos[full]]
+        padded=np.zeros(blocks*256,dtype=bool);padded[:count]=(bits&65535)!=0
+        if not np.array_equal(flags,padded.reshape(blocks,256).any(axis=1)):raise ValueError('block codec noncanonical')
+        v=bits.view('<f4')
+    elif codec=='bf16-exact':
         if len(payload)<4:raise ValueError('codec count')
         count,=struct.unpack('<I',payload[:4]);blen=(count+7)//8
         if count>900000 or len(payload)<4+blen:raise ValueError('codec bounds')
@@ -89,8 +142,10 @@ def decode(b):
 def atomic(path,data):
     path=pathlib.Path(path);path.parent.mkdir(parents=True,exist_ok=True);temp=path.with_suffix(path.suffix+'.part');temp.write_bytes(data);temp.replace(path)
 class Transport:
-    def __init__(self,model,url,canister,pem,directory,pack_hash,wire_codec=""):
-        self.wire_codec=wire_codec;self.max_floats=900000 if wire_codec in ("bf16-exact","int8-block256-v1") else 450000
+    def __init__(self,model,url,canister,pem,directory,pack_hash,wire_codec="",frame_version=1):
+        if frame_version not in (1,2):raise ValueError('unsupported frame version')
+        self.frame_version=frame_version
+        self.wire_codec=wire_codec;self.max_floats=900000 if wire_codec in ("bf16-exact","bf16-block256-exact-v1","int8-block256-v1","projection-block256-exact-v1") else 450000
         self.pack_hash=pack_hash;self.model=model;self.directory=pathlib.Path(directory);self.directory.mkdir(parents=True,exist_ok=True);self.index=0;self.measurements=[]
         self.process=subprocess.Popen([str(ROOT/'target/release/imajev-client'),url,canister,pem],stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
     def command(self,cmd):
@@ -101,13 +156,20 @@ class Transport:
         return result
     def upload(self,manifest,pack):return self.command({'op':'upload','manifest':str(manifest),'pack':str(pack)})
     def run(self,op,values,dims=(),scalars=(),tensor='',input_hash='0'*64,aux=()):
-        h={'version':1,'model':self.model,'pack_hash':self.pack_hash,'input_hash':input_hash,'step':self.index,'op':op,'tensor':tensor,'dims':list(dims),'scalars':list(scalars)}
+        h={'version':getattr(self,'frame_version',1),'model':self.model,'pack_hash':self.pack_hash,'input_hash':input_hash,'step':self.index,'op':op,'tensor':tensor,'dims':list(dims),'scalars':list(scalars)}
         if aux:h['aux']=list(aux)
         if getattr(self,'wire_codec',''):h['encoding']=self.wire_codec
+        return self._run_encoded(h,encode(h,values))
+    def _run_encoded(self,h,payload):
+        # JournalTransport already encoded and checked this exact frame.
+        op,tensor=h['op'],h['tensor']
         request=self.directory/f'{self.index:06d}.request.bin';response=self.directory/f'{self.index:06d}.response.bin'
-        atomic(request,encode(h,values));last=None
+        atomic(request,payload);last=None
+        fused=op in ('terminal_attention_mlp_integer','terminal_tail_integer') and bool(getattr(self,'fuse_terminal_decision',False))
+        command={'op':'terminal_step_decision' if fused else 'step','input':str(request),'output':str(response)}
+        if fused:command['options']=self.decision_options
         for attempt in range(3):
-            try:result=self.command({'op':'step','input':str(request),'output':str(response)});break
+            try:result=self.command(command);break
             except RuntimeError as e:
                 last=e
                 if not any(k in str(e).lower() for k in ('429','502','503','504','timeout','timed out','connection')):raise
@@ -115,6 +177,9 @@ class Transport:
                 time.sleep(0.1*2**attempt)
         returned,v=decode(response.read_bytes())
         if any(returned[k]!=v for k,v in h.items() if k not in ('step','scalars')) or returned['step']!=h['step']+1 or not np.array_equal(np.asarray(returned['scalars'],dtype=np.float32),np.asarray(h['scalars'],dtype=np.float32)):raise ValueError('state identity/progress mismatch')
+        if fused:
+            self.terminal_decision=result['ok']['decision']
+            result['decision_options']=list(self.decision_options)
         self.measurements.append({'index':self.index,'op':op,'tensor':tensor,**result});self.index+=1
         return v
     def close(self):
@@ -169,7 +234,7 @@ class Transport:
         tiles. Lossless wire isolates arithmetic error from transport error.
         """
         x=np.asarray(values,dtype=np.float32)
-        if getattr(self,'wire_codec','')!='bf16-exact':raise ValueError('integer evaluation requires lossless BF16 wire')
+        if getattr(self,'wire_codec','') not in ('bf16-exact','bf16-block256-exact-v1'):raise ValueError('integer evaluation requires lossless BF16 wire')
         if x.ndim!=2 or x.shape[1]!=cols or cols%256 or rows%8 or min(row_cap,token_cap,work_cap)<=0:raise ValueError('integer projection shape/caps')
         out=np.empty((len(x),rows),dtype=np.float32);token=0
         while token<len(x):
@@ -178,45 +243,88 @@ class Transport:
             if n<len(x)-token and n>=8:n=n//8*8
             if n<1:raise ValueError('integer projection token bound')
             width_cap=min(row_cap,self.max_floats//n,30_000_000//cols,(work_cap//n-rank*cols)//(cols+rank))//8*8
+            state_len=n*(cols+cols//256+rank)
+            capture_cap=min(width_cap,(self.max_floats-state_len)//n)//8*8
+            reuse=bool(getattr(self,'reuse_projection_inputs',False) and rank and width_cap>=8 and rows>width_cap and capture_cap>=8
+                and 1+(rows-capture_cap+width_cap-1)//width_cap <= (rows+width_cap-1)//width_cap)
+            if reuse and (cols+cols//256+rank) in (capture_cap,width_cap,(rows-capture_cap)%width_cap or width_cap):reuse=False
+            saved_state=None
             row=0
             while row<rows:
                 context=dict(dims=[n,cols,rank,row],tensor=base,aux=[lora_a,lora_b] if rank else [],scalars=[scale] if rank else [],arithmetic='int8-block256-base-f32-lora-v1')
-                if hasattr(self,'projection_width'):width_cap=self.projection_width(x[token:token+n],context,width_cap)//8*8
-                width=min(width_cap,rows-row)
+                operands=x[token:token+n] if saved_state is None else saved_state
+                if reuse:context['reuse_projection_inputs']='client-held-int8-f32-a-v1'
+                if hasattr(self,'projection_width'):width_cap=self.projection_width(operands,context,width_cap)//8*8
+                width=min(width_cap,rows-row,capture_cap if reuse and row==0 else width_cap)
                 if width<8:raise ValueError('integer projection minimum tile')
                 try:
-                    tile=self.run('lora_integer' if rank else 'linear_integer_bf16',x[token:token+n],[n,width,cols,row],[scale] if rank else [],tensor=base,aux=[lora_a,lora_b] if rank else [])
+                    if reuse:
+                        previous_codec=self.wire_codec
+                        try:
+                            self.wire_codec='projection-block256-exact-v1'
+                            flat=self.run('lora_integer_capture' if row==0 else 'lora_integer_reuse',operands,[n,width,cols,row,rank],[scale],tensor=base,aux=[lora_a,lora_b])
+                        finally:self.wire_codec=previous_codec
+                        if row==0:
+                            if len(flat)!=n*width+state_len:raise ValueError('capture reply shape')
+                            tile=flat[:n*width];saved_state=flat[n*width:]
+                        else:tile=flat
+                    else:tile=self.run('lora_integer' if rank else 'linear_integer_bf16',operands,[n,width,cols,row],[scale] if rank else [],tensor=base,aux=[lora_a,lora_b] if rank else [])
                 except RuntimeError as error:
                     if not is_instruction_limit(error) or width<=8:raise
                     width_cap=max(8,width//2//8*8)
-                    if hasattr(self,'remember_projection_limit'):self.remember_projection_limit(x[token:token+n],context,width,width_cap)
+                    if hasattr(self,'remember_projection_limit'):self.remember_projection_limit(operands,context,width,width_cap)
                     continue
                 out[token:token+n,row:row+width]=tile.reshape(n,width);row+=width
             token+=n
         return out
 
-    def project_mlp_integer(self,values,rows,cols,rank,gate,up,scale=2.,row_cap=4096,token_cap=132,work_cap=4000000000):
+    def project_mlp_integer(self,values,rows,cols,rank,gate,up,scale=2.,row_cap=4096,token_cap=132,work_cap=4000000000,*,add_norm=None):
         """Two BF16-rounded integer/LoRA projections, then existing BF16 SwiGLU."""
         x=np.asarray(values,dtype=np.float32)
-        if getattr(self,'wire_codec','')!='bf16-exact':raise ValueError('fused MLP requires lossless wire')
+        if getattr(self,'wire_codec','') not in ('bf16-exact','bf16-block256-exact-v1'):raise ValueError('fused MLP requires lossless wire')
         if x.ndim!=2 or x.shape[1]!=cols or cols%256 or rows%8 or min(row_cap,token_cap,work_cap)<=0:raise ValueError('fused MLP shape/caps')
+        other=None if add_norm is None else np.asarray(add_norm[0],dtype=np.float32)
+        if other is not None and other.shape!=x.shape:raise ValueError('MLP residual shape')
+        op='mlp_gate_up_integer' if other is None else 'mlp_add_norm_integer'
+        aux=[up] if other is None else [up,add_norm[1]]
+        scalars=[scale] if other is None else [scale,1e-6]
         out=np.empty((len(x),rows),dtype=np.float32);token=0
         while token<len(x):
-            n=min(token_cap,len(x)-token,self.max_floats//cols)
+            n=min(token_cap,len(x)-token,self.max_floats//(cols*(1 if other is None else 2)))
             if n<len(x)-token and n>=8:n=n//8*8
             if n<1:raise ValueError('fused MLP token bound')
-            width_cap=min(row_cap,self.max_floats//n,30_000_000//cols,(min(work_cap,4000000000)//(2*n)-rank*cols)//(cols+rank))//8*8
+            width_cap=min(row_cap,self.max_floats//n,30_000_000//cols,(min(work_cap,4500000000 if n<=89 else 4000000000)//(2*n)-rank*cols)//(cols+rank))//8*8
+            state_len=n*(cols+cols//256+2*rank)
+            capture_cap=min(width_cap,(self.max_floats-state_len)//n)//8*8
+            reuse=bool(getattr(self,'reuse_projection_inputs',False) and other is None and rank
+                and width_cap>=8 and rows>width_cap and capture_cap>=8
+                and 1+(rows-capture_cap+width_cap-1)//width_cap <= (rows+width_cap-1)//width_cap)
+            if reuse and (cols+cols//256+2*rank) in (capture_cap,width_cap,(rows-capture_cap)%width_cap or width_cap):reuse=False
+            saved_state=None
             row=0
             while row<rows:
-                context=dict(dims=[n,cols,rank,row],tensor=gate,aux=[up],scalars=[scale],arithmetic='int8-block256-base-f32-lora-v1',projection='mlp_gate_up_integer')
-                if hasattr(self,'projection_width'):width_cap=self.projection_width(x[token:token+n],context,width_cap)//8*8
-                width=min(width_cap,rows-row)
+                operands=(x[token:token+n] if other is None else np.concatenate([x[token:token+n].ravel(),other[token:token+n].ravel()])) if saved_state is None else saved_state
+                context=dict(dims=[n,cols,rank,row],tensor=gate,aux=aux,scalars=scalars,arithmetic='int8-block256-base-f32-lora-v1',projection=op)
+                if reuse:context['reuse_projection_inputs']='client-held-int8-f32-two-a-v1'
+                if hasattr(self,'projection_width'):width_cap=self.projection_width(operands,context,width_cap)//8*8
+                width=min(width_cap,rows-row,capture_cap if reuse and row==0 else width_cap)
                 if width<8:raise ValueError('fused MLP minimum tile')
-                try:tile=self.run('mlp_gate_up_integer',x[token:token+n],[n,width,cols,row],[scale],tensor=gate,aux=[up])
+                try:
+                    if reuse:
+                        previous_codec=self.wire_codec
+                        try:
+                            self.wire_codec='projection-block256-exact-v1'
+                            flat=self.run('mlp_gate_up_capture' if row==0 else 'mlp_gate_up_reuse',operands,[n,width,cols,row,rank],scalars,tensor=gate,aux=aux)
+                        finally:self.wire_codec=previous_codec
+                        if row==0:
+                            if len(flat)!=n*width+state_len:raise ValueError('MLP capture reply shape')
+                            tile=flat[:n*width];saved_state=flat[n*width:]
+                        else:tile=flat
+                    else:tile=self.run(op,operands,[n,width,cols,row],scalars,tensor=gate,aux=aux)
                 except RuntimeError as error:
                     if not is_instruction_limit(error) or width<=8:raise
                     width_cap=max(8,width//2//8*8)
-                    if hasattr(self,'remember_projection_limit'):self.remember_projection_limit(x[token:token+n],context,width,width_cap)
+                    if hasattr(self,'remember_projection_limit'):self.remember_projection_limit(operands,context,width,width_cap)
                     continue
                 out[token:token+n,row:row+width]=tile.reshape(n,width);row+=width
             token+=n

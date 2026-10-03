@@ -21,6 +21,8 @@ struct ProfileMeasurement {
     measurement: Measurement,
     spans: Vec<(String, u64, u64)>,
 }
+#[derive(CandidType, Deserialize)]
+struct TerminalDecisionMeasurement { measurement: Measurement, decision: ChoiceResult }
 #[derive(CandidType, Deserialize, serde::Serialize)]
 struct ChoiceResult {
     value: Option<String>,
@@ -30,6 +32,15 @@ struct ChoiceResult {
     raw_logits: Vec<f32>,
     instructions: u64,
     calibration_version: String,
+}
+#[derive(CandidType, Deserialize, serde::Serialize)]
+struct WeightCacheInfo {
+    bytes: u64,
+    names: Vec<String>,
+    preparation_instructions: u64,
+    rope_bytes: Option<u64>,
+    activation_bytes: Option<u64>,
+    paired_weight_bytes: Option<u64>,
 }
 #[derive(CandidType, Deserialize)]
 struct PackStatus {
@@ -156,7 +167,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let result:Result<Value,Box<dyn std::error::Error>>=async {
  match cmd["op"].as_str().ok_or("op")?{
  "module_hash"=>{ let hash=agent.read_state_canister_module_hash(canister).await?; Ok(json!({"module_hash":hash.iter().map(|b|format!("{b:02x}")).collect::<String>()})) },
+ "pack_status"=>{
+   let b=agent.query(&canister,"pack_status").with_arg(Encode!()?).call().await?;
+   let s=Decode!(&b,PackStatus)?;Ok(json!({"model":s.model,"pack_hash":s.pack_hash,"bytes":s.bytes,"received":s.received,"hashed":s.hashed,"ready":s.ready,"chunks":s.chunks}))
+ },
  "upload_parallel"=>parallel_upload(&agent,canister,&cmd).await,
+ "warm_weights"=>{
+   let name=cmd["name"].as_str().ok_or("weight name")?.to_string();let arg=Encode!(&name)?;
+   let b=agent.update(&canister,"warm_weights").with_arg(arg.clone()).call_and_wait().await?;
+   let info=Decode!(&b,Result<WeightCacheInfo,String>)?.map_err(io::Error::other)?;
+   Ok(json!({"cache":info,"request_bytes":arg.len(),"reply_bytes":b.len()}))
+ },
+ "clear_weight_cache"=>{
+   let arg=Encode!()?;let b=agent.update(&canister,"clear_weight_cache").with_arg(arg.clone()).call_and_wait().await?;
+   let info=Decode!(&b,WeightCacheInfo)?;Ok(json!({"cache":info,"request_bytes":arg.len(),"reply_bytes":b.len()}))
+ },
+ "weight_cache_status"=>{
+   let arg=Encode!()?;let b=agent.query(&canister,"weight_cache_status").with_arg(arg.clone()).call().await?;
+   let info=Decode!(&b,WeightCacheInfo)?;Ok(json!({"cache":info,"request_bytes":arg.len(),"reply_bytes":b.len()}))
+ },
  "upload"=>{
    let manifest=fs::read_to_string(cmd["manifest"].as_str().ok_or("manifest")?)?;
    let b=agent.update(&canister,"prepare").with_arg(Encode!(&manifest)?).call_and_wait().await?;Decode!(&b,Result<(),String>)?.map_err(io::Error::other)?;
@@ -170,6 +199,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
  },
  "decision"=>{
  let state=fs::read(cmd["input"].as_str().ok_or("input")?)?;let options:Vec<String>=serde_json::from_value(cmd["options"].clone())?;let arg=Encode!(&state,&options)?;let b=agent.query(&canister,match cmd["method"].as_str().unwrap_or("decision") { "decision"=>"decision", "decision_fast"=>"decision_fast", _=>return Err("decision method".into()) }).with_arg(arg.clone()).call().await?;let d=Decode!(&b,Result<ChoiceResult,String>)?.map_err(io::Error::other)?;Ok(json!({"decision":d,"request_bytes":arg.len(),"reply_bytes":b.len()}))
+ },
+ "terminal_step_decision"=>{
+   let state=fs::read(cmd["input"].as_str().ok_or("input")?)?;
+   let options:Vec<String>=serde_json::from_value(cmd["options"].clone())?;
+   let arg=Encode!(&state,&options)?;
+   let b=agent.query(&canister,"terminal_step_decision").with_arg(arg.clone()).call().await?;
+   let result=Decode!(&b,Result<TerminalDecisionMeasurement,String>)?.map_err(io::Error::other)?;
+   let m=result.measurement;fs::write(cmd["output"].as_str().ok_or("output")?,&m.state)?;
+   Ok(json!({"instructions":m.instructions,"stable_read_bytes":m.stable_read_bytes,
+    "heap_pages":m.heap_pages,"stable_pages":m.stable_pages,"request_bytes":arg.len(),
+    "reply_bytes":b.len(),"decision":result.decision}))
  },
  "profile"=>{
    let state=fs::read(cmd["input"].as_str().ok_or("input")?)?;let arg=Encode!(&state)?;
