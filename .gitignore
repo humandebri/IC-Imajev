@@ -27,3 +27,11 @@ __pycache__/
 *.safetensors
 *.log
 *.part
+
+# Build outputs for standalone benchmark and Wasm inspection crates.
+/scripts/**/target/
+
+# Recreated by generate_wat_pair.py; validated copies are archived under artifacts.
+/scripts/wat_pair_bench/kernel.wat
+
+/scripts/wat_s1_bench/kernel.wat
