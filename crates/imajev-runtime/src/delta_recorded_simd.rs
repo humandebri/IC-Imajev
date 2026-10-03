@@ -1,7 +1,9 @@
+//! Record the original F32 innovation while computing the original output.
+//! Derived from delta_simd::run; fixed 128x128 shape, no repeated recurrence.
 //! Four independent value lanes retain the scalar per-key sum order.
 #[cfg(target_arch = "wasm32")]
 #[target_feature(enable = "simd128")]
-pub unsafe fn run<const WRITEBACK: bool, const KEY_MAJOR: bool>(
+pub unsafe fn run_recorded(
     q: &[f32],
     k: &[f32],
     v: &[f32],
@@ -10,23 +12,18 @@ pub unsafe fn run<const WRITEBACK: bool, const KEY_MAJOR: bool>(
     state: &mut [f32],
     dk: usize,
     dv: usize,
-) -> Vec<f32> {
-    if dv < 128 {
-        return run_small::<WRITEBACK, KEY_MAJOR>(q, k, v, g, beta, state, dk, dv);
-    }
+) -> (Vec<f32>,Vec<f32>) {
+    assert_eq!((dk,dv),(128,128));
     use core::arch::wasm32::*;
-    let mut transposed = if KEY_MAJOR { Vec::new() } else { vec![0f32; dk * dv] };
-    let sp = if KEY_MAJOR {
-        state.as_mut_ptr()
-    } else {
-        for i in 0..dk {
-            for d in 0..dv {
-                transposed[i * dv + d] = state[d * dk + i];
-            }
+    let mut transposed = vec![0f32; dk * dv];
+    for i in 0..dk {
+        for d in 0..dv {
+            transposed[i * dv + d] = state[d * dk + i];
         }
-        transposed.as_mut_ptr()
-    };
+    }
+    let sp = transposed.as_mut_ptr();
     let mut out = vec![0.; g.len() * dv];
+    let mut innovations = vec![0.; g.len() * dv];
     for t in 0..g.len() {
         let decay = f32x4_splat(g[t]);
         let b = f32x4_splat(beta[t]);
@@ -201,126 +198,151 @@ pub unsafe fn run<const WRITEBACK: bool, const KEY_MAJOR: bool>(
                     b,
                 );
                 let mut o0 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 0).cast(), update0);
                 let update1 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 4).cast()), mem1),
                     b,
                 );
                 let mut o1 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 4).cast(), update1);
                 let update2 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 8).cast()), mem2),
                     b,
                 );
                 let mut o2 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 8).cast(), update2);
                 let update3 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 12).cast()), mem3),
                     b,
                 );
                 let mut o3 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 12).cast(), update3);
                 let update4 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 16).cast()), mem4),
                     b,
                 );
                 let mut o4 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 16).cast(), update4);
                 let update5 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 20).cast()), mem5),
                     b,
                 );
                 let mut o5 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 20).cast(), update5);
                 let update6 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 24).cast()), mem6),
                     b,
                 );
                 let mut o6 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 24).cast(), update6);
                 let update7 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 28).cast()), mem7),
                     b,
                 );
                 let mut o7 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 28).cast(), update7);
                 let update8 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 32).cast()), mem8),
                     b,
                 );
                 let mut o8 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 32).cast(), update8);
                 let update9 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 36).cast()), mem9),
                     b,
                 );
                 let mut o9 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 36).cast(), update9);
                 let update10 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 40).cast()), mem10),
                     b,
                 );
                 let mut o10 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 40).cast(), update10);
                 let update11 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 44).cast()), mem11),
                     b,
                 );
                 let mut o11 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 44).cast(), update11);
                 let update12 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 48).cast()), mem12),
                     b,
                 );
                 let mut o12 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 48).cast(), update12);
                 let update13 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 52).cast()), mem13),
                     b,
                 );
                 let mut o13 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 52).cast(), update13);
                 let update14 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 56).cast()), mem14),
                     b,
                 );
                 let mut o14 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 56).cast(), update14);
                 let update15 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 60).cast()), mem15),
                     b,
                 );
                 let mut o15 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 60).cast(), update15);
                 let update16 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 64).cast()), mem16),
                     b,
                 );
                 let mut o16 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 64).cast(), update16);
                 let update17 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 68).cast()), mem17),
                     b,
                 );
                 let mut o17 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 68).cast(), update17);
                 let update18 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 72).cast()), mem18),
                     b,
                 );
                 let mut o18 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 72).cast(), update18);
                 let update19 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 76).cast()), mem19),
                     b,
                 );
                 let mut o19 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 76).cast(), update19);
                 let update20 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 80).cast()), mem20),
                     b,
                 );
                 let mut o20 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 80).cast(), update20);
                 let update21 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 84).cast()), mem21),
                     b,
                 );
                 let mut o21 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 84).cast(), update21);
                 let update22 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 88).cast()), mem22),
                     b,
                 );
                 let mut o22 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 88).cast(), update22);
                 let update23 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 92).cast()), mem23),
                     b,
                 );
                 let mut o23 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 92).cast(), update23);
                 let update24 = f32x4_mul(
                     f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 96).cast()), mem24),
                     b,
                 );
                 let mut o24 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 96).cast(), update24);
                 let update25 = f32x4_mul(
                     f32x4_sub(
                         v128_load(v.as_ptr().add(t * dv + start + 100).cast()),
@@ -329,6 +351,7 @@ pub unsafe fn run<const WRITEBACK: bool, const KEY_MAJOR: bool>(
                     b,
                 );
                 let mut o25 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 100).cast(), update25);
                 let update26 = f32x4_mul(
                     f32x4_sub(
                         v128_load(v.as_ptr().add(t * dv + start + 104).cast()),
@@ -337,6 +360,7 @@ pub unsafe fn run<const WRITEBACK: bool, const KEY_MAJOR: bool>(
                     b,
                 );
                 let mut o26 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 104).cast(), update26);
                 let update27 = f32x4_mul(
                     f32x4_sub(
                         v128_load(v.as_ptr().add(t * dv + start + 108).cast()),
@@ -345,6 +369,7 @@ pub unsafe fn run<const WRITEBACK: bool, const KEY_MAJOR: bool>(
                     b,
                 );
                 let mut o27 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 108).cast(), update27);
                 let update28 = f32x4_mul(
                     f32x4_sub(
                         v128_load(v.as_ptr().add(t * dv + start + 112).cast()),
@@ -353,6 +378,7 @@ pub unsafe fn run<const WRITEBACK: bool, const KEY_MAJOR: bool>(
                     b,
                 );
                 let mut o28 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 112).cast(), update28);
                 let update29 = f32x4_mul(
                     f32x4_sub(
                         v128_load(v.as_ptr().add(t * dv + start + 116).cast()),
@@ -361,6 +387,7 @@ pub unsafe fn run<const WRITEBACK: bool, const KEY_MAJOR: bool>(
                     b,
                 );
                 let mut o29 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 116).cast(), update29);
                 let update30 = f32x4_mul(
                     f32x4_sub(
                         v128_load(v.as_ptr().add(t * dv + start + 120).cast()),
@@ -369,6 +396,7 @@ pub unsafe fn run<const WRITEBACK: bool, const KEY_MAJOR: bool>(
                     b,
                 );
                 let mut o30 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 120).cast(), update30);
                 let update31 = f32x4_mul(
                     f32x4_sub(
                         v128_load(v.as_ptr().add(t * dv + start + 124).cast()),
@@ -377,6 +405,7 @@ pub unsafe fn run<const WRITEBACK: bool, const KEY_MAJOR: bool>(
                     b,
                 );
                 let mut o31 = f32x4_splat(0.);
+                v128_store(innovations.as_mut_ptr().add(t * dv + start + 124).cast(), update31);
                 for i in 0..dk {
                     let p = sp.add(i * dv + start);
                     let ki = f32x4_splat(*k.get_unchecked(t * dk + i));
@@ -636,160 +665,10 @@ pub unsafe fn run<const WRITEBACK: bool, const KEY_MAJOR: bool>(
             }
         }
     }
-    if WRITEBACK && !KEY_MAJOR {
-        for i in 0..dk {
-            for d in 0..dv {
-                state[d * dk + i] = transposed[i * dv + d];
-            }
+    for i in 0..dk {
+        for d in 0..dv {
+            state[d * dk + i] = transposed[i * dv + d];
         }
     }
-    out
-}
-
-// Four independent value lanes retain the scalar per-key sum order.
-#[cfg(target_arch = "wasm32")]
-#[target_feature(enable = "simd128")]
-unsafe fn run_small<const WRITEBACK: bool, const KEY_MAJOR: bool>(
-    q: &[f32],
-    k: &[f32],
-    v: &[f32],
-    g: &[f32],
-    beta: &[f32],
-    state: &mut [f32],
-    dk: usize,
-    dv: usize,
-) -> Vec<f32> {
-    use core::arch::wasm32::*;
-    let mut transposed = if KEY_MAJOR { Vec::new() } else { vec![0f32; dk * dv] };
-    let sp = if KEY_MAJOR {
-        state.as_mut_ptr()
-    } else {
-        for i in 0..dk {
-            for d in 0..dv {
-                transposed[i * dv + d] = state[d * dk + i];
-            }
-        }
-        transposed.as_mut_ptr()
-    };
-    let mut out = vec![0.; g.len() * dv];
-    for t in 0..g.len() {
-        let decay = f32x4_splat(g[t]);
-        let b = f32x4_splat(beta[t]);
-        for start in (0..dv).step_by(16) {
-            if start + 16 <= dv {
-                let mut mem0 = f32x4_splat(0.);
-                let mut mem1 = f32x4_splat(0.);
-                let mut mem2 = f32x4_splat(0.);
-                let mut mem3 = f32x4_splat(0.);
-                for i in 0..dk {
-                    let p = sp.add(i * dv + start);
-                    let ki = f32x4_splat(*k.get_unchecked(t * dk + i));
-                    mem0 = f32x4_add(
-                        mem0,
-                        f32x4_mul(f32x4_mul(v128_load(p.add(0).cast()), decay), ki),
-                    );
-                    mem1 = f32x4_add(
-                        mem1,
-                        f32x4_mul(f32x4_mul(v128_load(p.add(4).cast()), decay), ki),
-                    );
-                    mem2 = f32x4_add(
-                        mem2,
-                        f32x4_mul(f32x4_mul(v128_load(p.add(8).cast()), decay), ki),
-                    );
-                    mem3 = f32x4_add(
-                        mem3,
-                        f32x4_mul(f32x4_mul(v128_load(p.add(12).cast()), decay), ki),
-                    );
-                }
-                let update0 = f32x4_mul(
-                    f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 0).cast()), mem0),
-                    b,
-                );
-                let mut o0 = f32x4_splat(0.);
-                let update1 = f32x4_mul(
-                    f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 4).cast()), mem1),
-                    b,
-                );
-                let mut o1 = f32x4_splat(0.);
-                let update2 = f32x4_mul(
-                    f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 8).cast()), mem2),
-                    b,
-                );
-                let mut o2 = f32x4_splat(0.);
-                let update3 = f32x4_mul(
-                    f32x4_sub(v128_load(v.as_ptr().add(t * dv + start + 12).cast()), mem3),
-                    b,
-                );
-                let mut o3 = f32x4_splat(0.);
-                for i in 0..dk {
-                    let p = sp.add(i * dv + start);
-                    let ki = f32x4_splat(*k.get_unchecked(t * dk + i));
-                    let qi = f32x4_splat(*q.get_unchecked(t * dk + i));
-                    let s0 = f32x4_add(
-                        f32x4_mul(v128_load(p.add(0).cast()), decay),
-                        f32x4_mul(ki, update0),
-                    );
-                    v128_store(p.add(0).cast(), s0);
-                    o0 = f32x4_add(o0, f32x4_mul(s0, qi));
-                    let s1 = f32x4_add(
-                        f32x4_mul(v128_load(p.add(4).cast()), decay),
-                        f32x4_mul(ki, update1),
-                    );
-                    v128_store(p.add(4).cast(), s1);
-                    o1 = f32x4_add(o1, f32x4_mul(s1, qi));
-                    let s2 = f32x4_add(
-                        f32x4_mul(v128_load(p.add(8).cast()), decay),
-                        f32x4_mul(ki, update2),
-                    );
-                    v128_store(p.add(8).cast(), s2);
-                    o2 = f32x4_add(o2, f32x4_mul(s2, qi));
-                    let s3 = f32x4_add(
-                        f32x4_mul(v128_load(p.add(12).cast()), decay),
-                        f32x4_mul(ki, update3),
-                    );
-                    v128_store(p.add(12).cast(), s3);
-                    o3 = f32x4_add(o3, f32x4_mul(s3, qi));
-                }
-                v128_store(out.as_mut_ptr().add(t * dv + start + 0).cast(), o0);
-                v128_store(out.as_mut_ptr().add(t * dv + start + 4).cast(), o1);
-                v128_store(out.as_mut_ptr().add(t * dv + start + 8).cast(), o2);
-                v128_store(out.as_mut_ptr().add(t * dv + start + 12).cast(), o3);
-            } else {
-                for d in (start..dv).step_by(4) {
-                    let mut mem = f32x4_splat(0.);
-                    for i in 0..dk {
-                        let p = sp.add(i * dv + d);
-                        let s = f32x4_mul(v128_load(p.cast()), decay);
-                        mem =
-                            f32x4_add(mem, f32x4_mul(s, f32x4_splat(*k.get_unchecked(t * dk + i))));
-                    }
-                    let update = f32x4_mul(
-                        f32x4_sub(v128_load(v.as_ptr().add(t * dv + d).cast()), mem),
-                        b,
-                    );
-                    let mut o = f32x4_splat(0.);
-                    for i in 0..dk {
-                        let p = sp.add(i * dv + d);
-                        let s = f32x4_add(
-                            // Recompute the same rounded decay rather than writing and
-                            // reloading an intermediate state for every token.
-                            f32x4_mul(v128_load(p.cast()), decay),
-                            f32x4_mul(f32x4_splat(*k.get_unchecked(t * dk + i)), update),
-                        );
-                        v128_store(p.cast(), s);
-                        o = f32x4_add(o, f32x4_mul(s, f32x4_splat(*q.get_unchecked(t * dk + i))));
-                    }
-                    v128_store(out.as_mut_ptr().add(t * dv + d).cast(), o);
-                }
-            }
-        }
-    }
-    if WRITEBACK && !KEY_MAJOR {
-        for i in 0..dk {
-            for d in 0..dv {
-                state[d * dk + i] = transposed[i * dv + d];
-            }
-        }
-    }
-    out
+    (out,innovations)
 }
