@@ -1,5 +1,7 @@
 # Imajevの演算・query分割の効率化（2026-10-01）
 
+削減手段の全体一覧と採用状況は [COMPUTE_REDUCTION.md](COMPUTE_REDUCTION.md) を参照。
+
 この文書の前半は部分演算の開発履歴。最新の全32層測定とLaya比較は [LAYA_COST_ANALYSIS.md](LAYA_COST_ANALYSIS.md) を参照。
 
 Layaの実コードを参照し、Imajevの実重み・operandで改善を実装、ローカル通常queryでA/B測定した。**対象は第1層QKVの256出力行と専用readout。全4Bのcanister推論は未完了。** 全32層の速度・精度改善には読み替えない。
