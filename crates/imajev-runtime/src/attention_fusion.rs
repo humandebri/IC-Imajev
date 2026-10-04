@@ -30,8 +30,26 @@ where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
 }
 pub(crate) fn evaluate_shared<F,B>(r:&Request,x:&[f32],m:&Manifest,read:&mut F,prepared:Option<&crate::int8_kernel::QuantizedRows>)->Result<(Vec<f32>,u64)>
 where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
+    evaluate_shared_with_a(r,x,m,read,prepared,None)
+}
+// The original F32 A product is independent of the selected Q heads.
+pub(crate) fn prepare_q_a<F,B>(r:&Request,x:&[f32],m:&Manifest,read:&mut F)->Result<(Vec<f32>,u64)>
+where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
+    if r.op!="attention_q_gqa_integer" || r.dims.len()!=5 || !(1..=132).contains(&r.dims[0]) || x.len()!=r.dims[0]*COLS || !x.iter().all(|v|v.is_finite()){return Err("attention Q A input".into());}
+    let request=projection(r,m,r.tensor.clone(),r.dims[0],2048,0)?;
+    let t=m.tensors.iter().find(|t|t.name==request.aux[0]).ok_or("attention Q A tensor")?;
+    if t.bytes!=(64*COLS*4)as u64{return Err("attention Q A bytes".into());}
+    let mut ar=request;ar.op="matmul".into();ar.dims=vec![r.dims[0],64,COLS];
+    let(w,used)=crate::load_prepared_weight(t,&ar,read)?;
+    let ax=crate::matrix_loaded(x,&w,r.dims[0],64,COLS)?;
+    if !ax.iter().all(|v|v.is_finite()){return Err("attention Q A finite".into());}
+    Ok((ax,used))
+}
+pub(crate) fn evaluate_shared_with_a<F,B>(r:&Request,x:&[f32],m:&Manifest,read:&mut F,prepared:Option<&crate::int8_kernel::QuantizedRows>,ax:Option<&[f32]>)->Result<(Vec<f32>,u64)>
+where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
     if !crate::lossless_encoding(&r.encoding) || !r.aux.is_empty() || !r.scalars.is_empty() || !x.iter().all(|v|v.is_finite()) {return Err("attention fusion metadata".into());}
     if r.op=="attention_kv_integer" {
+        if ax.is_some(){return Err("attention KV cannot carry Q A".into());}
         if r.dims.len()!=2 {return Err("attention KV dims".into());}
         let (n,offset)=(r.dims[0],r.dims[1]);
         if n==0 || n>132 || offset>512 || n+offset>512 || x.len()!=n*COLS {return Err("attention KV bounds".into());}
@@ -53,11 +71,12 @@ where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
     let (n,total,offset,first,heads)=(r.dims[0],r.dims[1],r.dims[2],r.dims[3],r.dims[4]);
     if n==0 || n>132 || total<n || total>512 || offset!=total-n || first%4!=0 || heads==0 || heads>16 || heads%4!=0 || first.checked_add(heads).is_none_or(|end|end>16) {return Err("attention Q bounds".into());}
     if prepared.is_some_and(|q|q.rows()!=n || q.cols()!=COLS){return Err("attention shared quantization shape".into());}
+    if ax.is_some_and(|a|a.len()!=n*64 || !a.iter().all(|v|v.is_finite())){return Err("attention shared Q A shape/finite".into());}
     let groups=heads/4;let count=n*COLS;let kv=groups*total*256;
     if x.len()!=count+2*kv || x.len()>MAX_FLOATS || heads*(n*(n+1)/2+n*offset)*256>75_000_000 {return Err("attention Q input/work".into());}
     let root=r.tensor.strip_suffix(".q_proj.weight").filter(|name|name.ends_with(".self_attn")).ok_or("attention Q tensor")?;
     let request=projection(r,m,r.tensor.clone(),n,heads*512,first*512)?;
-    let (projected,pread)=crate::evaluate_integer(&request,&x[..count],m,read,prepared)?;
+    let (projected,pread)=crate::evaluate_integer_with_ax(&request,&x[..count],m,read,prepared,ax)?;
     let mut queries=Vec::with_capacity(n*heads*256);let mut gate=Vec::with_capacity(n*heads*256);
     for row in projected.chunks_exact(512) {queries.extend_from_slice(&row[..256]);gate.extend_from_slice(&row[256..]);}
     let (rotated,nread)=norm_rope(r,&queries,m,read,n,heads,offset,format!("{root}.q_norm.weight"))?;
@@ -84,4 +103,27 @@ mod tests {
     }
     #[test]
     fn head_order_is_token_and_group_preserving() {assert_eq!(head_major(&[0.,1.,2.,3.,4.,5.,6.,7.],2,2,2),[0.,1.,4.,5.,2.,3.,6.,7.]);}
+    #[test]
+    fn shared_q_a_split_preserves_all_head_bits() {
+        let n=2;let total=3;let mut pack=vec![];let mut tensors=vec![];
+        let root="model.language_model.layers.3.self_attn";
+        let mut push=|suffix:&str,rows:usize,cols:usize,dtype:&str,bytes:Vec<u8>|{let offset=pack.len()as u64;tensors.push(crate::Tensor{name:format!("{root}.{suffix}"),rows,cols,dtype:dtype.into(),offset,bytes:bytes.len()as u64});pack.extend(bytes);};
+        let mut base:Vec<u8>=(0..8192*COLS).map(|i|((i*13%127)as i8-63)as u8).collect();for _ in 0..8192{base.extend(0.003f32.to_le_bytes());}
+        push("q_proj.weight",8192,COLS,"int8",base);
+        for (name,rows,cols) in [("q_proj.lora_A.weight",64,COLS),("q_proj.lora_B.weight",8192,64)]{let bytes=(0..rows*cols).flat_map(|i|(((i*7%23)as f32-11.)*0.0003).to_le_bytes()).collect();push(name,rows,cols,"f32",bytes);}
+        push("q_norm.weight",1,256,"bf16",vec![0x80,0x3f].repeat(256));
+        let m=Manifest{version:1,model:"a".repeat(64),pack_hash:"b".repeat(64),bytes:pack.len()as u64,tensors};
+        let r=request("attention_q_gqa_integer",vec![n,total,total-n,0,16]);
+        let norm:Vec<_>=(0..n*COLS).map(|i|crate::bf(((i*11%31)as f32-15.)*0.01)).collect();let q=crate::int8_kernel::quantize_rows(&norm,n,COLS).unwrap();
+        let kv:Vec<_>=(0..2*4*total*256).map(|i|crate::bf(((i*3%29)as f32-14.)*0.01)).collect();let mut payload=norm.clone();payload.extend_from_slice(&kv);
+        let mut read=|offset:u64,len:usize|->Result<Vec<u8>>{Ok(pack[offset as usize..offset as usize+len].to_vec())};
+        let(full,_)=evaluate_shared(&r,&payload,&m,&mut read,Some(&q)).unwrap();let(ax,_)=prepare_q_a(&r,&norm,&m,&mut read).unwrap();let mut chunks=vec![];
+        for (first,heads) in [(0,4),(4,12)]{let mut part=r.clone();part.dims[3]=first;part.dims[4]=heads;let mut x=norm.clone();for k in 0..2{let start=(k*4+first/4)*total*256;x.extend_from_slice(&kv[start..start+heads/4*total*256]);}
+            let(ordinary,ordinary_bytes)=evaluate_shared(&part,&x,&m,&mut read,Some(&q)).unwrap();let(shared,shared_bytes)=evaluate_shared_with_a(&part,&x,&m,&mut read,Some(&q),Some(&ax)).unwrap();
+            assert_eq!(ordinary.iter().map(|v|v.to_bits()).collect::<Vec<_>>(),shared.iter().map(|v|v.to_bits()).collect::<Vec<_>>());assert_eq!(ordinary_bytes-shared_bytes,(64*COLS*4)as u64);chunks.push(shared);
+        }
+        let mut joined=vec![];for t in 0..n{joined.extend_from_slice(&chunks[0][t*1024..(t+1)*1024]);joined.extend_from_slice(&chunks[1][t*3072..(t+1)*3072]);}
+        assert_eq!(full.iter().map(|v|v.to_bits()).collect::<Vec<_>>(),joined.iter().map(|v|v.to_bits()).collect::<Vec<_>>());
+        for bad in [vec![],vec![f32::NAN;n*64]]{assert!(evaluate_shared_with_a(&r,&payload,&m,&mut|_,_|->Result<Vec<u8>>{panic!("invalid A read")},Some(&q),Some(&bad)).is_err());}
+    }
 }

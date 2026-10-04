@@ -10,7 +10,7 @@ from attention_mlp_stream_codec import NAME,C,KV,encode_request
 from transport import is_instruction_limit
 ap=argparse.ArgumentParser(description=__doc__)
 for name in ['canister','wasm','directory']:ap.add_argument('--'+name,required=True)
-ap.add_argument('--cases',default='617,insufficient,maximum');ap.add_argument('--layers',default='2');ap.add_argument('--front',type=int,default=1024);ap.add_argument('--begins',default='4096,4352,4608,4864,5120');a=ap.parse_args()
+ap.add_argument('--q4',action='store_true');ap.add_argument('--cases',default='617,insufficient,maximum');ap.add_argument('--layers',default='2');ap.add_argument('--front',type=int,default=1024);ap.add_argument('--begins',default='4096,4352,4608,4864,5120');a=ap.parse_args()
 d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=True);assert not(d/'report.json').exists();sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();m=json.loads((ROOT/'checkpoints/full-int8.manifest.json').read_text());module=sha(ROOT/a.wasm)
 paths=list((ROOT/'client').glob('*.py'))+list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+[pathlib.Path(__file__)];hashes={str(p.relative_to(ROOT)):sha(p)for p in paths}
 t=Transport(m['model'],'http://localhost:8001/',a.canister,str(ROOT/'artifacts/imajev-local.pem'),d,m['pack_hash'],wire_codec=MLP_NAME,frame_version=3);cases=[]
@@ -24,8 +24,9 @@ try:
    h,x,both,req,res=query(root,report,'mlp_full_integer',layer);n=h['dims'][0]
    _,_,att,areq,ares=query(root,report,'attention_full_integer',layer+1);kv=att[n*C:]
    mh,mx,next_both,mreq,mres=query(root,report,'mlp_full_integer',layer+1)
+   with np.load(ROOT/'artifacts/prefix_codec/full-roll-review-base-proof-v7/prefix/queries/states'/f'layer-{layer+1:02d}.npz',allow_pickle=False)as z:prefix=np.concatenate([z['keys'].transpose(1,0,2).ravel(),z['values'].transpose(1,0,2).ravel()])
    t.wire_codec=MLP_NAME;carry=t.run('mlp_stream_prepare',x,[n,0,a.front],[2.,1e-6],tensor=h['tensor'],aux=h['aux'],input_hash=h['input_hash'])
-   header=dict(h,version=3,step=t.index,encoding=NAME,op='mlp_complete_attention_kv',dims=[n,a.front,9216-a.front,45]);packet=encode_request(header,carry);index=t.index
+   header=dict(h,version=3,step=t.index,encoding=NAME,op='mlp_complete_attention_kv_q4'if a.q4 else'mlp_complete_attention_kv',dims=[n,a.front,9216-a.front,45]);packet=encode_request(header,carry,prefix);index=t.index
    try:y=t._run_encoded(header,packet)
    except RuntimeError as error:
     if not is_instruction_limit(error):raise
@@ -33,9 +34,8 @@ try:
     cases.append(dict(label=label,layer=layer,tokens=n,stage='mlp_complete_kv',success=False,error=str(error),request_sha256=sha(d/f'{index:06d}.request.bin')));continue
    assert y[:2*n*C].tobytes()==both.tobytes();assert y[2*n*C:n*(2*C+KV)].tobytes()==kv.tobytes();first=t.measurements[-1]
    out=d/f'{index:06d}.profile.response.bin';profile=t.command(dict(op='profile',input=str(d/f'{index:06d}.request.bin'),output=str(out)));assert decode(out.read_bytes())[1].tobytes()==y.tobytes()
-   with np.load(ROOT/'artifacts/prefix_codec/full-roll-review-base-proof-v7/prefix/queries/states'/f'layer-{layer+1:02d}.npz',allow_pickle=False)as z:prefix=np.concatenate([z['keys'].transpose(1,0,2).ravel(),z['values'].transpose(1,0,2).ravel()])
    for begin in map(int,a.begins.split(',')):
-    bh=dict(mh,version=3,step=t.index,encoding=NAME,op='attention_finish_mlp_front',dims=[n,begin,45]);bi=t.index;bp=encode_request(bh,y,prefix)
+    bh=dict(mh,version=3,step=t.index,encoding=NAME,op='attention_finish_mlp_front_q4'if a.q4 else'attention_finish_mlp_front',dims=[n,begin,45]);bi=t.index;bp=encode_request(bh,y,prefix)
     try:result=t._run_encoded(bh,bp)
     except RuntimeError as error:
      if not is_instruction_limit(error):raise
@@ -47,7 +47,7 @@ try:
     out=d/f'{bi:06d}.profile.response.bin';second=t.command(dict(op='profile',input=str(d/f'{bi:06d}.request.bin'),output=str(out)));assert decode(out.read_bytes())[1].tobytes()==result.tobytes()
     row=dict(label=label,layer=layer+1,tokens=n,begin=begin,success=True,kv_bitwise_equal=True,prepared_mlp_bitwise_equal=True,finished_hidden_norm_bitwise_equal=True,first_call=first,first_profile=profile,call=call,profile=second,source_hashes={str(p.relative_to(ROOT)):sha(p)for p in [req,res,areq,ares,mreq,mres]});cases.append(row);print(json.dumps(row),flush=True)
  verify_module(t,module);assert hashes=={str(p.relative_to(ROOT)):sha(p)for p in paths}
- (d/'report.json').write_text(json.dumps(dict(module_sha256=module,source_hashes=hashes,cases=cases,ordinary_queries=len(t.measurements),whole_inference_reduction_verified=False),indent=2)+'\n')
+ (d/'report.json').write_text(json.dumps(dict(module_sha256=module,q4=a.q4,front=a.front,source_hashes=hashes,cases=cases,ordinary_queries=len(t.measurements),whole_inference_reduction_verified=False),indent=2)+'\n')
  with zipfile.ZipFile(d/'validated-source.zip','x',zipfile.ZIP_DEFLATED)as z:
   for p in paths:z.write(p,str(p.relative_to(ROOT)))
 finally:t.close()

@@ -1,3 +1,5 @@
+2026-10-04継続: Qを4+12 headへ分割し元F32 A積を共有。全7箇所×3入力×2幅の42条件でMLP前半5120/5376行が成立し全出力一致。全6条件/現行連結3条件回帰・54件の再開も確認。全体未接続で主54 query・50/32未達。 [実測](ATTENTION_Q4_CARRY.md)。
+
 2026-10-04再レビュー: request欠落時の不正checkpoint再利用とmetric識別情報の未検証を修正。再開/境界/codec計11テスト通過。canister演算は不変、主54 query・50/32未達。 [レビュー記録](IMPLEMENTATION_REVIEW_2026_10_04_RESUME.md)。
 
 2026-10-04継続: MLP完了→次attention K/V→Q/GQA/out→次MLP前半の通常query経路を実装。主87の3328行、最大変更89の3072行まで実出力一致。大きい前半は5B超過。新APIは全体未接続で、50未達。[境界実測](ATTENTION_MLP_BRIDGE.md)。
