@@ -95,6 +95,50 @@ impl Parts {
         out
     }
 }
+enum StreamOutput { Carry(Parts), Plain(Vec<f32>) }
+impl StreamOutput {
+    fn flat(self,n:usize)->Vec<f32> {match self {Self::Carry(p)=>p.flat(n),Self::Plain(v)=>v}}
+    #[cfg(feature="experimental-direct-mlp-reply")]
+    fn reply(self,r:&Request,n:usize)->Result<crate::EvaluatedReply> {
+        match self {
+            Self::Plain(v)=>Ok(crate::EvaluatedReply::Values(v)),
+            Self::Carry(parts)=>Ok(crate::EvaluatedReply::payload(r,parts.payload(n)?)),
+        }
+    }
+}
+#[cfg(feature="experimental-direct-mlp-reply")]
+impl Parts {
+    fn payload(self,n:usize)->Result<Vec<u8>> {
+        let full=self.done/256*256;let rem=self.done%256;
+        if self.done==0 || self.done>H || self.done%STEP!=0
+            || self.residual.len()!=n*C || self.ax.len()!=2*n*R || self.down.len()!=n*R
+            || self.product.len()!=n*full || self.scales.len()!=n*(full/256) || self.pending.len()!=n*rem
+            || !crate::bf16_codec::classify_finite(&self.residual)? || !crate::bf16_codec::classify_finite(&self.pending)?
+            || !self.ax.iter().chain(&self.down).all(|v|v.is_finite())
+            || !self.scales.iter().all(|v|v.is_finite() && *v>0.) {
+            return Err("direct MLP reply invariant".into());
+        }
+        // product bytes come exclusively from checked decode or quantize_rows;
+        // no floating integer conversion or redundant full product scan here.
+        let mut p=Vec::with_capacity(5+n*(3*C+self.done+rem+4*(C/256+self.done/256+3*R)));
+        p.push(if rem==0{1}else{2});p.extend((self.done as u32).to_le_bytes());
+        let start=p.len();p.resize(start+2*n*C,0);crate::bf16_codec::pack(&self.residual,&mut p[start..]);
+        p.extend(self.q.values()[..n*C].iter().map(|v|*v as i8 as u8));
+        for v in &self.q.scales()[..n*C/256] {p.extend(v.to_le_bytes());}
+        for v in self.ax {p.extend(v.to_le_bytes());}
+        p.extend(self.product);
+        let start=p.len();p.resize(start+2*n*rem,0);crate::bf16_codec::pack(&self.pending,&mut p[start..]);
+        for v in self.scales.into_iter().chain(self.down) {p.extend(v.to_le_bytes());}
+        Ok(p)
+    }
+}
+#[cfg(feature="experimental-direct-mlp-reply")]
+pub(crate) fn prepare_direct_reply<F,B>(r:&Request,plain:Vec<f32>,m:&Manifest,read:&mut F)->Result<(crate::EvaluatedReply,u64)>
+where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
+    let(n,_,_)=shape(r)?;
+    if r.op!="mlp_stream_prepare" || plain.len()!=2*n*C || !plain.iter().all(|v|v.is_finite()) || !crate::bf16_codec::all_bf16(&plain) {return Err("MLP direct preparation input".into());}
+    PreparedMlpStream{request:r.clone(),parts:None,plain}.evaluate_reply(r,m,read)
+}
 /// Opaque finite, shape-checked state remains bound to the complete request.
 /// ```compile_fail
 /// let mut state: imajev_runtime::PreparedMlpStream = todo!();
@@ -148,12 +192,21 @@ impl PreparedMlpStream {
             plain: vec![],
         })
     }
-    pub(crate) fn evaluate<F, B>(
+    pub(crate) fn evaluate<F,B>(self,r:&Request,m:&Manifest,read:&mut F)->Result<(Vec<f32>,u64)>
+    where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
+        let(n,_,_)=shape(r)?;self.generate(r,m,read).map(|(out,b)|(out.flat(n),b))
+    }
+    #[cfg(feature="experimental-direct-mlp-reply")]
+    pub(crate) fn evaluate_reply<F,B>(self,r:&Request,m:&Manifest,read:&mut F)->Result<(crate::EvaluatedReply,u64)>
+    where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
+        let(n,_,_)=shape(r)?;let(out,b)=self.generate(r,m,read)?;Ok((out.reply(r,n)?,b))
+    }
+    fn generate<F, B>(
         self,
         r: &Request,
         m: &Manifest,
         read: &mut F,
-    ) -> Result<(Vec<f32>, u64)>
+    ) -> Result<(StreamOutput, u64)>
     where
         F: FnMut(u64, usize) -> Result<B>,
         B: WeightBuffer,
@@ -216,7 +269,7 @@ impl PreparedMlpStream {
             }
         };
         if r.op == "mlp_stream_finish" {
-            return finish(parts, r, inner, &p, n, m, read);
+            return finish(parts, r, inner, &p, n, m, read).map(|(v,b)|(StreamOutput::Plain(v),b));
         }
         let mut gr = inner.clone();
         gr.op = "mlp_gate_up_reuse".into();
@@ -251,9 +304,9 @@ impl PreparedMlpStream {
         })?;
         if r.op == "mlp_stream_complete" {
             let (out, used) = finish(parts, r, inner, &p, n, m, read)?;
-            return Ok((out, bytes + used));
+            return Ok((StreamOutput::Plain(out), bytes + used));
         }
-        Ok((parts.flat(n), bytes))
+        Ok((StreamOutput::Carry(parts), bytes))
     }
 }
 /// Preserve block256 scales regardless of a query's 128-row boundary.
@@ -490,6 +543,37 @@ mod tests {
     use super::*;
     fn request() -> Request {
         serde_json::from_value(serde_json::json!({"version":1,"model":"a".repeat(64),"pack_hash":"b".repeat(64),"input_hash":"c".repeat(64),"step":0,"op":"mlp_stream_next","tensor":"model.language_model.layers.0.post_attention_layernorm.weight","dims":[87,4096,5120],"scalars":[2.,1e-6],"aux":["model.language_model.layers.1.input_layernorm.weight"],"encoding":NAME})).unwrap()
+    }
+    #[cfg(feature="experimental-direct-mlp-reply")]
+    #[test]
+    fn direct_reply_is_byte_identical_and_bound_to_every_request_field() {
+        for n in [1,7,87,89] {
+            for done in [128,4096,6016,H] {
+                if done%STEP!=0 {continue;}
+                let parts=||Parts {residual:vec![-0.;n*C],q:QuantizedRows::from_bytes(n,C,&vec![127;n*C],&vec![0.0123;n*C/256]).unwrap(),
+                    ax:vec![0.1234567;n*2*R],product:(0..n*(done/256*256)).map(|i|((i%255)as i16-127)as i8 as u8).collect(),
+                    pending:vec![-0.;n*(done%256)],scales:vec![0.009;n*(done/256)],down:vec![-0.1234567;n*R],done};
+                let mut input=request();input.dims=vec![n,done,if done==H{0}else{STEP}];
+                if done==H{input.op="mlp_stream_finish".into();}
+                for version in [1,2,3] {
+                    if version==2 && !cfg!(feature="experimental-blake3") {continue;}
+                    input.version=version;let mut output=input.clone();output.step+=1;
+                    for signed in [false,true] {
+                        let payload=parts().payload(n).unwrap();
+                        let actual=crate::EvaluatedReply::payload(&input,payload).encode(&output,signed).unwrap();
+                        let flat=parts().flat(n);
+                        let expected=crate::encode_impl(&output,&flat,signed && cfg!(feature="experimental-host-checksum")).unwrap();
+                        assert_eq!(actual,expected,"n={n} done={done} version={version} signed={signed}");
+                    }
+                }
+                let mut output=input.clone();output.step+=1;
+                let mut mutations=Vec::new();
+                for change in 0..11 {let mut r=output.clone();match change {
+                    0=>r.step+=1,1=>r.model="d".repeat(64),2=>r.pack_hash="e".repeat(64),3=>r.input_hash="f".repeat(64),
+                    4=>r.op.push('x'),5=>r.tensor.push('x'),6=>r.dims[0]+=1,7=>r.scalars[0]=3.,8=>r.aux[0].push('x'),9=>r.encoding.push('x'),_=>r.version=4};mutations.push(r);}
+                for r in mutations {assert!(crate::EvaluatedReply::payload(&input,parts().payload(n).unwrap()).encode(&r,false).is_err());}
+            }
+        }
     }
     #[cfg(feature = "experimental-mlp-half")]
     #[test]

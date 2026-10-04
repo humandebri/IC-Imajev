@@ -1,3 +1,7 @@
+#[cfg(feature="experimental-projection-reuse")]
+mod query_reply;
+#[cfg(feature="experimental-projection-reuse")]
+pub use query_reply::{EvaluatedReply,PayloadReply};
 #[cfg(feature="experimental-attention-mlp-stream")]
 mod attention_mlp_stream;
 #[cfg(feature="experimental-mlp-delta-stream")]
@@ -620,6 +624,21 @@ where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer,
         DecodedQueryInput::DeltaHybrid(input)=>input.evaluate_owned(r,m,&mut read),
         other=>evaluate_decoded_with_prepared_buffer(r,&other,m,read),
     }
+}
+/// Canister reply path avoids materializing integer carry as F32.
+#[cfg(feature="experimental-projection-reuse")]
+pub fn evaluate_owned_reply_with_prepared_buffer<F,B>(r:&Request,input:DecodedQueryInput,m:&Manifest,mut read:F)->Result<(EvaluatedReply,u64)>
+where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
+    if r.model!=m.model || r.pack_hash!=m.pack_hash {return Err("model mismatch".into());}
+    #[cfg(feature="experimental-direct-mlp-reply")]
+    match input {
+        DecodedQueryInput::MlpStream(input)=>return input.evaluate_reply(r,m,&mut read),
+        #[cfg(feature="experimental-attention-mlp-stream")]
+        DecodedQueryInput::AttentionMlp(input)=>return input.evaluate_reply(r,m,&mut read),
+        other=>return evaluate_owned_decoded_with_prepared_buffer(r,other,m,read).map(|(v,b)|(EvaluatedReply::Values(v),b)),
+    }
+    #[cfg(not(feature="experimental-direct-mlp-reply"))]
+    evaluate_owned_decoded_with_prepared_buffer(r,input,m,read).map(|(v,b)|(EvaluatedReply::Values(v),b))
 }
 pub fn sigmoid(x: f32) -> f32 {
     if x >= 0.0 {

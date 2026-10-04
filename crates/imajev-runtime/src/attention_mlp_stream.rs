@@ -203,12 +203,20 @@ impl PreparedAttentionMlp {
             ax,
         })
     }
-    pub(crate) fn evaluate<F, B>(
+    pub(crate) fn evaluate<F,B>(self,r:&Request,m:&Manifest,read:&mut F)->Result<(Vec<f32>,u64)>
+    where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
+        let(out,b)=self.evaluate_inner(r,m,read,false)?;Ok((out.into_values()?,b))
+    }
+    #[cfg(feature="experimental-direct-mlp-reply")]
+    pub(crate) fn evaluate_reply<F,B>(self,r:&Request,m:&Manifest,read:&mut F)->Result<(crate::EvaluatedReply,u64)>
+    where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {self.evaluate_inner(r,m,read,true)}
+    fn evaluate_inner<F, B>(
         self,
         r: &Request,
         m: &Manifest,
         read: &mut F,
-    ) -> Result<(Vec<f32>, u64)>
+        direct:bool,
+    ) -> Result<(crate::EvaluatedReply, u64)>
     where
         F: FnMut(u64, usize) -> Result<B>,
         B: WeightBuffer,
@@ -279,7 +287,7 @@ impl PreparedAttentionMlp {
             both.extend_from_slice(&q.scales()[..n * C / 256]);
             both.extend(gated);
             both.extend(ax);
-            return Ok((both, used));
+            return Ok((crate::EvaluatedReply::Values(both), used));
         }
         let v = self.values;
         let q = self.quant.ok_or("attention MLP quant state")?;
@@ -334,12 +342,21 @@ impl PreparedAttentionMlp {
         used += bytes;
         let mut pair = v[..count].to_vec();
         pair.extend(attention);
+        #[cfg(feature="experimental-direct-mlp-reply")]
+        if direct && compact(r) {
+            let(out,bytes)=crate::profile::measure("bridge_mlp_front",||crate::mlp_stream::prepare_direct_reply(&mlp(r)?,pair,m,read))?;
+            let crate::EvaluatedReply::Payload(payload)=out else {return Err("compact MLP expected typed carry".into());};
+            let mut p=vec![7];p.extend(payload.into_payload());
+            return Ok((crate::EvaluatedReply::payload(r,p),used+bytes));
+        }
+        #[cfg(not(feature="experimental-direct-mlp-reply"))]
+        let _=direct;
         let (mut state, bytes) = crate::profile::measure("bridge_mlp_front", || {
             crate::mlp_stream::prepare_direct(&mlp(r)?, pair, m, read)
         })?;
         used += bytes;
         if !compact(r) {state.extend_from_slice(kv);}
-        Ok((state, used))
+        Ok((crate::EvaluatedReply::Values(state), used))
     }
 }
 pub(crate) fn append(b: &mut Vec<u8>, r: &Request, v: &[f32]) -> Result<()> {

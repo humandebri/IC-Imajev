@@ -276,6 +276,9 @@ fn step(state: StateBytes) -> std::result::Result<Measurement, String> {
     #[cfg(not(feature = "experimental-projection-reuse"))]
     let (y, read) = evaluate(&r, &x)?;
     r.step = r.step.checked_add(1).ok_or("progress overflow")?;
+    #[cfg(feature="experimental-projection-reuse")]
+    let state = y.encode(&r,cfg!(feature="experimental-host-checksum"))?;
+    #[cfg(not(feature="experimental-projection-reuse"))]
     let state = encode(&r, &y)?;
     #[cfg(target_arch = "wasm32")]
     let heap_pages = core::arch::wasm32::memory_size(0) as u64;
@@ -313,6 +316,9 @@ fn profile_step(state: StateBytes) -> std::result::Result<ProfileMeasurement, St
         let (y, read) =
             imajev_runtime::profile::measure("evaluate_inclusive", || evaluate(&r, &x))?;
         r.step = r.step.checked_add(1).ok_or("progress overflow")?;
+        #[cfg(feature="experimental-projection-reuse")]
+        let state = imajev_runtime::profile::measure("wire_encode", || y.encode(&r,cfg!(feature="experimental-host-checksum")))?;
+        #[cfg(not(feature="experimental-projection-reuse"))]
         let state = imajev_runtime::profile::measure("wire_encode", || encode(&r, &y))?;
         #[cfg(target_arch = "wasm32")]
         let heap_pages = core::arch::wasm32::memory_size(0) as u64;
@@ -330,14 +336,14 @@ fn profile_step(state: StateBytes) -> std::result::Result<ProfileMeasurement, St
     result.map(|measurement| ProfileMeasurement { measurement, spans })
 }
 #[cfg(feature = "experimental-projection-reuse")]
-fn evaluate_decoded(r:&imajev_runtime::Request,input:imajev_runtime::DecodedQueryInput)->std::result::Result<(Vec<f32>,u64),String> {
-    if let imajev_runtime::DecodedQueryInput::Values(x)=input {return evaluate(r,&x);}
+fn evaluate_decoded(r:&imajev_runtime::Request,input:imajev_runtime::DecodedQueryInput)->std::result::Result<(imajev_runtime::EvaluatedReply,u64),String> {
+    if let imajev_runtime::DecodedQueryInput::Values(x)=input {return evaluate(r,&x).map(|(v,b)|(imajev_runtime::EvaluatedReply::Values(v),b));}
     STORE.with(|s| {
         let s=s.borrow();
         if !s.ready {return Err("not ready".into());}
         let m=s.manifest.as_ref().ok_or("missing manifest")?;
         let mut physical_read_bytes=0u64;
-        let (output,_)=imajev_runtime::evaluate_owned_decoded_with_prepared_buffer(r,input,m,|offset,len| {
+        let (output,_)=imajev_runtime::evaluate_owned_reply_with_prepared_buffer(r,input,m,|offset,len| {
             if offset.checked_add(len as u64).is_none_or(|end| end>m.bytes) {return Err("weight read range".into());}
             if let Some(bytes)=s.weight_cache.read(offset,len) {return Ok(bytes);}
             let mut bytes=vec![0;len];
@@ -415,6 +421,8 @@ fn terminal_step_decision(state: StateBytes, options: Vec<String>) -> Result<Ter
     validate_terminal_decision(&r, &options)?;
     #[cfg(feature="experimental-projection-reuse")]
     let(y,mut read)=evaluate_decoded(&r,input)?;
+    #[cfg(feature="experimental-projection-reuse")]
+    let y=y.into_values()?;
     #[cfg(not(feature="experimental-projection-reuse"))]
     let(y,mut read)=evaluate(&r,&x)?;
     let offset=if r.op=="terminal_tail_integer" && r.dims.len()==2 {r.dims[0]*2560}else{0};
