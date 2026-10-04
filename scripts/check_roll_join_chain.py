@@ -13,7 +13,7 @@ from mlp_delta_stream_codec import NAME as PAIR,encode_request as pair,encode_co
 from mlp_stream_codec import NAME as STREAM
 ap=argparse.ArgumentParser(description=__doc__)
 for name in ['canister','wasm','directory']:ap.add_argument('--'+name,required=True)
-ap.add_argument('--cases',default='617,insufficient,maximum');ap.add_argument('--layers',default='1');ap.add_argument('--heads',default='24,26');ap.add_argument('--down-rows',type=int,default=768);ap.add_argument('--entry-heads',type=int,help='Obtain the partial-down carry from the preceding real MLP/Delta join');ap.add_argument('--entry-front',type=int,default=4096);ap.add_argument('--front',type=int,default=1792);ap.add_argument('--attention-front',type=int,default=5376);ap.add_argument('--compress-base',action='store_true');ap.add_argument('--compact-attention',action='store_true');ap.add_argument('--compress-residual',action='store_true');ap.add_argument('--residual-raw-threshold',type=float,default=0.);ap.add_argument('--residual-dictionary',action='store_true');a=ap.parse_args();validate_join_settings(a);d=ROOT/a.directory
+ap.add_argument('--cases',default='617,insufficient,maximum');ap.add_argument('--layers',default='1');ap.add_argument('--heads',default='24,26');ap.add_argument('--down-rows',type=int,default=768);ap.add_argument('--entry-start',action='store_true',help='Include preceding Delta/MLP start, using canister embedding for layer0');ap.add_argument('--entry-heads',type=int,help='Obtain the partial-down carry from the preceding real MLP/Delta join');ap.add_argument('--entry-front',type=int,default=4096);ap.add_argument('--front',type=int,default=1792);ap.add_argument('--attention-front',type=int,default=5376);ap.add_argument('--compress-base',action='store_true');ap.add_argument('--compact-attention',action='store_true');ap.add_argument('--compress-residual',action='store_true');ap.add_argument('--residual-raw-threshold',type=float,default=0.);ap.add_argument('--residual-dictionary',action='store_true');a=ap.parse_args();validate_join_settings(a);d=ROOT/a.directory
 if (d/'report.json').exists():raise ValueError('Use a new evidence directory')
 d.mkdir(parents=True,exist_ok=True)
 labels=selections(a.cases,('617','insufficient','maximum'),'cases');layers=list(map(int,selections(a.layers,tuple(map(str,(1,5,9,13,17,21,25))),'layers')));heads=list(map(int,selections(a.heads,tuple(map(str,range(2,32,2))),'heads')))
@@ -50,6 +50,23 @@ try:
     eh=a.entry_heads;eb=a.entry_front
     h0,x0,both0=reference(label,layer-1);t.wire_codec=STREAM
     prev=t.run('mlp_stream_prepare',x0,[n,0,eb],[2.,1e-6],tensor=h0['tensor'],aux=h0['aux'],input_hash=h0['input_hash'])
+    if a.entry_start:
+     from delta_mlp_start_codec import NAME as START,CONV,encode_ids,encode_request as start_packet
+     start_prefix=state(label,layer-1,True)
+     ehead=header(h0,'delta_mlp_stream_start_ids'if layer==1 else'delta_mlp_stream_prepare',START,[n,eb,45])
+     if layer==1:
+      serving=read_report(ROOT/'artifacts/reference-serving.json',ROOT,references)
+      if serving['model_lock_sha256']!=m['model']:raise ValueError('start reference model')
+      ids=serving['records'][{'617':0,'insufficient':19,'maximum':11}[label]]['token_ids'][45:]
+      if len(ids)!=n:raise ValueError('start token length')
+      packet=encode_ids(ehead,ids,start_prefix['conv'],start_prefix['delta_log'])
+     else:
+      _,_,prior=reference(label,layer-2)
+      packet=start_packet(ehead,prior[:n*C],prior[n*C:],start_prefix['conv'],start_prefix['delta_log'])
+     entry=run(ehead,packet,f'{label}-l{layer}-entry-start')
+     if entry is None:continue
+     ey=entry[0];assert ey[:-CONV].tobytes()==prev.tobytes();assert ey[-CONV:].tobytes()==state(label,layer-1)['conv'].ravel().tobytes()
+     entry_profiles.append(profile(entry,ey));entry_calls.append(entry[1]);prev=ey[:-CONV]
     ep=state(label,layer,True);ec=ep['conv'];el=ep['delta_log'];ef=np.concatenate([np.arange(eh//2*128),np.arange(2048,2048+eh//2*128),np.arange(4096,4096+eh*128)]);er=np.concatenate([np.arange(eh//2*128,2048),np.arange(2048+eh//2*128,4096),np.arange(4096+eh*128,8192)])
     def entry_log(first):
      sl=slice(None,eh//2*128)if first else slice(eh//2*128,None);vl=slice(None,eh*128)if first else slice(eh*128,None);gl=slice(None,eh)if first else slice(eh,None)
@@ -86,7 +103,7 @@ try:
     h=header(h3,'delta_partial_mlp_full',PAIR,[n,a.attention_front,9216-a.attention_front,k,45]);fifth=run(h,encode_continue_request(h,y,cv[:,rest_cols],sliced(k,32),compress_base=a.compress_base),f'{label}-l{layer}-heads{k}-full')
     if fifth is None:continue
     y=fifth[0];assert y[:2*n*C].tobytes()==both4.tobytes();assert y[2*n*C:].tobytes()==final[:,rest_cols].ravel().tobytes();lastp=profile(fifth,y)
-    calls=[r[1]for r in [first,second,third,fourth,fifth]];row=dict(label=label,layer=layer,tokens=n,heads=k,front=a.front,down_rows=a.down_rows,attention_front=a.attention_front,compress_base=a.compress_base,compact_attention=a.compact_attention,compress_residual=a.compress_residual,residual_raw_threshold=a.residual_raw_threshold,residual_dictionary=a.residual_dictionary,entry_heads=a.entry_heads,entry_front=a.entry_front,entry_calls=entry_calls,entry_profiles=entry_profiles,entry_bitwise_equal=True if entry_calls else None,success=True,exported_hidden_norm_bitwise_equal=True,prepared_stream_bitwise_equal=True,conv_bitwise_equal=True,calls=calls,profiles=[fp,sp,tp,qp,lastp],five_query_instructions=sum(c['ok']['instructions']for c in calls),five_query_candid_bytes=sum(c['ok']['request_bytes']+c['ok']['reply_bytes']for c in calls));rows.append(row);print(json.dumps(row),flush=True)
+    calls=[r[1]for r in [first,second,third,fourth,fifth]];row=dict(label=label,layer=layer,tokens=n,heads=k,front=a.front,down_rows=a.down_rows,attention_front=a.attention_front,compress_base=a.compress_base,compact_attention=a.compact_attention,compress_residual=a.compress_residual,residual_raw_threshold=a.residual_raw_threshold,residual_dictionary=a.residual_dictionary,entry_start=a.entry_start,entry_heads=a.entry_heads,entry_front=a.entry_front,entry_calls=entry_calls,entry_profiles=entry_profiles,entry_bitwise_equal=True if entry_calls else None,success=True,exported_hidden_norm_bitwise_equal=True,prepared_stream_bitwise_equal=True,conv_bitwise_equal=True,calls=calls,profiles=[fp,sp,tp,qp,lastp],five_query_instructions=sum(c['ok']['instructions']for c in calls),five_query_candid_bytes=sum(c['ok']['request_bytes']+c['ok']['reply_bytes']for c in calls));rows.append(row);print(json.dumps(row),flush=True)
  verify_module(t,module)
  if sha(ROOT/a.wasm)!=module:raise ValueError('Wasm file changed during run')
  if hashes!={str(p.relative_to(ROOT)):sha(p)for p in paths}:raise ValueError('Source changed during run')

@@ -36,7 +36,11 @@ class ProofInputsTests(unittest.TestCase):
                     compress_residual=True, entry_heads=20, entry_front=4096)
         validate_join_settings(SimpleNamespace(**good))
         validate_join_settings(SimpleNamespace(**dict(good, entry_front=4224)))
-        for key, value in [('front', 0), ('front', 9216), ('attention_front', 6273),
+        with self.assertRaises(ValueError):
+            validate_join_settings(SimpleNamespace(**dict(good, entry_heads=None, entry_start=True)))
+        with self.assertRaises(ValueError):
+            validate_join_settings(SimpleNamespace(**dict(good, entry_front=4224, entry_start=True)))
+        for key, value in [('front', 0), ('front', 9216), ('front', 1920), ('attention_front', 6273),
                            ('down_rows', 2560), ('down_rows', 33),
                            ('entry_heads', 21), ('entry_heads', 32),
                            ('entry_front', 1), ('entry_front', 9216),

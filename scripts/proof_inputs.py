@@ -40,7 +40,7 @@ def validate_join_settings(args):
     """Reject unsupported schedules before creating artifacts or calling queries."""
     for name in ('front', 'attention_front'):
         value = getattr(args, name)
-        if not 0 < value < 9216 or value % 128:
+        if not 0 < value < 9216 or value % (256 if name == 'front' else 128):
             raise ValueError(f'invalid {name}: {value}')
     if not 0 < args.down_rows < 2560 or args.down_rows % 32:
         raise ValueError('invalid down_rows')
@@ -48,8 +48,10 @@ def validate_join_settings(args):
         raise ValueError('invalid residual_raw_threshold')
     if args.residual_dictionary and not args.compress_residual:
         raise ValueError('residual_dictionary requires compress_residual')
+    if getattr(args, 'entry_start', False) and args.entry_heads is None:
+        raise ValueError('entry_start requires entry_heads')
     if args.entry_heads is not None:
         if not 0 < args.entry_heads < 32 or args.entry_heads % 2:
             raise ValueError('invalid entry_heads')
-        if not 0 < args.entry_front < 9216 or args.entry_front % 128:
+        if not 0 < args.entry_front < 9216 or args.entry_front % (256 if getattr(args, 'entry_start', False) else 128):
             raise ValueError('invalid entry_front')

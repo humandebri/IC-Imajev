@@ -326,12 +326,21 @@ impl PreparedMlpDeltaStream {
         F: FnMut(u64, usize) -> Result<B>,
         B: WeightBuffer,
     {
+        self.evaluate_inner(r,m,read,false).and_then(|(reply,bytes)|Ok((reply.into_values()?,bytes)))
+    }
+    #[cfg(feature="experimental-direct-mlp-reply")]
+    pub(crate) fn evaluate_reply<F,B>(self,r:&Request,m:&Manifest,read:&mut F)->Result<(crate::EvaluatedReply,u64)>
+    where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
+        self.evaluate_inner(r,m,read,true)
+    }
+    fn evaluate_inner<F,B>(self,r:&Request,m:&Manifest,read:&mut F,direct:bool)->Result<(crate::EvaluatedReply,u64)>
+    where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
         if !crate::same_request(r, &self.request) {
             return Err("pair identity".into());
         }
         let (n, _, _, h, p, layer) = metadata(r)?;
         if is_follow(r) {
-            return self.evaluate_follow(r, m, read, n, h, p, layer);
+            return self.evaluate_follow(r, m, read, n, h, p, layer).map(|(v,b)|(crate::EvaluatedReply::Values(v),b));
         }
         let (both, mut bytes) = crate::profile::measure("pair_mlp_complete", || {
             self.mlp
@@ -400,6 +409,13 @@ impl PreparedMlpDeltaStream {
         let ax = crate::profile::measure("pair_out_A_continue", || {
             crate::f32_output::continue_columns(&gated, &vec![0.; n * R], &w, n, R, 4096, 0, count)
         })?;
+        #[cfg(feature="experimental-direct-mlp-reply")]
+        if direct {
+            let payload=direct_pair_payload(r,&both[..n*C],&prep,&base,&ax,&history)?;
+            return Ok((crate::EvaluatedReply::payload(r,payload),bytes));
+        }
+        #[cfg(not(feature="experimental-direct-mlp-reply"))]
+        let _=direct;
         let mut out = both[..n * C].to_vec();
         prep.flat(n, &mut out);
         out.extend(base);
@@ -408,8 +424,31 @@ impl PreparedMlpDeltaStream {
         if out.len() != reply_count(r)? || !out.iter().all(|v| v.is_finite()) {
             return Err("pair output length/finite".into());
         }
-        Ok((out, bytes))
+        Ok((crate::EvaluatedReply::Values(out), bytes))
     }
+}
+// QuantizedRows can only originate in the checked decoder or quantizer. Keep
+// its integer representation throughout reply construction; never flatten it
+// to F32 only to validate and pack the same integers again.
+#[cfg(feature="experimental-direct-mlp-reply")]
+fn direct_pair_payload(r:&Request,hidden:&[f32],prep:&crate::delta_head_continue::Preparation,base:&[f32],ax:&[f32],history:&[f32])->Result<Vec<u8>> {
+    let(n,_,_,h,_,_)=metadata(r)?;
+    if is_follow(r) || hidden.len()!=n*C || base.len()!=n*C || ax.len()!=n*R || history.len()!=3*h*256
+        || prep.q.rows()!=n || prep.q.cols()!=C || prep.qa.len()!=n*R || prep.za.len()!=n*R || prep.gates.len()!=n*64
+        || !crate::bf16_codec::classify_finite(hidden)? || !crate::bf16_codec::classify_finite(history)?
+        || !prep.qa.iter().chain(&prep.za).chain(base).chain(ax).all(|v|v.is_finite())
+        || !prep.gates.iter().all(|v|v.is_finite() && (0.0..=1.0).contains(v)) {
+        return Err("direct pair reply invariant".into());
+    }
+    let mut payload=Vec::with_capacity(1+3*n*C+4*n*(C/256+3*R+64+C)+2*history.len());
+    payload.push(0);
+    let start=payload.len();payload.resize(start+2*hidden.len(),0);crate::bf16_codec::pack(hidden,&mut payload[start..]);
+    payload.extend(prep.q.values()[..n*C].iter().map(|v|*v as i8 as u8));
+    for v in prep.q.scales()[..n*C/256].iter().chain(&prep.qa).chain(&prep.za).chain(&prep.gates).chain(base).chain(ax) {
+        payload.extend(v.to_le_bytes());
+    }
+    let start=payload.len();payload.resize(start+2*history.len(),0);crate::bf16_codec::pack(history,&mut payload[start..]);
+    Ok(payload)
 }
 fn next_mlp(r: &Request) -> Result<Request> {
     let (n, _, _, _, _, layer) = metadata(r)?;
@@ -750,4 +789,43 @@ mod tests {
   let r:Request=serde_json::from_value(serde_json::json!({"version":1,"model":"a".repeat(64),"pack_hash":"b".repeat(64),"input_hash":"c".repeat(64),"step":0,"op":"delta_partial_mlp_full","encoding":NAME,"tensor":"model.language_model.layers.3.post_attention_layernorm.weight","dims":[1,5376,3840,24,45],"scalars":[2.,1e-6],"aux":["model.language_model.layers.4.input_layernorm.weight"]})).unwrap();
   let v=vec![-0.;reply_count(&r).unwrap()];let frame=crate::encode(&r,&v).unwrap();let(_,decoded)=crate::decode(&frame).unwrap();assert_eq!(v.iter().map(|v|v.to_bits()).collect::<Vec<_>>(),decoded.iter().map(|v|v.to_bits()).collect::<Vec<_>>());let mut raw=vec![];append_reply(&mut raw,&r,&v).unwrap();raw[0]=3;assert!(decode_reply(&r,&raw).is_err());assert_eq!(next_mlp(&r).unwrap().op,"mlp_full_integer");
  }
+}
+
+#[cfg(all(test,feature="experimental-direct-mlp-reply"))]
+mod direct_reply_tests {
+    use super::*;
+    fn request(n:usize,h:usize)->Request {
+        serde_json::from_value(serde_json::json!({"version":3,"model":"a".repeat(64),"pack_hash":"b".repeat(64),"input_hash":"c".repeat(64),"step":7,"op":"mlp_complete_delta_partial","encoding":NAME,"tensor":"model.language_model.layers.0.post_attention_layernorm.weight","dims":[n,4096,5120,h,45],"scalars":[2.,1e-6],"aux":["model.language_model.layers.1.input_layernorm.weight"]})).unwrap()
+    }
+    fn preparation(n:usize)->crate::delta_head_continue::Preparation {
+        let integers=(0..n*C).map(|i|((i%255)as i16-127)as i8 as u8).collect::<Vec<_>>();
+        let mut rest=vec![0.0123456;n*C/256];rest.extend(vec![0.1234567;n*2*R]);rest.extend(vec![0.5;n*64]);
+        crate::delta_head_continue::Preparation::restore(n,&integers,&rest).unwrap()
+    }
+    #[test]
+    fn typed_pair_matches_old_payload_and_authenticated_frames() {
+        for n in [1,7,80,87,89] {for h in [18,20,26] {
+            let mut r=request(n,h);let prep=preparation(n);
+            let hidden=vec![-0.;n*C];let base=vec![0.1234567;n*C];let ax=vec![-0.1234567;n*R];let history=vec![-0.;3*h*256];
+            let mut values=hidden.clone();prep.flat(n,&mut values);values.extend(&base);values.extend(&ax);values.extend(&history);
+            let payload=direct_pair_payload(&r,&hidden,&prep,&base,&ax,&history).unwrap();let mut old=vec![];append_reply(&mut old,&r,&values).unwrap();assert_eq!(payload,old);
+            for version in [1,2,3] {
+                if version==2 && !cfg!(feature="experimental-blake3") {continue;}
+                r.version=version;let mut output=r.clone();output.step+=1;
+                for signed in [false,true] {
+                    let old=if signed && cfg!(feature="experimental-host-checksum") {crate::encode_impl(&output,&values,true).unwrap()}else{crate::encode(&output,&values).unwrap()};
+                    assert_eq!(crate::EvaluatedReply::payload(&r,payload.clone()).encode(&output,signed).unwrap(),old);
+                }
+            }
+        }}
+    }
+    #[test]
+    fn typed_pair_rejects_nonfinite_shape_and_direction() {
+        let mut r=request(1,20);let mut prep=preparation(1);let mut hidden=vec![-0.;C];let base=vec![0.;C];let ax=vec![0.;R];let history=vec![-0.;3*20*256];
+        assert!(direct_pair_payload(&r,&hidden,&prep,&base[..C-1],&ax,&history).is_err());
+        hidden[0]=f32::NAN;assert!(direct_pair_payload(&r,&hidden,&prep,&base,&ax,&history).is_err());hidden[0]=0.1234567;assert!(direct_pair_payload(&r,&hidden,&prep,&base,&ax,&history).is_err());hidden[0]=-0.;
+        prep.gates[0]=1.1;assert!(direct_pair_payload(&r,&hidden,&prep,&base,&ax,&history).is_err());prep.gates[0]=0.5;
+        prep.qa[0]=f32::INFINITY;assert!(direct_pair_payload(&r,&hidden,&prep,&base,&ax,&history).is_err());prep.qa[0]=0.;
+        r.op="delta_partial_mlp_prepare".into();assert!(direct_pair_payload(&r,&hidden,&prep,&base,&ax,&history).is_err());
+    }
 }
