@@ -1,0 +1,9 @@
+# 2026-10-04 分割query実装の再レビュー
+
+対象は `2046ca0` までの連結query、可逆carry、クライアント再開処理。Rustのrequest同一性・shape/進捗・整数/scales・BF16/F32境界を読み、最新attention bridgeの実測と全体graphの結果を区別して確認した。
+
+再開時にresponseとmetricだけが残った場合、requestのbyte一致が検証されない問題を修正した。同じheaderで入力値が変わっても古い結果を再利用できた。今は完成checkpointのrequest欠落をquery実行前に拒否する。metricもindex/op/tensorが一致しなければ拒否する。responseだけでmetricがない中断状態は、従来どおりrequestを照合して再queryする。これはclient-held状態の混在防止であり、checksumを認証として扱わない。
+
+`test_journal.py` 6件、`test_roll_graph.py` 3件、`test_attention_mlp_stream_codec.py` 2件が通過。正常再開、request欠落、別queryのmetric、checksum破損、中断後再query、幅縮小の再開を確認した。canister演算・Wasmは変更していないため、推論命令数の改善をこの修正の効果として報告しない。
+
+現行実測は主87/情報不足80が54query、最大変更89は標準62query。最新bridge APIは全体未接続。精度比較は固定INT8版とのビット一致で、BF16基準との同等性や既存の重大変更見逃しの改善は示していない。32/50queryは未達。生成物はignoreされ、Layaと主canisterは変更していない。

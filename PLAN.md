@@ -1,3 +1,5 @@
+2026-10-04再レビュー: request欠落時の不正checkpoint再利用とmetric識別情報の未検証を修正。再開/境界/codec計11テスト通過。canister演算は不変、主54 query・50/32未達。 [レビュー記録](docs/IMPLEMENTATION_REVIEW_2026_10_04_RESUME.md)。
+
 2026-10-04継続: MLP完了→次attention K/V→Q/GQA/out→次MLP前半の通常query経路を実装。主87の3328行、最大変更89の3072行まで実出力一致。大きい前半は5B超過。新APIは全体未接続で、50未達。[境界実測](docs/ATTENTION_MLP_BRIDGE.md)。
 
 2026-10-04継続: 連結経路のcarryを既存Huffmanへ変更。実16件と全体3条件がビット一致。主54 queryのまま追加866,900,972命令・621,991 bytes減、標準62query比ではなお命令2.739%・通信8.611%増。50/32未達。[内訳と実測](docs/ROLL_QUERY.md)。
