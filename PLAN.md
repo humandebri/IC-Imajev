@@ -1,3 +1,5 @@
+2026-10-04: 実装レビューを修正し、層境界の連結経路を全体へ接続。主87/情報不足80は62→54 query・全出力ビット一致。89 tokenは入口超過を保存し標準62queryへ切替。主の総命令3.11%・通信9.12%増のため実験オプションで、50/32未達。全6条件回帰・最終3条件と54query再開を確認。[実測と修正](docs/ROLL_QUERY.md)。
+
 2026-10-04: 部分down前倒しを追加。87 token/1600行と89 token/1280行でcarry/finish一致、89 token/1600行は5B超過。全6条件回帰も通過。全体graphは未接続で主62 query、50未達。[実測と次のボトルネック](docs/MLP_DELTA_STREAM.md)。
 
 2026-10-04: MLP完了→次層Delta部分→次queryのDelta完了/次層MLP準備を実装。39成立条件でcarry/次層finishまでビット一致、45条件は5B超過を記録。新Wasmの全6条件回帰も通過。全体は未接続で主62 query、50未達。詳細は [MLP_DELTA_STREAM.md](docs/MLP_DELTA_STREAM.md)。

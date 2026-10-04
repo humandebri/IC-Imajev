@@ -101,6 +101,12 @@ pub struct PreparedMlpStream {
     parts: Option<Parts>,
     plain: Vec<f32>,
 }
+pub(crate) fn prepare_direct<F,B>(r:&Request,plain:Vec<f32>,m:&Manifest,read:&mut F)->Result<(Vec<f32>,u64)>
+where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
+    let(n,_,_)=shape(r)?;
+    if r.op!="mlp_stream_prepare" || plain.len()!=2*n*C || !plain.iter().all(|v|v.is_finite()) || !crate::bf16_codec::all_bf16(&plain) {return Err("MLP direct preparation input".into());}
+    PreparedMlpStream{request:r.clone(),parts:None,plain}.evaluate(r,m,read)
+}
 fn f32s(p: &[u8]) -> Result<Vec<f32>> {
     let v: Vec<_> = p
         .chunks_exact(4)

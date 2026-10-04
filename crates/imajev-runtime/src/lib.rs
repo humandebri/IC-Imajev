@@ -1,4 +1,6 @@
 #[cfg(feature="experimental-mlp-delta-stream")]
+mod delta_mlp_start;
+#[cfg(feature="experimental-mlp-delta-stream")]
 mod delta_head_continue;
 #[cfg(feature="experimental-mlp-delta-stream")]
 mod mlp_delta_stream;
@@ -174,6 +176,8 @@ pub fn int8_prefix(req: &Request, count: usize) -> Result<usize> {
 }
 fn wire_float_limit(r: &Request) -> usize {
     #[cfg(feature="experimental-mlp-delta-stream")]
+    if r.encoding==delta_mlp_start::NAME {return delta_mlp_start::limit(r).unwrap_or(0);}
+    #[cfg(feature="experimental-mlp-delta-stream")]
     if r.encoding==mlp_delta_stream::NAME {return mlp_delta_stream::reply_count(r).unwrap_or(0);}
     #[cfg(feature="experimental-mlp-stream")]
     if r.encoding==mlp_stream::NAME {return mlp_stream::limit(r).unwrap_or(0);}
@@ -219,6 +223,8 @@ fn encode_impl(req:&Request,x:&[f32],signed_transport:bool)->Result<Vec<u8>> {
     #[cfg(feature="experimental-mlp-stream")]
     let limit=if req.encoding==mlp_stream::NAME {mlp_stream::limit(req)?}else{limit};
     #[cfg(feature="experimental-mlp-delta-stream")]
+    let limit=if req.encoding==delta_mlp_start::NAME {delta_mlp_start::limit(req)?}else{limit};
+    #[cfg(feature="experimental-mlp-delta-stream")]
     let limit=if req.encoding==mlp_delta_stream::NAME {mlp_delta_stream::reply_count(req)?}else{limit};
     if x.len() > limit || (!checked_block_encoding(&req.encoding) && !x.iter().all(|v| v.is_finite())) {
         return Err("invalid activation".into());
@@ -231,6 +237,8 @@ fn encode_impl(req:&Request,x:&[f32],signed_transport:bool)->Result<Vec<u8>> {
     b.extend_from_slice(&(header.len() as u32).to_le_bytes());
     b.extend(header);
     match req.encoding.as_str() {
+        #[cfg(feature="experimental-mlp-delta-stream")]
+        delta_mlp_start::NAME=>delta_mlp_start::append(&mut b,req,x)?,
         #[cfg(feature="experimental-mlp-delta-stream")]
         mlp_delta_stream::NAME=>mlp_delta_stream::append_reply(&mut b,req,x)?,
         #[cfg(feature="experimental-mlp-stream")]
@@ -368,6 +376,8 @@ pub fn decode(b: &[u8]) -> Result<(Request, Vec<f32>)> {
 fn decode_values(r:&Request,payload:&[u8])->Result<Vec<f32>> {
     let x: Vec<f32> = match r.encoding.as_str() {
         #[cfg(feature="experimental-mlp-delta-stream")]
+        delta_mlp_start::NAME=>delta_mlp_start::decode_reply(r,payload)?,
+        #[cfg(feature="experimental-mlp-delta-stream")]
         mlp_delta_stream::NAME=>mlp_delta_stream::decode_reply(r,payload)?,
         #[cfg(feature="experimental-mlp-stream")]
         mlp_stream::NAME=>mlp_stream::decode_values(r,payload)?,
@@ -492,10 +502,10 @@ pub use projection_codec::PreparedProjection;
 #[cfg(feature="experimental-mlp-pipeline")]
 pub use mlp_pipeline::PreparedMlp;
 #[cfg(feature="experimental-projection-reuse")]
-pub enum DecodedQueryInput { #[cfg(feature="experimental-mlp-delta-stream")] MlpDeltaStream(PreparedMlpDeltaStream), #[cfg(feature="experimental-int8-k-continue")] Int8K(PreparedInt8K), #[cfg(feature="experimental-mlp-stream")] MlpStream(PreparedMlpStream), #[cfg(feature="experimental-f32-k-continue")] F32K(PreparedF32K), #[cfg(feature="experimental-terminal-tail")] TerminalTail(PreparedTail), #[cfg(feature="experimental-mlp-delta-fusion")] MlpDelta(mlp_delta_fusion::PreparedCarry), #[cfg(feature="experimental-prefix-start")] PrefixStart(prefix_start::PreparedPrefixStart), #[cfg(feature="experimental-prefix-hybrid")] DeltaHybrid(delta_hybrid::PreparedDeltaHybrid), Values(Vec<f32>), Projection(PreparedProjection), #[cfg(feature="experimental-mlp-pipeline")] Mlp(PreparedMlp) }
+pub enum DecodedQueryInput { #[cfg(feature="experimental-mlp-delta-stream")] DeltaMlpStart(delta_mlp_start::PreparedDeltaMlpStart), #[cfg(feature="experimental-mlp-delta-stream")] MlpDeltaStream(PreparedMlpDeltaStream), #[cfg(feature="experimental-int8-k-continue")] Int8K(PreparedInt8K), #[cfg(feature="experimental-mlp-stream")] MlpStream(PreparedMlpStream), #[cfg(feature="experimental-f32-k-continue")] F32K(PreparedF32K), #[cfg(feature="experimental-terminal-tail")] TerminalTail(PreparedTail), #[cfg(feature="experimental-mlp-delta-fusion")] MlpDelta(mlp_delta_fusion::PreparedCarry), #[cfg(feature="experimental-prefix-start")] PrefixStart(prefix_start::PreparedPrefixStart), #[cfg(feature="experimental-prefix-hybrid")] DeltaHybrid(delta_hybrid::PreparedDeltaHybrid), Values(Vec<f32>), Projection(PreparedProjection), #[cfg(feature="experimental-mlp-pipeline")] Mlp(PreparedMlp) }
 #[cfg(feature="experimental-projection-reuse")]
 impl DecodedQueryInput {
-    pub fn values(&self)->Option<&[f32]> {match self {#[cfg(feature="experimental-mlp-delta-stream")] Self::MlpDeltaStream(_)=>None, #[cfg(feature="experimental-int8-k-continue")] Self::Int8K(_)=>None, #[cfg(feature="experimental-mlp-stream")] Self::MlpStream(_)=>None, #[cfg(feature="experimental-f32-k-continue")] Self::F32K(_)=>None, #[cfg(feature="experimental-terminal-tail")] Self::TerminalTail(_)=>None, #[cfg(feature="experimental-mlp-delta-fusion")] Self::MlpDelta(_)=>None, #[cfg(feature="experimental-prefix-start")] Self::PrefixStart(_)=>None, #[cfg(feature="experimental-prefix-hybrid")] Self::DeltaHybrid(_)=>None, Self::Values(v)=>Some(v),Self::Projection(_)=>None, #[cfg(feature="experimental-mlp-pipeline")] Self::Mlp(_)=>None}}
+    pub fn values(&self)->Option<&[f32]> {match self {#[cfg(feature="experimental-mlp-delta-stream")] Self::DeltaMlpStart(_)=>None, #[cfg(feature="experimental-mlp-delta-stream")] Self::MlpDeltaStream(_)=>None, #[cfg(feature="experimental-int8-k-continue")] Self::Int8K(_)=>None, #[cfg(feature="experimental-mlp-stream")] Self::MlpStream(_)=>None, #[cfg(feature="experimental-f32-k-continue")] Self::F32K(_)=>None, #[cfg(feature="experimental-terminal-tail")] Self::TerminalTail(_)=>None, #[cfg(feature="experimental-mlp-delta-fusion")] Self::MlpDelta(_)=>None, #[cfg(feature="experimental-prefix-start")] Self::PrefixStart(_)=>None, #[cfg(feature="experimental-prefix-hybrid")] Self::DeltaHybrid(_)=>None, Self::Values(v)=>Some(v),Self::Projection(_)=>None, #[cfg(feature="experimental-mlp-pipeline")] Self::Mlp(_)=>None}}
 }
 #[cfg(feature="experimental-projection-reuse")]
 pub fn decode_query(b:&[u8])->Result<(Request,DecodedQueryInput)>{decode_query_impl(b,false)}
@@ -506,6 +516,8 @@ pub fn decode_signed_query(b:&[u8])->Result<(Request,DecodedQueryInput)>{decode_
 #[cfg(feature="experimental-projection-reuse")]
 fn decode_query_impl(b:&[u8],signed_transport:bool)->Result<(Request,DecodedQueryInput)> {
     let (r,payload)=decode_envelope_impl(b,signed_transport)?;
+    #[cfg(feature="experimental-mlp-delta-stream")]
+    if r.encoding==delta_mlp_start::NAME {let input=delta_mlp_start::PreparedDeltaMlpStart::decode(&r,payload)?;return Ok((r,DecodedQueryInput::DeltaMlpStart(input)));}
     #[cfg(feature="experimental-mlp-delta-stream")]
     if r.encoding==mlp_delta_stream::NAME {let input=PreparedMlpDeltaStream::decode(&r,payload)?;return Ok((r,DecodedQueryInput::MlpDeltaStream(input)));}
     #[cfg(feature="experimental-int8-k-continue")]
@@ -529,7 +541,7 @@ fn decode_query_impl(b:&[u8],signed_transport:bool)->Result<(Request,DecodedQuer
     }
     #[cfg(feature="experimental-mlp-pipeline")]
     if r.encoding==mlp_pipeline::NAME {
-        let input=if r.op=="mlp_down_norm_prepared" {DecodedQueryInput::Mlp(PreparedMlp::decode(&r,payload)?)}
+        let input=if r.op=="mlp_down_norm_prepared" || cfg!(feature="experimental-mlp-delta-fusion") && r.op=="mlp_down_norm_partial_prepared" {DecodedQueryInput::Mlp(PreparedMlp::decode(&r,payload)?)}
         else {if !(r.op=="mlp_prepare_down" || cfg!(feature="experimental-mlp-delta-fusion") && r.op=="mlp_prepare_partial_down")||payload.first()!=Some(&0){return Err("MLP pipeline request direction".into());}DecodedQueryInput::Values(decode_values(&r,payload)?)};
         return Ok((r,input));
     }
@@ -544,6 +556,8 @@ where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer,
 {
     if r.model!=m.model || r.pack_hash!=m.pack_hash {return Err("model mismatch".into());}
     match input {
+        #[cfg(feature="experimental-mlp-delta-stream")]
+        DecodedQueryInput::DeltaMlpStart(_)=>Err("Delta MLP start requires owned evaluation".into()),
         #[cfg(feature="experimental-mlp-delta-stream")]
         DecodedQueryInput::MlpDeltaStream(_)=>Err("MLP Delta stream requires owned evaluation".into()),
         #[cfg(feature="experimental-f32-k-continue")]
@@ -574,6 +588,8 @@ where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer,
 {
     if r.model!=m.model || r.pack_hash!=m.pack_hash {return Err("model mismatch".into());}
     match input {
+        #[cfg(feature="experimental-mlp-delta-stream")]
+        DecodedQueryInput::DeltaMlpStart(input)=>input.evaluate(r,m,&mut read),
         #[cfg(feature="experimental-mlp-delta-stream")]
         DecodedQueryInput::MlpDeltaStream(input)=>input.evaluate(r,m,&mut read),
         #[cfg(feature="experimental-mlp-stream")]

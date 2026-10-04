@@ -49,7 +49,6 @@ class JournalTransport(Transport):
         h=dict(version=getattr(self,'frame_version',1),model=self.model,pack_hash=self.pack_hash,input_hash=input_hash,step=self.index,op=op,tensor=tensor,dims=list(dims),scalars=list(scalars))
         if aux:h['aux']=list(aux)
         if getattr(self,'wire_codec',''):h['encoding']=self.wire_codec
-        request=self.directory/f'{self.index:06d}.request.bin';response=self.directory/f'{self.index:06d}.response.bin';metric=self.directory/f'{self.index:06d}.metric.json'
         if prefix_packet is None:payload=encode(h,values)
         else:
             if op=='prefix_start_integer':
@@ -58,6 +57,11 @@ class JournalTransport(Transport):
                 from prefix_hybrid import NAME,encode_request
             h['encoding']=NAME
             payload=encode_request(h,values,prefix_packet)
+        return self.run_encoded(h,payload)
+    def run_encoded(self,h,payload):
+        if h['step']!=self.index or h['model']!=self.model or h['pack_hash']!=self.pack_hash:raise ValueError('encoded journal identity')
+        op=h['op'];tensor=h.get('tensor','');dims=h.get('dims',[])
+        request=self.directory/f'{self.index:06d}.request.bin';response=self.directory/f'{self.index:06d}.response.bin';metric=self.directory/f'{self.index:06d}.metric.json'
         if request.exists() and request.read_bytes()!=payload:raise ValueError(f'checkpoint input mismatch at query {self.index}; use a fresh directory after changing the graph')
         if response.exists() and metric.exists():
             rh,v=decode(response.read_bytes())
@@ -454,10 +458,17 @@ class TextGraph:
             for head in range(16):out[:,head]=self.t.run('attention_bf16',np.concatenate([all_q[:,head].ravel(),all_k[:,head//4].ravel(),all_v[:,head//4].ravel()]),[total,256]).reshape(total,256)[-n:]
         path=self.t.directory/'states';path.mkdir(exist_ok=True);np.savez(path/f'layer-{layer:02d}.npz',keys=all_k,values=all_v,positions=np.arange(total,dtype=np.int32))
         return self.linear(self.pair('attention_gate',out.reshape(qn,4096),gate),name+'.o_proj')
-    def forward(self,token_ids,layers=32):
+    def forward(self,token_ids,layers=32,*,initial_hidden=None,start_layer=0,first_attention=None):
         if not 1<=len(token_ids)<=512:raise ValueError('text prefill needs 1..512 tokens')
-        prefix_started=getattr(self,'fuse_prefix_start',False)
-        if prefix_started:
+        prefix_started=getattr(self,'fuse_prefix_start',False) and initial_hidden is None
+        if initial_hidden is not None:
+            hidden=np.asarray(initial_hidden)
+            if not 0<start_layer<layers or hidden.dtype!=np.float32 or hidden.shape!=(len(token_ids),2560) or not np.isfinite(hidden).all() or np.any(hidden.view('<u4')&65535):raise ValueError('continued graph hidden shape/precision')
+            if first_attention is not None:
+                first_attention=np.asarray(first_attention)
+                if first_attention.dtype!=np.float32 or first_attention.shape!=hidden.shape or not np.isfinite(first_attention).all() or np.any(first_attention.view('<u4')&65535):raise ValueError('continued graph attention shape/precision')
+        elif start_layer!=0 or first_attention is not None:raise ValueError('continued graph requires hidden')
+        elif prefix_started:
             start_clock=time.perf_counter()
             hidden,first_attention=self.prefix_start(token_ids)
         else:
@@ -465,8 +476,13 @@ class TextGraph:
             for start in range(0,len(token_ids),128):
                 ids=token_ids[start:start+128];parts.append(self.t.run('embed',ids,[len(ids),2560],tensor=embedding).reshape(len(ids),2560))
             hidden=np.concatenate(parts,axis=0)
-        pre_normalized=None;tail_done=False
-        for layer in range(layers):
+        pre_normalized=None;tail_done=False;attention_layer=start_layer;skip_until=start_layer
+        for layer in range(start_layer,layers):
+            if layer<skip_until:continue
+            if getattr(self,'roll_blocks',False) and layer>0 and layer%4==0:
+                hidden,first_attention=self.roll_block(layer,hidden,pre_normalized)
+                pre_normalized=None;attention_layer=layer+2;skip_until=layer+2
+                continue
             self.current_layer=layer
             if layer==31 and tail_done:
                 np.save(self.t.directory/'layer-31.npy',hidden)
@@ -476,9 +492,9 @@ class TextGraph:
             layer_hidden=None
             prefix=PREFIX+f'layers.{layer}';start=len(self.t.measurements);clock=time.perf_counter()
             if prefix_started and layer==0:start=0;clock=start_clock
-            normalized=None if prefix_started and layer==0 else (pre_normalized if pre_normalized is not None else self.norm(hidden,prefix+'.input_layernorm'))
-            terminal_fused=self.fuse_terminal_attention and self.terminal_readout and layer==31
-            if prefix_started and layer==0:attention=first_attention
+            normalized=None if (prefix_started and layer==0 or first_attention is not None and layer==attention_layer) else (pre_normalized if pre_normalized is not None else self.norm(hidden,prefix+'.input_layernorm'))
+            terminal_fused=self.fuse_terminal_attention and self.terminal_readout and layer==31 and not (first_attention is not None and layer==attention_layer)
+            if first_attention is not None and layer==attention_layer:attention=first_attention
             elif terminal_fused:
                 hidden,pre_normalized=self.terminal_attention_mlp(normalized,hidden[-1:],prefix+'.self_attn',layer)
             else:

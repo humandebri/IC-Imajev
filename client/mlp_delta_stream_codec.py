@@ -57,7 +57,7 @@ def decode_reply(h,payload):
     return np.concatenate([residual,integers.astype('<f4'),rest,history])
 
 
-def encode_continue_request(h,carry,history,log):
+def encode_continue_request(h,carry,history,log,*,compress_base=False):
     from transport import frame_digest
     n,b,c,k,p=layout(h)
     if h['op'] not in FOLLOW:raise ValueError('pair continuation direction')
@@ -68,6 +68,12 @@ def encode_continue_request(h,carry,history,log):
     remaining=32-k;cv=np.asarray(history,dtype='<f4').ravel();lv=np.asarray(log,dtype='<f4').ravel();kc=p*remaining//2*128
     if cv.size!=3*remaining*256 or lv.size!=p*(remaining//2*128+remaining*128+remaining) or not np.isfinite(cv).all() or not np.isfinite(lv).all() or np.any(cv.view('<u4')&65535) or np.any(lv[:kc].view('<u4')&65535) or np.any(lv[kc+p*remaining*128:]<0) or np.any(lv[kc+p*remaining*128:]>1):raise ValueError('pair continuation prefix')
     payload=b'\2'+(v[:n*C].view('<u4')>>16).astype('<u2').tobytes()+integers.astype(np.int8).tobytes()+rest.tobytes()+(cv.view('<u4')>>16).astype('<u2').tobytes()+(lv[:kc].view('<u4')>>16).astype('<u2').tobytes()+lv[kc:].tobytes()
+    if compress_base:
+        from mlp_delta_carry import planar,encode_plane
+        prep=n*(C//256+2*R+64);base=rest[prep:prep+n*C].tobytes();planes=planar(base,4);count=n*C
+        packed=b''.join(encode_plane(planes[i*count:(i+1)*count])for i in range(4))
+        prefix=payload[1+3*n*C+4*tail:]
+        payload=b'\4'+struct.pack('<I',len(packed))+payload[1:1+3*n*C]+rest[:prep].tobytes()+rest[prep+n*C:].tobytes()+packed+prefix
     header=json.dumps(h,separators=(',',':'),allow_nan=False).encode();body=struct.pack('<I',len(header))+header+payload
     if len(header)>16384 or len(body)+32>2_000_000:raise ValueError('pair continuation frame bounds')
     return body+frame_digest(h,body)

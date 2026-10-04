@@ -4,7 +4,7 @@ from projection_codec import block_pack,block_unpack
 NAME='mlp-down-state-exact-v1'
 def layout(h):
     d=h.get('dims',[]);s=h.get('scalars',[]);a=h.get('aux',[])
-    if h.get('encoding')!=NAME or h.get('op') not in ('mlp_prepare_down','mlp_down_norm_prepared','mlp_prepare_partial_down') or not (len(d)==2 or h.get("op")=="mlp_prepare_partial_down" and len(d)==3 and type(d[2])is int and 0<d[2]<2560 and d[2]%32==0) or any(type(v)is not int for v in d) or not 1<=d[0]<=89 or d[1]!=2560 or len(s)!=2 or not np.array_equal(np.asarray(s,dtype='<f4').view('<u4'),np.asarray([2.,1e-6],dtype='<f4').view('<u4')) or len(a)!=1:raise ValueError('MLP pipeline metadata')
+    if h.get('encoding')!=NAME or h.get('op') not in ('mlp_prepare_down','mlp_down_norm_prepared','mlp_prepare_partial_down','mlp_down_norm_partial_prepared') or not (len(d)==2 and h.get("op")!="mlp_down_norm_partial_prepared" or h.get("op")in ("mlp_prepare_partial_down","mlp_down_norm_partial_prepared") and len(d)==3 and type(d[2])is int and 0<d[2]<2560 and d[2]%32==0) or any(type(v)is not int for v in d) or not 1<=d[0]<=89 or d[1]!=2560 or len(s)!=2 or not np.array_equal(np.asarray(s,dtype='<f4').view('<u4'),np.asarray([2.,1e-6],dtype='<f4').view('<u4')) or len(a)!=1:raise ValueError('MLP pipeline metadata')
     tensor=h.get('tensor','');prefix='model.language_model.layers.';suffix='.post_attention_layernorm.weight'
     if not tensor.startswith(prefix) or not tensor.endswith(suffix):raise ValueError('MLP pipeline tensor')
     layer=tensor[len(prefix):-len(suffix)]
@@ -13,7 +13,9 @@ def layout(h):
 
 def encode_payload(h,v):
     n,c,q,tail=layout(h)
-    if len(v)==2*c:return b'\0'+block_pack(v)
+    if len(v)==2*c:
+        if h['op']=='mlp_down_norm_partial_prepared':raise ValueError('partial finish requires prepared state')
+        return b'\0'+block_pack(v)
     if len(v)!=c+q+tail or np.any(v[:c].view('<u4')&65535):raise ValueError('MLP pipeline state shape')
     integers=v[c:c+q]
     if not np.isfinite(integers).all() or np.any(integers<-127) or np.any(integers>127) or np.any(integers!=np.trunc(integers)) or np.any(integers.view('<u4')==0x80000000):raise ValueError('MLP pipeline integer')

@@ -139,6 +139,7 @@ impl PreparedMlpDeltaStream {
         })
     }
     fn decode_follow(r: &Request, payload: &[u8], n: usize, h: usize, p: usize) -> Result<Self> {
+        if payload.first()==Some(&4) {return Self::decode_compressed_follow(r,payload,n,h,p);}
         let remaining = 32 - h;
         let hc = 3 * remaining * 256;
         let kc = p * remaining / 2 * 128;
@@ -186,6 +187,19 @@ impl PreparedMlpDeltaStream {
             history,
             log,
         })
+    }
+    fn decode_compressed_follow(r:&Request,payload:&[u8],n:usize,h:usize,p:usize)->Result<Self> {
+        if payload.len()<5 {return Err("pair compressed length".into());}
+        let len=u32::from_le_bytes(payload[1..5].try_into().unwrap())as usize;
+        let prep=n*(C/256+2*R+64);let end=5+3*n*C+4*(prep+n*R);
+        let remaining=32-h;let prefix=2*(3*remaining*256+p*remaining/2*128)+4*p*(remaining*128+remaining);
+        let packed_end=end.checked_add(len).filter(|v|v.checked_add(prefix)==Some(payload.len())).ok_or("pair compressed range")?;
+        let planes=crate::profile::measure("pair_base_planes",||crate::carry_planes::decode(&payload[end..packed_end],&[(n*C,4)]))?;
+        let mut plain=Vec::with_capacity(1+3*n*C+4*(prep+n*C+n*R)+prefix);plain.push(2);
+        plain.extend_from_slice(&payload[5..5+3*n*C+4*prep]);
+        for index in 0..n*C {for byte in 0..4 {plain.push(planes[0][byte*n*C+index]);}}
+        plain.extend_from_slice(&payload[5+3*n*C+4*prep..end]);plain.extend_from_slice(&payload[packed_end..]);
+        Self::decode_follow(r,&plain,n,h,p)
     }
     fn evaluate_follow<F, B>(
         self,
@@ -614,6 +628,19 @@ mod tests {
                 .all(|(a, b)| a.to_bits() == b.to_bits()));
             assert!(crate::decode_query(&frame).is_err());
         }
+    }
+    #[test]
+    fn compressed_base_follow_decodes_and_rejects_trailing_planes() {
+        let mut r=request(1,20);r.op="delta_partial_mlp_prepare".into();
+        let prep=C/256+2*R+64;let mut payload=vec![4];let packed_len=4*(5+C);
+        payload.extend((packed_len as u32).to_le_bytes());payload.extend(vec![0;3*C]);
+        for _ in 0..C/256 {payload.extend(1f32.to_le_bytes());}
+        payload.extend(vec![0;4*(prep-C/256+R)]);
+        for _ in 0..4 {payload.push(0);payload.extend((C as u32).to_le_bytes());payload.extend(vec![0;C]);}
+        let remain=12;payload.extend(vec![0;2*(3*remain*256+45*remain/2*128)+4*45*(remain*128+remain)]);
+        assert!(PreparedMlpDeltaStream::decode(&r,&payload).is_ok());
+        payload.push(0);assert!(PreparedMlpDeltaStream::decode(&r,&payload).is_err());
+        payload[1..5].copy_from_slice(&u32::MAX.to_le_bytes());assert!(PreparedMlpDeltaStream::decode(&r,&payload).is_err());
     }
     #[test]
     fn partial_down_progress_is_explicit_and_bound() {

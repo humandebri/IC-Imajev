@@ -11,6 +11,21 @@ class TailDecisionReplayTests(TerminalDecisionTests):
   return t.run('terminal_tail_integer',np.zeros(5120,np.float32),[1,0],tensor='model.language_model.layers.30.post_attention_layernorm.weight')
 
 class TailGraphTests(unittest.TestCase):
+ def test_supplied_terminal_attention_still_runs_mlp(self):
+  with tempfile.TemporaryDirectory()as directory:
+   class FakeTransport:
+    def __init__(self):self.directory=pathlib.Path(directory);self.measurements=[];self.calls=[]
+    def run(self,op,values,dims=(),**kwargs):
+     self.calls.append(op);self.measurements.append(dict(ok=dict(instructions=1,request_bytes=1,reply_bytes=1)))
+     if op!='terminal_mlp_integer':raise AssertionError(op)
+     np.testing.assert_array_equal(values[:2560],np.ones(2560,np.float32))
+     np.testing.assert_array_equal(values[2560:],np.full(2560,2.,np.float32))
+     return np.concatenate([np.full(2560,3.,np.float32),np.full(2560,4.,np.float32)])
+   t=FakeTransport();g=TextGraph.__new__(TextGraph);g.t=t;g.layers=[];g.fuse_terminal_tail=False;g.fuse_terminal_attention=True;g.terminal_readout=True;g.fuse_add_norm=True;g.arithmetic='int8';g.recorded_hidden=lambda x,l:x
+   g.norm=lambda *args:(_ for _ in ()).throw(AssertionError('redundant norm'))
+   g.terminal_attention_mlp=lambda *args:(_ for _ in ()).throw(AssertionError('repeated attention'))
+   out=g.forward([1],initial_hidden=np.ones((1,2560),np.float32),start_layer=31,first_attention=np.full((1,2560),2.,np.float32))
+   self.assertEqual(t.calls,['terminal_mlp_integer']);self.assertTrue(np.all(out==4.))
  def test_final_two_layers_keep_distinct_hidden_and_kv(self):
   with tempfile.TemporaryDirectory()as directory:
    class FakeTransport:

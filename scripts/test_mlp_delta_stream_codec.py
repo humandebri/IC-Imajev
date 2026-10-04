@@ -35,6 +35,14 @@ class PairCodecTests(unittest.TestCase):
     inner=dict(h,encoding=DOWN_NAME,op='mlp_prepare_down',dims=[n,C],tensor='model.language_model.layers.1.post_attention_layernorm.weight',aux=['model.language_model.layers.2.input_layernorm.weight'])
     wire=b'\3'+encode_payload(inner,prepared)+(cv.view('<u4')>>16).astype('<u2').tobytes();expected=np.concatenate([prepared,cv]);self.assertEqual(decode_reply(h,wire).tobytes(),expected.tobytes())
     with self.assertRaises(ValueError):decode_reply(h,payload)
+ def test_compressed_base_retains_exact_lanes_and_fits_89_head20(self):
+  import struct
+  from mlp_delta_carry import planar
+  h=header(89,20);h['op']='delta_partial_mlp_prepare';_,x=reply(89,20);remaining=12
+  cv=np.zeros(3*remaining*256,np.float32);log=np.zeros(45*(remaining//2*128+remaining*128+remaining),np.float32)
+  with self.assertRaises(ValueError):encode_continue_request(h,x,cv,log)
+  packet=encode_continue_request(h,x,cv,log,compress_base=True)
+  self.assertLess(len(packet),2_000_000);offset=4+int.from_bytes(packet[:4],'little');self.assertEqual(packet[offset],4)
  def test_partial_down_progress_is_bound_and_shape_unchanged(self):
   h=header(1,22);h['op']='delta_partial_mlp_prepare_down';h['dims'].append(1600)
   self.assertEqual(layout(h),(1,5120,4096,22,45))
