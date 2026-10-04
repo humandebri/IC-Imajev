@@ -7,7 +7,7 @@ C,H,KV=2560,9216,2048
 
 def layout(h):
     d=h.get('dims',[]);s=h.get('scalars',[]);a=h.get('aux',[])
-    if h.get('encoding')!=NAME or h.get('op')!='mlp_finish_attention_full' or len(d)!=3 or any(type(x)is not int for x in d) or len(a)!=1 or len(s)!=2 or not np.array_equal(np.asarray(s,dtype='<f4').view('<u4'),np.asarray([2.,1e-6],dtype='<f4').view('<u4')):raise ValueError('MLP attention metadata')
+    if h.get('encoding')!=NAME or h.get('op')not in ('mlp_finish_attention_full','mlp_finish_attention_full_compact') or len(d)!=3 or any(type(x)is not int for x in d) or len(a)!=1 or len(s)!=2 or not np.array_equal(np.asarray(s,dtype='<f4').view('<u4'),np.asarray([2.,1e-6],dtype='<f4').view('<u4')):raise ValueError('MLP attention metadata')
     n,p,rows=d
     if not 1<=n<=89 or not 0<=p<=132 or not 0<rows<C or rows%32:raise ValueError('MLP attention bounds')
     m=re.fullmatch(r'model\.language_model\.layers\.(0|[1-9][0-9]*)\.post_attention_layernorm\.weight',h.get('tensor',''))
@@ -25,7 +25,7 @@ def encode_request(h,carry,prefix):
     return body+frame_digest(h,body)
 
 def decode_reply(h,payload):
-    n,_,_=layout(h);count=n*(3*C+KV)
+    n,_,_=layout(h);count=n*((2 if h['op']=='mlp_finish_attention_full_compact'else 3)*C+KV)
     if payload[:1]!=b'\0' or len(payload)!=1+2*count:raise ValueError('MLP attention reply length/direction')
     values=(np.frombuffer(payload[1:],dtype='<u2').astype('<u4')<<16).view('<f4')
     if not np.isfinite(values).all():raise ValueError('MLP attention reply finite')

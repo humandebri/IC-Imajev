@@ -5,7 +5,7 @@ import struct
 import numpy as np
 from mlp_stream_codec import C,H,R,NAME as MLP_NAME,encode_payload as encode_mlp
 NAME='mlp-delta-stream-exact-v1'
-FOLLOW=('delta_partial_mlp_prepare','delta_partial_mlp_prepare_down','delta_partial_mlp_full')
+FOLLOW=('delta_partial_mlp_prepare','delta_partial_mlp_prepare_down','delta_partial_mlp_full','delta_partial_finish')
 
 def layout(h):
     d=h.get('dims',[]);a=h.get('aux',[]);s=h.get('scalars',[])
@@ -18,7 +18,7 @@ def layout(h):
     return n,b,c,k,p
 
 def reply_count(h):
-    n,b,c,k,p=layout(h);return n*(2*C if h['op']=='delta_partial_mlp_full'else C+H+100)+3*(32-k)*256 if h['op'] in FOLLOW else n*(3*C+C//256+3*R+64)+3*k*256
+    n,b,c,k,p=layout(h);return n*(2*C if h['op'] in ('delta_partial_mlp_full','delta_partial_finish')else C+H+100)+3*(32-k)*256 if h['op'] in FOLLOW else n*(3*C+C//256+3*R+64)+3*k*256
 
 def encode_request(h,state,history,log,*,compress_residual=False,residual_raw_threshold=0.,residual_dictionary=False):
     from transport import frame_digest
@@ -40,8 +40,8 @@ def encode_request(h,state,history,log,*,compress_residual=False,residual_raw_th
 
 def decode_reply(h,payload):
     n,b,c,k,p=layout(h)
-    if h['op']=='delta_partial_mlp_full':
-        if payload[:1]!=b'\5'or len(payload)!=1+2*reply_count(h):raise ValueError('pair full reply length/direction')
+    if h['op']in ('delta_partial_mlp_full','delta_partial_finish'):
+        if payload[:1]!=bytes([8 if h['op']=='delta_partial_finish'else 5])or len(payload)!=1+2*reply_count(h):raise ValueError('pair full reply length/direction')
         v=(np.frombuffer(payload[1:],dtype='<u2').astype('<u4')<<16).view('<f4')
         if not np.isfinite(v).all():raise ValueError('pair full reply finite')
         return v

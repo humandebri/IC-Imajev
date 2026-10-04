@@ -6,7 +6,7 @@ const H: usize = 9216;
 const KV: usize = 2048;
 
 fn metadata(r: &Request) -> Result<(usize, usize, usize)> {
-    if r.encoding != NAME || r.op != "mlp_finish_attention_full" || r.dims.len() != 3
+    if r.encoding != NAME || !matches!(r.op.as_str(), "mlp_finish_attention_full" | "mlp_finish_attention_full_compact") || r.dims.len() != 3
         || r.aux.len() != 1 || r.scalars.len() != 2
         || r.scalars[0].to_bits() != 2f32.to_bits()
         || r.scalars[1].to_bits() != 1e-6f32.to_bits() {
@@ -36,7 +36,7 @@ fn inner(r: &Request) -> Result<Request> {
 }
 pub(crate) fn reply_count(r: &Request) -> Result<usize> {
     let (n, _, _) = metadata(r)?;
-    Ok(n * (3 * C + KV))
+    Ok(n * (if r.op == "mlp_finish_attention_full_compact" {2 * C} else {3 * C} + KV))
 }
 /// Input fields and their complete request binding cannot be forged externally.
 /// ```compile_fail
@@ -84,6 +84,7 @@ impl PreparedMlpAttentionFinish {
         let (attention, used_attention) = crate::profile::measure("bridge_attention_full", ||
             crate::attention_full::evaluate(&ar, &input, m, read))?;
         if attention.len() != n * (C + KV) {return Err("MLP attention finish attention shape".into());}
+        if r.op == "mlp_finish_attention_full_compact" {both.truncate(n * C);}
         both.extend(attention);
         Ok((both, used_mlp.checked_add(used_attention).ok_or("MLP attention finish read overflow")?))
     }
@@ -117,6 +118,16 @@ mod tests {
         for n in [1,7,87,89] {let r=request(n);let p=payload(&r);assert!(p.len()+16424<2_000_000);assert!(PreparedMlpAttentionFinish::decode(&r,&p).is_ok());
             let v=vec![-0.;reply_count(&r).unwrap()];let frame=crate::encode(&r,&v).unwrap();let(_,out)=crate::decode(&frame).unwrap();assert!(v.iter().zip(out).all(|(a,b)|a.to_bits()==b.to_bits()));assert!(frame.len()<2_000_000);
             assert!(crate::decode_query(&frame).is_err());
+        }
+    }
+    #[test]fn compact_reply_omits_only_unused_norm_and_keeps_legacy_contract() {
+        for n in [1,87,89] {
+            let mut r=request(n);let legacy=reply_count(&r).unwrap();r.op="mlp_finish_attention_full_compact".into();
+            assert_eq!(legacy-reply_count(&r).unwrap(),n*C);
+            assert!(PreparedMlpAttentionFinish::decode(&r,&payload(&r)).is_ok());
+            let v=vec![-0.;reply_count(&r).unwrap()];let frame=crate::encode(&r,&v).unwrap();
+            assert!(crate::decode(&frame).unwrap().1.iter().all(|x|x.to_bits()==(-0f32).to_bits()));
+            assert!(crate::encode(&r,&vec![0.;legacy]).is_err());
         }
     }
     #[test]fn malformed_input_and_all_identity_fields_fail_before_reads() {

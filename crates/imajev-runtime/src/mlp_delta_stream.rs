@@ -4,7 +4,7 @@ use crate::{
     Manifest, Request, Result,
 };
 pub(crate) const NAME: &str = "mlp-delta-stream-exact-v1";
-fn is_follow(r: &Request) -> bool {matches!(r.op.as_str(), "delta_partial_mlp_prepare" | "delta_partial_mlp_prepare_down" | "delta_partial_mlp_full")}
+fn is_follow(r: &Request) -> bool {matches!(r.op.as_str(), "delta_partial_mlp_prepare" | "delta_partial_mlp_prepare_down" | "delta_partial_mlp_full" | "delta_partial_finish")}
 const C: usize = 2560;
 const H: usize = 9216;
 const R: usize = 64;
@@ -12,7 +12,7 @@ fn metadata(r: &Request) -> Result<(usize, usize, usize, usize, usize, usize)> {
     if r.encoding != NAME
         || !matches!(
             r.op.as_str(),
-            "mlp_complete_delta_partial" | "delta_partial_mlp_prepare" | "delta_partial_mlp_prepare_down" | "delta_partial_mlp_full"
+            "mlp_complete_delta_partial" | "delta_partial_mlp_prepare" | "delta_partial_mlp_prepare_down" | "delta_partial_mlp_full" | "delta_partial_finish"
         )
         || r.dims.len() != if r.op == "delta_partial_mlp_prepare_down" {6} else {5}
         || (r.op == "delta_partial_mlp_prepare_down" && !crate::mlp_pipeline::valid_partial_rows(*r.dims.get(5).unwrap_or(&0)))
@@ -68,7 +68,7 @@ fn inner(r: &Request) -> Result<Request> {
 pub(crate) fn reply_count(r: &Request) -> Result<usize> {
     let (n, _, _, h, _, _) = metadata(r)?;
     Ok(if is_follow(r) {
-        n * (if r.op=="delta_partial_mlp_full" {2*C}else{C+H+100}) + 3 * (32 - h) * 256
+        n * (if matches!(r.op.as_str(),"delta_partial_mlp_full"|"delta_partial_finish") {2*C}else{C+H+100}) + 3 * (32 - h) * 256
     } else {
         n * (2 * C + C / 256 + 2 * R + 64 + C + R) + 3 * h * 256
     })
@@ -302,9 +302,10 @@ impl PreparedMlpDeltaStream {
         let (attention, used) = crate::int8_k_continue::evaluate(&kr, &state, m, read)?;
         bytes += used;
         drop(state);
-        let mr = next_mlp(r)?;
         let mut pair = hidden;
         pair.extend(attention);
+        if r.op == "delta_partial_finish" {pair.extend(history);return Ok((pair, bytes));}
+        let mr = next_mlp(r)?;
         let (mut out, used) = crate::profile::measure("pair_next_mlp_prepare", || {
             if mr.op == "mlp_full_integer" {
                 crate::mlp_pipeline::full(&mr,&pair,m,read)
@@ -485,7 +486,7 @@ pub(crate) fn append_reply(b: &mut Vec<u8>, r: &Request, x: &[f32]) -> Result<()
     if x.len() != reply_count(r)? || !x.iter().all(|v| v.is_finite()) {
         return Err("pair reply length/finite".into());
     }
-    if r.op=="delta_partial_mlp_full" {b.push(5);return pack_bf(b,x);}
+    if matches!(r.op.as_str(),"delta_partial_mlp_full"|"delta_partial_finish") {b.push(if r.op=="delta_partial_finish"{8}else{5});return pack_bf(b,x);}
     if is_follow(r) {
         b.push(3);
         let c = n * (C + H + 100);
@@ -526,8 +527,8 @@ pub(crate) fn append_reply(b: &mut Vec<u8>, r: &Request, x: &[f32]) -> Result<()
 }
 pub(crate) fn decode_reply(r: &Request, payload: &[u8]) -> Result<Vec<f32>> {
     let (n, _, _, h, _, _) = metadata(r)?;
-    if r.op=="delta_partial_mlp_full" {
-        if payload.first()!=Some(&5)||payload.len()!=1+2*reply_count(r)?{return Err("pair full reply length/direction".into());}
+    if matches!(r.op.as_str(),"delta_partial_mlp_full"|"delta_partial_finish") {
+        if payload.first()!=Some(&if r.op=="delta_partial_finish"{8}else{5})||payload.len()!=1+2*reply_count(r)?{return Err("pair full reply length/direction".into());}
         let mut out=vec![0.;reply_count(r)?];crate::bf16_codec::unpack(&payload[1..],&mut out);if !out.iter().all(|v|v.is_finite()){return Err("pair full reply finite".into());}return Ok(out);
     }
     if is_follow(r) {
@@ -827,5 +828,21 @@ mod direct_reply_tests {
         prep.gates[0]=1.1;assert!(direct_pair_payload(&r,&hidden,&prep,&base,&ax,&history).is_err());prep.gates[0]=0.5;
         prep.qa[0]=f32::INFINITY;assert!(direct_pair_payload(&r,&hidden,&prep,&base,&ax,&history).is_err());prep.qa[0]=0.;
         r.op="delta_partial_mlp_prepare".into();assert!(direct_pair_payload(&r,&hidden,&prep,&base,&ax,&history).is_err());
+    }
+}
+
+#[cfg(test)]
+mod finish_only_tests {
+    use super::*;
+    #[test]fn finish_only_reply_is_separate_from_mlp_and_request_direction() {
+        for n in [1,87,89] {
+            let r:Request=serde_json::from_value(serde_json::json!({"version":3,"model":"a".repeat(64),"pack_hash":"b".repeat(64),"input_hash":"c".repeat(64),"step":1,"op":"delta_partial_finish","encoding":NAME,"tensor":"model.language_model.layers.29.post_attention_layernorm.weight","dims":[n,4352,4864,20,45],"scalars":[2.,1e-6],"aux":["model.language_model.layers.30.input_layernorm.weight"]})).unwrap();
+            let v=vec![-0.;reply_count(&r).unwrap()];let mut b=vec![];append_reply(&mut b,&r,&v).unwrap();assert_eq!(b[0],8);
+            assert!(decode_reply(&r,&b).unwrap().iter().all(|x|x.to_bits()==(-0f32).to_bits()));
+            assert!(PreparedMlpDeltaStream::decode(&r,&b).is_err());
+            let mut wrong=r.clone();wrong.op="delta_partial_mlp_full".into();assert!(decode_reply(&wrong,&b).is_err());
+            assert!(decode_reply(&r,&b[..b.len()-1]).is_err());
+            let end=b.len();b[end-2..].copy_from_slice(&0x7fc0u16.to_le_bytes());assert!(decode_reply(&r,&b).is_err());
+        }
     }
 }

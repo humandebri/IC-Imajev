@@ -17,3 +17,7 @@ Rust 138 unit（1 ignored）、15 integration、11 doc、Python境界2テスト�
 命令削減とは評価しない。v1は診断比較用にMLP normも返すため、encoderと返送に余分な処理が残る。次は後続で不要なnormの返送を除去し、8query連結と全体graphへ接続して実測する。初期prefix準備、partial carryを取得するcontrol、profile再実行は診断用で、実経路の呼び出し数とは分けて記録する。
 
 最終module `1fe829f353f7e7ddd45db7559cecc1b3ee7f61a62b9300dc3bf961c5ff974989`、build `artifacts/mlp_attention_finish/full-build-v1`、4WAT patch wasmparser検証済み。準備721 update、cache4,065,416,192 bytes、78,739,929,194命令。元BF16モデルとの精度評価は別で、最大変更の見逃しは未解消。
+
+## 後続のcompact返信と全体接続
+
+不要なnorm返送を省くAPIと、終端のDelta完了専用APIを追加し、主54→51queryの全体経路を実測した。命令・通信の増加も含めて[全体結果](JOINED_QUERY.md)を参照する。v1証跡は保存し、後続結果と混同しない。

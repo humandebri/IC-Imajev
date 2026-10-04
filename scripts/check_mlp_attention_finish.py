@@ -11,7 +11,7 @@ from mlp_attention_finish_codec import NAME,C,H,encode_request
 from mlp_codec import NAME as DOWN
 ap=argparse.ArgumentParser(description=__doc__)
 for name in ['canister','wasm','directory']:ap.add_argument('--'+name,required=True)
-ap.add_argument('--cases',default='617,insufficient,maximum');ap.add_argument('--layers',default='6,14,22');ap.add_argument('--rows',default='768,1280');a=ap.parse_args()
+ap.add_argument('--compact',action='store_true');ap.add_argument('--cases',default='617,insufficient,maximum');ap.add_argument('--layers',default='6,14,22');ap.add_argument('--rows',default='768,1280');a=ap.parse_args()
 labels=selections(a.cases,('617','insufficient','maximum'),'cases');layers=list(map(int,selections(a.layers,tuple(map(str,range(2,30,4))),'layers')));widths=list(map(int,selections(a.rows,tuple(map(str,range(32,C,32))),'rows')))
 d=ROOT/a.directory
 if (d/'report.json').exists():raise ValueError('Use a new evidence directory')
@@ -30,12 +30,12 @@ try:
    for rows in widths:
     t.wire_codec=DOWN;state=t.run('mlp_prepare_partial_down',x,[n,C,rows],[2.,1e-6],tensor=mh['tensor'],aux=mh['aux'],input_hash=mh['input_hash'])
     finished=t.run('mlp_down_norm_partial_prepared',state,[n,C,rows],[2.,1e-6],tensor=mh['tensor'],aux=mh['aux'],input_hash=mh['input_hash']);assert finished.tobytes()==expected_mlp.tobytes();control_mlp=t.measurements[-1]
-    h=dict(mh,version=3,step=t.index,encoding=NAME,op='mlp_finish_attention_full',dims=[n,p,rows]);index=t.index;packet=encode_request(h,state,ax[n*C:])
+    h=dict(mh,version=3,step=t.index,encoding=NAME,op='mlp_finish_attention_full_compact'if a.compact else'mlp_finish_attention_full',dims=[n,p,rows]);index=t.index;packet=encode_request(h,state,ax[n*C:])
     try:y=t._run_encoded(h,packet)
     except RuntimeError as error:
      if not is_instruction_limit(error):raise
      records.append(dict(label=label,layer=layer,rows=rows,success=False,error=str(error),failed_request=f'{index:06d}.request.bin'));continue
-    expected=np.concatenate([expected_mlp,expected_attention]);assert y.tobytes()==expected.tobytes();call=t.measurements[-1]
+    expected=np.concatenate([expected_mlp[:n*C]if a.compact else expected_mlp,expected_attention]);assert y.tobytes()==expected.tobytes();call=t.measurements[-1]
     request=d/f'{index:06d}.request.bin';out=d/f'{index:06d}.profile.response.bin';profile=t.command(dict(op='profile',input=str(request),output=str(out)));assert decode(out.read_bytes())[1].tobytes()==expected.tobytes();(d/f'{index:06d}.profile.json').write_text(json.dumps(profile,indent=2)+'\n')
     old=[control_mlp,control_attention];row=dict(label=label,layer=layer,tokens=n,rows=rows,success=True,full_bitwise_equal=True,call=call,control_calls=old,profile=profile,instruction_saving=sum(c['ok']['instructions']for c in old)-call['ok']['instructions'],candid_saving=sum(c['ok']['request_bytes']+c['ok']['reply_bytes']for c in old)-call['ok']['request_bytes']-call['ok']['reply_bytes']);records.append(row);print(json.dumps(row),flush=True)
  verify_module(t,module)
