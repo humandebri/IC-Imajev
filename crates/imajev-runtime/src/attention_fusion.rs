@@ -72,7 +72,10 @@ where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
     if n==0 || n>132 || total<n || total>512 || offset!=total-n || first%4!=0 || heads==0 || heads>16 || heads%4!=0 || first.checked_add(heads).is_none_or(|end|end>16) {return Err("attention Q bounds".into());}
     if prepared.is_some_and(|q|q.rows()!=n || q.cols()!=COLS){return Err("attention shared quantization shape".into());}
     if ax.is_some_and(|a|a.len()!=n*64 || !a.iter().all(|v|v.is_finite())){return Err("attention shared Q A shape/finite".into());}
-    let groups=heads/4;let count=n*COLS;let kv=groups*total*256;
+    let groups=heads/4;let kv=groups*total*256;
+    // Private prepared path needs only KV: original Q input and A were carried
+    // together and validated above. Unprepared public paths still require norm.
+    let count=if prepared.is_some() && ax.is_some() && x.len()==2*kv {0}else{n*COLS};
     if x.len()!=count+2*kv || x.len()>MAX_FLOATS || heads*(n*(n+1)/2+n*offset)*256>75_000_000 {return Err("attention Q input/work".into());}
     let root=r.tensor.strip_suffix(".q_proj.weight").filter(|name|name.ends_with(".self_attn")).ok_or("attention Q tensor")?;
     let request=projection(r,m,r.tensor.clone(),n,heads*512,first*512)?;
@@ -120,7 +123,9 @@ mod tests {
         let(full,_)=evaluate_shared(&r,&payload,&m,&mut read,Some(&q)).unwrap();let(ax,_)=prepare_q_a(&r,&norm,&m,&mut read).unwrap();let mut chunks=vec![];
         for (first,heads) in [(0,4),(4,12)]{let mut part=r.clone();part.dims[3]=first;part.dims[4]=heads;let mut x=norm.clone();for k in 0..2{let start=(k*4+first/4)*total*256;x.extend_from_slice(&kv[start..start+heads/4*total*256]);}
             let(ordinary,ordinary_bytes)=evaluate_shared(&part,&x,&m,&mut read,Some(&q)).unwrap();let(shared,shared_bytes)=evaluate_shared_with_a(&part,&x,&m,&mut read,Some(&q),Some(&ax)).unwrap();
-            assert_eq!(ordinary.iter().map(|v|v.to_bits()).collect::<Vec<_>>(),shared.iter().map(|v|v.to_bits()).collect::<Vec<_>>());assert_eq!(ordinary_bytes-shared_bytes,(64*COLS*4)as u64);chunks.push(shared);
+            assert_eq!(ordinary.iter().map(|v|v.to_bits()).collect::<Vec<_>>(),shared.iter().map(|v|v.to_bits()).collect::<Vec<_>>());assert_eq!(ordinary_bytes-shared_bytes,(64*COLS*4)as u64);
+            let(compact,compact_bytes)=evaluate_shared_with_a(&part,&x[n*COLS..],&m,&mut read,Some(&q),Some(&ax)).unwrap();
+            assert_eq!(shared.iter().map(|v|v.to_bits()).collect::<Vec<_>>(),compact.iter().map(|v|v.to_bits()).collect::<Vec<_>>());assert_eq!(shared_bytes,compact_bytes);chunks.push(shared);
         }
         let mut joined=vec![];for t in 0..n{joined.extend_from_slice(&chunks[0][t*1024..(t+1)*1024]);joined.extend_from_slice(&chunks[1][t*3072..(t+1)*3072]);}
         assert_eq!(full.iter().map(|v|v.to_bits()).collect::<Vec<_>>(),joined.iter().map(|v|v.to_bits()).collect::<Vec<_>>());

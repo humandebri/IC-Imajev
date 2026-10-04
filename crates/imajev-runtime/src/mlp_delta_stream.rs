@@ -73,6 +73,19 @@ pub(crate) fn reply_count(r: &Request) -> Result<usize> {
         n * (2 * C + C / 256 + 2 * R + 64 + C + R) + 3 * h * 256
     })
 }
+// Dimensions are bounded by metadata; compressed descriptors never size allocations.
+fn expand_residual(n:usize,begin:usize,p:&[u8])->Result<Vec<u8>> {
+    if p.len()<9 || p[0]!=1 || u32::from_le_bytes(p[1..5].try_into().unwrap())as usize!=begin {return Err("pair residual progress".into());}
+    let size=u32::from_le_bytes(p[5..9].try_into().unwrap())as usize;
+    let end=9usize.checked_add(size).filter(|&end|end<=p.len()).ok_or("pair residual length")?;
+    let tail=n*(C+begin+4*(C/256+begin/256+3*R));
+    if p.len()-end!=tail {return Err("pair residual tail".into());}
+    let mut groups=crate::carry_planes::decode(&p[9..end],&[(n*C,2)])?;
+    let planes=groups.pop().ok_or("pair residual planes")?;
+    let mut out=Vec::with_capacity(5+2*n*C+tail);out.extend_from_slice(&p[..5]);
+    for i in 0..n*C {out.push(planes[i]);out.push(planes[n*C+i]);}
+    out.extend_from_slice(&p[end..]);Ok(out)
+}
 /// Validated complete MLP input remains attached to the whole fusion request.
 /// ```compile_fail
 /// let mut x: imajev_runtime::PreparedMlpDeltaStream = todo!();
@@ -93,11 +106,11 @@ pub struct PreparedMlpDeltaStream {
 }
 impl PreparedMlpDeltaStream {
     pub(crate) fn decode(r: &Request, payload: &[u8]) -> Result<Self> {
-        let (n, _, _, h, p, _) = metadata(r)?;
+        let (n, begin, _, h, p, _) = metadata(r)?;
         if is_follow(r) {
             return Self::decode_follow(r, payload, n, h, p);
         }
-        if payload.first() != Some(&1) || payload.len() < 5 {
+        if !matches!(payload.first(),Some(&1)|Some(&6)) || payload.len() < 5 {
             return Err("pair request direction".into());
         }
         let len = u32::from_le_bytes(payload[1..5].try_into().unwrap()) as usize;
@@ -112,7 +125,12 @@ impl PreparedMlpDeltaStream {
             return Err("pair prefix length".into());
         }
         let mlp_request = inner(r)?;
-        let mlp = crate::PreparedMlpStream::decode(&mlp_request, &payload[5..end])?;
+        let expanded;
+        let carry=if payload[0]==6 {
+            expanded=crate::profile::measure("pair_residual_planes",||expand_residual(n,begin,&payload[5..end]))?;
+            &expanded[..]
+        }else{&payload[5..end]};
+        let mlp = crate::PreparedMlpStream::decode(&mlp_request, carry)?;
         let mut history = vec![0.; hc];
         crate::bf16_codec::unpack(&payload[end..end + 2 * hc], &mut history);
         let mut log = vec![0.; kc];
@@ -718,6 +736,16 @@ mod tests {
 }
 #[cfg(test)]mod full_follow_tests {
  use super::*;
+ #[test]fn residual_planes_preserve_bytes_and_reject_malformed(){
+  let(n,begin)=(1,256);let tail=n*(C+begin+4*(C/256+begin/256+3*R));
+  let mut planes=vec![];for byte in [0u8,128] {planes.push(2);planes.extend(1u32.to_le_bytes());planes.push(byte);}
+  let mut p=vec![1];p.extend((begin as u32).to_le_bytes());p.extend((planes.len()as u32).to_le_bytes());p.extend(planes);p.extend(vec![17;tail]);
+  let mut expected=vec![1];expected.extend((begin as u32).to_le_bytes());expected.extend(vec![0,128].repeat(n*C));expected.extend(vec![17;tail]);
+  assert_eq!(expand_residual(n,begin,&p).unwrap(),expected);
+  let mut bad=p.clone();bad[1]=1;assert!(expand_residual(n,begin,&bad).is_err());
+  bad=p.clone();bad[5..9].copy_from_slice(&u32::MAX.to_le_bytes());assert!(expand_residual(n,begin,&bad).is_err());
+  bad=p.clone();bad.push(0);assert!(expand_residual(n,begin,&bad).is_err());p.pop();assert!(expand_residual(n,begin,&p).is_err());
+ }
  #[test]fn full_reply_preserves_bits_and_rejects_wrong_direction(){
   let r:Request=serde_json::from_value(serde_json::json!({"version":1,"model":"a".repeat(64),"pack_hash":"b".repeat(64),"input_hash":"c".repeat(64),"step":0,"op":"delta_partial_mlp_full","encoding":NAME,"tensor":"model.language_model.layers.3.post_attention_layernorm.weight","dims":[1,5376,3840,24,45],"scalars":[2.,1e-6],"aux":["model.language_model.layers.4.input_layernorm.weight"]})).unwrap();
   let v=vec![-0.;reply_count(&r).unwrap()];let frame=crate::encode(&r,&v).unwrap();let(_,decoded)=crate::decode(&frame).unwrap();assert_eq!(v.iter().map(|v|v.to_bits()).collect::<Vec<_>>(),decoded.iter().map(|v|v.to_bits()).collect::<Vec<_>>());let mut raw=vec![];append_reply(&mut raw,&r,&v).unwrap();raw[0]=3;assert!(decode_reply(&r,&raw).is_err());assert_eq!(next_mlp(&r).unwrap().op,"mlp_full_integer");

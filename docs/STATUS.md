@@ -1,3 +1,5 @@
+2026-10-04継続: 不要norm/KVの再送・展開を除くcompact Attentionを追加。87 token/5888行の部分queryで27.11M命令・801,776 bytes減、参照carry bit一致。可逆残差圧縮も追加したが、主5連結は依然上限超過。全6条件/連結3条件回帰通過、全体54 query・50/32未達。[実測と限界](COMPACT_ATTENTION_CARRY.md)。
+
 2026-10-04継続レビュー: 分割Attentionのprefix二重コピーと、五連結後段失敗時の成功metric/profile欠落を修正。Delta/MLPの連結APIを追加し80 tokenの部分経路が一致。主87 tokenは第五query上限超過で、主全体54 query・50/32未達。 [実装と失敗境界](ROLL_JOIN_REVIEW_2026_10_04.md)。
 
 2026-10-04継続: Qを4+12 headへ分割し元F32 A積を共有。全7箇所×3入力×2幅の42条件でMLP前半5120/5376行が成立し全出力一致。全6条件/現行連結3条件回帰・54件の再開も確認。全体未接続で主54 query・50/32未達。 [実測](ATTENTION_Q4_CARRY.md)。

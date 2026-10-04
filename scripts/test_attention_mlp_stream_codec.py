@@ -29,4 +29,18 @@ class Tests(unittest.TestCase):
    with self.assertRaises(ValueError):encode_request(h,bad,prefix)
    bad=expected.copy();bad[bf+n*C+n*C//256]=.1234567
    with self.assertRaisesRegex(ValueError,'BF16'):encode_request(h,bad,prefix)
+ def test_compact_q4_omits_only_norm_and_duplicate_kv(self):
+  from mlp_stream_codec import encode_payload,NAME as MLP
+  import json,struct
+  for n in [1,80,87,89]:
+   h=self.h(n);h.update(op='attention_finish_mlp_front_q4',tensor='model.language_model.layers.3.post_attention_layernorm.weight',aux=['model.language_model.layers.4.input_layernorm.weight'],dims=[n,6144,45])
+   bf=n*(2*C+KV);v=np.concatenate([np.full(bf,-0.,np.float32),np.full(n*C,-127.,np.float32),np.full(n*C//256,.0123,np.float32),np.full(n*1024,-0.,np.float32),np.full(n*64,.01234567,np.float32)])
+   prefix=np.zeros(45*KV,np.float32)
+   def payload(frame):
+    size=struct.unpack('<I',frame[:4])[0];return frame[4+size:-32]
+   old=payload(encode_request(h,v,prefix));h['op']='attention_finish_mlp_front_q4_compact';new=payload(encode_request(h,v,prefix))
+   self.assertEqual(new,b'\6'+old[1:1+2*n*C]+old[1+4*n*C:]);self.assertEqual(len(old)-len(new),2*n*C)
+   inner=dict(h,encoding=MLP,op='mlp_stream_prepare',dims=[n,0,6144]);state=carry(n,6144);raw=b'\7'+encode_payload(inner,state)
+   self.assertEqual(decode_reply(h,raw).tobytes(),state.tobytes())
+   with self.assertRaises(ValueError):decode_reply(h,b'\3'+raw[1:])
 if __name__=='__main__':unittest.main()

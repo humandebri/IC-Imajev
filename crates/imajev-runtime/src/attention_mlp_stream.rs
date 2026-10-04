@@ -14,9 +14,10 @@ fn complete(r: &Request) -> bool {
 fn q4(r: &Request) -> bool {
     matches!(
         r.op.as_str(),
-        "mlp_complete_attention_kv_q4" | "attention_finish_mlp_front_q4"
+        "mlp_complete_attention_kv_q4" | "attention_finish_mlp_front_q4" | "attention_finish_mlp_front_q4_compact"
     )
 }
+fn compact(r:&Request)->bool {r.op=="attention_finish_mlp_front_q4_compact"}
 fn q_payload(
     norm: &[f32],
     kv: &[f32],
@@ -72,7 +73,7 @@ fn metadata(r: &Request) -> Result<(usize, usize, usize, usize)> {
         || !(complete
             || matches!(
                 r.op.as_str(),
-                "attention_finish_mlp_front" | "attention_finish_mlp_front_q4"
+                "attention_finish_mlp_front" | "attention_finish_mlp_front_q4" | "attention_finish_mlp_front_q4_compact"
             ))
         || r.dims.len() != if complete { 4 } else { 3 }
         || r.aux.len() != 1
@@ -136,7 +137,7 @@ pub(crate) fn limit(r: &Request) -> Result<usize> {
     Ok(if complete(r) {
         n * (3 * C + KV + C / 256 + if q4(r) { 1088 } else { 0 })
     } else {
-        crate::mlp_stream::limit(&mlp(r)?)? + n * KV
+        crate::mlp_stream::limit(&mlp(r)?)? + if compact(r) {0}else{n * KV}
     })
 }
 pub struct PreparedAttentionMlp {
@@ -172,13 +173,13 @@ impl PreparedAttentionMlp {
                 ax: vec![],
             });
         }
-        let base = n * (2 * C + KV);
+        let base = n * (if compact(r) { C }else{2*C} + KV);
         let gate = if q4(r) { n * 1024 } else { 0 };
         let bf = base + gate + offset * KV;
         let end = 1 + 2 * bf;
         let scales = n * C / 256;
         let a = if q4(r) { n * 64 } else { 0 };
-        if p.first() != Some(&if q4(r) { 5 } else { 2 })
+        if p.first() != Some(&if compact(r) {6}else if q4(r) { 5 } else { 2 })
             || p.len() != end + n * C + 4 * (scales + a)
         {
             return Err("attention MLP carry length/direction".into());
@@ -283,11 +284,13 @@ impl PreparedAttentionMlp {
         let v = self.values;
         let q = self.quant.ok_or("attention MLP quant state")?;
         let total = n + p;
-        let kv = &v[2 * count..2 * count + n * KV];
-        let prefix = &v[2 * count + n * KV..];
+        let kv_start=if compact(r) {count}else{2*count};
+        let kv = &v[kv_start..kv_start + n * KV];
+        let prefix = &v[kv_start + n * KV..];
         let first = if q4(r) { 4 } else { 0 };
         let heads = 16 - first;
-        let payload = q_payload(&v[count..2 * count], kv, prefix, n, p, first / 4, heads / 4);
+        let norm=if compact(r) {&[][..]}else{&v[count..2*count]};
+        let payload = q_payload(norm, kv, prefix, n, p, first / 4, heads / 4);
         let root = format!("model.language_model.layers.{layer}.self_attn");
         let mut qr = r.clone();
         qr.op = "attention_q_gqa_integer".into();
@@ -335,7 +338,7 @@ impl PreparedAttentionMlp {
             crate::mlp_stream::prepare_direct(&mlp(r)?, pair, m, read)
         })?;
         used += bytes;
-        state.extend_from_slice(kv);
+        if !compact(r) {state.extend_from_slice(kv);}
         Ok((state, used))
     }
 }
@@ -370,6 +373,7 @@ pub(crate) fn append(b: &mut Vec<u8>, r: &Request, v: &[f32]) -> Result<()> {
         }
         return Ok(());
     }
+    if compact(r) {b.push(7);return crate::mlp_stream::append(b,&mlp(r)?,v);}
     b.push(3);
     let end = v.len() - n * KV;
     crate::mlp_stream::append(b, &mlp(r)?, &v[..end])?;
@@ -407,6 +411,11 @@ pub(crate) fn decode_reply(r: &Request, p: &[u8]) -> Result<Vec<f32>> {
         bf.extend(ax);
         return Ok(bf);
     }
+    if compact(r) {
+        if p.first()!=Some(&7) {return Err("compact attention MLP reply direction".into());}
+        let v=crate::mlp_stream::decode_values(&mlp(r)?,&p[1..])?;
+        if v.len()!=limit(r)? {return Err("compact attention MLP reply count".into());}return Ok(v);
+    }
     if p.first() != Some(&3) || p.len() < 1 + 2 * n * KV {
         return Err("attention MLP reply direction".into());
     }
@@ -425,6 +434,20 @@ mod tests {
     use super::*;
     fn req() -> Request {
         serde_json::from_value(serde_json::json!({"version":1,"model":"a".repeat(64),"pack_hash":"b".repeat(64),"input_hash":"c".repeat(64),"step":0,"op":"attention_finish_mlp_front","encoding":NAME,"tensor":"model.language_model.layers.3.post_attention_layernorm.weight","dims":[1,4608,45],"scalars":[2.,1e-6],"aux":["model.language_model.layers.4.input_layernorm.weight"]})).unwrap()
+    }
+    #[test]
+    fn compact_carry_omits_norm_and_checks_direction() {
+        let mut r=req();r.op="attention_finish_mlp_front_q4_compact".into();
+        let bf=C+KV+1024+45*KV;
+        let mut p=vec![6];p.extend(vec![0;2*bf+C]);
+        for _ in 0..C/256 {p.extend(1f32.to_le_bytes());}
+        for _ in 0..64 {p.extend(0.01234567f32.to_le_bytes());}
+        let state=PreparedAttentionMlp::decode(&r,&p).unwrap();
+        assert_eq!(state.values.len(),C+KV+45*KV);
+        assert_eq!(state.gated.len(),1024);assert_eq!(state.ax.len(),64);
+        assert_eq!(limit(&r).unwrap(),crate::mlp_stream::limit(&mlp(&r).unwrap()).unwrap());
+        p[0]=5;assert!(PreparedAttentionMlp::decode(&r,&p).is_err());
+        p[0]=6;p.pop();assert!(PreparedAttentionMlp::decode(&r,&p).is_err());
     }
     #[test]
     fn checked_carry_identity_and_bounds() {
