@@ -21,6 +21,7 @@ ap.add_argument('--opt-level', choices=['1', '2', '3'], default='3')
 ap.add_argument('--strassen-raw',action='store_true')
 ap.add_argument('--strassen-output128',action='store_true')
 ap.add_argument('--f32-k-continue',action='store_true')
+ap.add_argument('--attention-mlp-stream',action='store_true')
 ap.add_argument('--mlp-stream',action='store_true')
 ap.add_argument('--mlp-delta-stream',action='store_true')
 ap.add_argument('--int8-k-continue',action='store_true')
@@ -57,6 +58,7 @@ if args.host_checksum:features += ',experimental-host-checksum'
 if args.strassen_raw:features += ',experimental-strassen-raw'
 if args.strassen_output128:features += ',experimental-strassen-output128'
 if args.f32_k_continue:features += ',experimental-f32-k-continue'
+if args.attention_mlp_stream:features += ',experimental-attention-mlp-stream'
 if args.mlp_stream:features += ',experimental-mlp-stream'
 if args.mlp_delta_stream:features += ',experimental-mlp-delta-stream'
 if args.int8_k_continue:features += ',experimental-int8-k-continue'
