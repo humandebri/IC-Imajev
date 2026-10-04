@@ -1,3 +1,5 @@
+2026-10-04継続レビュー: 分割Attentionのprefix二重コピーと、五連結後段失敗時の成功metric/profile欠落を修正。Delta/MLPの連結APIを追加し80 tokenの部分経路が一致。主87 tokenは第五query上限超過で、主全体54 query・50/32未達。 [実装と失敗境界](docs/ROLL_JOIN_REVIEW_2026_10_04.md)。
+
 2026-10-04継続: Qを4+12 headへ分割し元F32 A積を共有。全7箇所×3入力×2幅の42条件でMLP前半5120/5376行が成立し全出力一致。全6条件/現行連結3条件回帰・54件の再開も確認。全体未接続で主54 query・50/32未達。 [実測](docs/ATTENTION_Q4_CARRY.md)。
 
 2026-10-04再レビュー: request欠落時の不正checkpoint再利用とmetric識別情報の未検証を修正。再開/境界/codec計11テスト通過。canister演算は不変、主54 query・50/32未達。 [レビュー記録](docs/IMPLEMENTATION_REVIEW_2026_10_04_RESUME.md)。

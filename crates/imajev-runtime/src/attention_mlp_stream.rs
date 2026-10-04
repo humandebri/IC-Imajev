@@ -183,10 +183,13 @@ impl PreparedAttentionMlp {
         {
             return Err("attention MLP carry length/direction".into());
         }
-        let mut v = unpack_bf(&p[1..end])?;
-        let prefix = v.split_off(base + gate);
-        let gated = v.split_off(base);
-        v.extend(prefix);
+        // Unpack directly into the final layout; do not split off and copy
+        // the unchanged prefix twice on every legacy or Q4 request.
+        let mut v = vec![0.; base + offset * KV];
+        crate::bf16_codec::unpack(&p[1..1+2*base], &mut v[..base]);
+        crate::bf16_codec::unpack(&p[1+2*(base+gate)..end], &mut v[base..]);
+        if !v.iter().all(|v| v.is_finite()) {return Err("attention MLP carry finite".into());}
+        let gated = unpack_bf(&p[1+2*base..1+2*(base+gate)])?;
         let sx = unpack_f32(&p[end + n * C..end + n * C + 4 * scales])?;
         let q = QuantizedRows::from_bytes(n, C, &p[end..end + n * C], &sx)?;
         let ax = unpack_f32(&p[end + n * C + 4 * scales..])?;

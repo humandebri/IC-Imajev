@@ -177,6 +177,8 @@ pub fn int8_prefix(req: &Request, count: usize) -> Result<usize> {
     }
 }
 fn wire_float_limit(r: &Request) -> usize {
+ #[cfg(feature="experimental-mlp-delta-fusion")]
+ if mlp_delta_fusion::is_encoding(&r.encoding){return mlp_delta_fusion::reply_count(r).unwrap_or(0);}
  #[cfg(feature="experimental-attention-mlp-stream")]
  if r.encoding==attention_mlp_stream::NAME{return attention_mlp_stream::limit(r).unwrap_or(0);}
     #[cfg(feature="experimental-mlp-delta-stream")]
