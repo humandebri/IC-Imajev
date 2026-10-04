@@ -35,6 +35,8 @@ pub mod output_pairs;
 #[cfg(feature="experimental-prepared-activation")]
 pub mod prepared_activation;
 #[cfg(feature="experimental-delta-full-log")]
+mod delta_restore;
+#[cfg(feature="experimental-delta-full-log")]
 pub mod delta_log;
 #[cfg(feature="experimental-delta-full-log")]
 mod delta_recorded_simd;

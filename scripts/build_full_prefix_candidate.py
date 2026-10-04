@@ -35,6 +35,7 @@ ap.add_argument('--host-checksum',action='store_true')
 ap.add_argument('--prefix-start', action='store_true')
 ap.add_argument('--delta-no-writeback', action='store_true')
 ap.add_argument('--delta-state-layout', action='store_true')
+ap.add_argument('--prefix-update-hoist',action='store_true')
 ap.add_argument('--mlp-delta-fusion', action='store_true')
 ap.add_argument('--instruction-profile', action='store_true')
 args = ap.parse_args()
@@ -72,6 +73,7 @@ if args.instruction_profile:
     features += ',instruction-profile'
 if args.mlp_delta_fusion:
     features += ',experimental-mlp-delta-fusion'
+if args.prefix_update_hoist:features += ',experimental-prefix-update-hoist'
 if args.delta_state_layout:
     features += ',experimental-delta-state-layout'
 if args.delta_no_writeback:
