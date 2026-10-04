@@ -11,7 +11,7 @@ def layout(h):
  n,b,p=d
  if not 1<=n<=89 or not 0<b<=9216 or b%256 or not 1<=p<=132:raise ValueError('Delta MLP start bounds')
  m=re.fullmatch(r'model\.language_model\.layers\.(0|[1-9][0-9]*)\.post_attention_layernorm\.weight',h.get('tensor',''))
- if not m or (h['op']=='delta_mlp_stream_start_ids'and int(m[1])!=0) or int(m[1])>=30 or (int(m[1])+1)%4==0 or a[0]!=f'model.language_model.layers.{int(m[1])+1}.input_layernorm.weight':raise ValueError('Delta MLP start scope')
+ if not m or (h['op']=='delta_mlp_stream_start_ids'and int(m[1])!=0) or int(m[1])>30 or (int(m[1])+1)%4==0 or a[0]!=f'model.language_model.layers.{int(m[1])+1}.input_layernorm.weight':raise ValueError('Delta MLP start scope')
  return n,b,p
 
 def encode_request(h,hidden,norm,history,log):

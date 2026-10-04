@@ -28,12 +28,16 @@ def compare(new,old,refs):
 def main():
     ap=argparse.ArgumentParser(description=__doc__)
     for name in ['canister','wasm','base-proof','directory']:ap.add_argument('--'+name,required=True)
+    ap.add_argument('--tail-start',action='store_true');ap.add_argument('--tail-heads28',type=int,default=6);ap.add_argument('--tail-front28',type=int,default=5888);ap.add_argument('--tail-heads29',type=int,default=24);ap.add_argument('--tail-front30',type=int,default=512);ap.add_argument('--tail-down29',type=int,default=1024)
     ap.add_argument('--join-start',action='store_true');ap.add_argument('--cases',default='617,insufficient,maximum');a=ap.parse_args();d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=True);base=ROOT/a.base_proof
+    if any(d.iterdir()):raise ValueError('Use a fresh proof directory')
+    if not a.tail_start and (a.tail_heads28,a.tail_front28,a.tail_heads29,a.tail_front30,a.tail_down29)!=(6,5888,24,512,1024):raise ValueError('tail chunks require --tail-start')
     paths=list((ROOT/'client').glob('*.py'))+list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'canisters/inference/src').rglob('*.rs'))+[ROOT/p for p in ['Cargo.toml','Cargo.lock','crates/imajev-runtime/Cargo.toml','canisters/inference/Cargo.toml','MODEL_LOCK.json','checkpoints/full-int8.manifest.json','scripts/run_prefix_canister.py','scripts/proof_inputs.py','scripts/build_full_prefix_candidate.py']]+[pathlib.Path(__file__)]
     sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();hashes={str(p.relative_to(ROOT)):sha(p)for p in paths};module=sha(ROOT/a.wasm);rows=[]
     flags=['--compact-lossless','--compact-heads','--fuse-add-norm','--fuse-mlp','--fuse-mlp-norm','--fuse-norm-rope','--fuse-delta','--wide-mlp','--fuse-delta-input','--reuse-projection-inputs','--fuse-attention','--fuse-delta-projected','--fuse-delta-finish','--fuse-mlp-pipeline','--fuse-attention-full','--fuse-mlp-full','--fuse-delta-full-log','--terminal-readout','--fuse-terminal-attention','--fuse-terminal-decision','--fuse-terminal-tail','--fuse-prefix-start','--roll-start']
     records={'617':0,'insufficient':19,'maximum':11}
-    if a.join_start:flags.append('--join-start')
+    if a.join_start or a.tail_start:flags.append('--join-start')
+    if a.tail_start:flags+=['--tail-start','--tail-heads28',str(a.tail_heads28),'--tail-front28',str(a.tail_front28),'--tail-heads29',str(a.tail_heads29),'--tail-front30',str(a.tail_front30),'--tail-down29',str(a.tail_down29)]
     labels=selections(a.cases,tuple(records),'cases');refs={}
     for label in labels:
         old=ROOT/f'artifacts/output-pairs-v2-{label}'

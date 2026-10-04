@@ -1,3 +1,5 @@
+2026-10-04継続: 後段のcarryを再利用し、主132 token/情報不足は51→50通常queryで全体完走。採用INT8の返却hidden/state/判断がbit一致。主234,609,007,209命令（直前比0.3209%増）・通信149,353,220 bytes（0.6372%減）。最大変更89 tokenは62query、32未達。標準6条件回帰も通過。[実測と交換条件](docs/TAIL_QUERY.md)。
+
 2026-10-04レビュー: bridge単独featureでcanister型付きデコーダが無効になる依存欠落を修正。hidden可逆圧縮と後段stream/terminal接続を追加、境界・checkpointを検証。実canister検証/全体接続は後続、現状51query・50/32未達。[レビュー記録](docs/TAIL_STREAM_REVIEW.md)。
 
 2026-10-04継続: GQAでKVコピー/再帰検証を省き、積をSIMD化してF32加算順序を維持。実Wasm8条件、標準6/連結3条件がbit一致。主51query・69.27億命令（2.8767%）減・通信不変。主の後段5連結も成立、次要求2MB超過を保存。50/32未達。[実測と次の境界](docs/ATTENTION_VIEWS.md)。

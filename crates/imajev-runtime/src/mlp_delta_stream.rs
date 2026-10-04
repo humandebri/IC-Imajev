@@ -27,7 +27,7 @@ fn metadata(r: &Request) -> Result<(usize, usize, usize, usize, usize, usize)> {
     }
     let (n, b, c, h, p) = (r.dims[0], r.dims[1], r.dims[2], r.dims[3], r.dims[4]);
     if !(1..=89).contains(&n)
-        || (if plain(r) {b!=0}else{b==0})
+        || (if plain(r) {b!=0}else{b==0 && !is_follow(r)})
         || c == 0
         || b % crate::mlp_stream::STEP != 0
         || c % crate::mlp_stream::STEP != 0
@@ -62,7 +62,7 @@ fn metadata(r: &Request) -> Result<(usize, usize, usize, usize, usize, usize)> {
 fn inner(r: &Request) -> Result<Request> {
     let (n, b, c, _, _, _) = metadata(r)?;
     let mut i = r.clone();
-    if plain(r){i.op="mlp_full_integer".into();i.encoding="bf16-block256-exact-v1".into();i.dims=vec![n,C];return Ok(i);}
+    if b==0 {i.op="mlp_full_integer".into();i.encoding="bf16-block256-exact-v1".into();i.dims=vec![n,C];return Ok(i);}
     i.encoding = crate::mlp_stream::NAME.into();
     i.op = "mlp_stream_complete".into();
     i.dims = vec![n, b, c];
@@ -167,13 +167,24 @@ impl PreparedMlpDeltaStream {
         })
     }
     fn decode_follow(r: &Request, payload: &[u8], n: usize, h: usize, p: usize) -> Result<Self> {
-        if payload.first()==Some(&12) {
+        if matches!(payload.first(),Some(&12)|Some(&14)) {
             if payload.len()<9 {return Err("pair hidden length".into());}
-            let len=u32::from_le_bytes(payload[1..5].try_into().unwrap())as usize;
-            let end=5usize.checked_add(len).filter(|v|v.checked_add(4).is_some_and(|v|v<=payload.len())).ok_or("pair hidden range")?;
-            let planes=crate::profile::measure("pair_hidden_planes",||crate::carry_planes::decode(&payload[5..end],&[(n*C,2)]))?;
-            let mut plain=Vec::with_capacity(5+2*n*C+payload.len()-end-4);plain.push(10);plain.extend_from_slice(&payload[end..end+4]);
-            plain.resize(5+2*n*C,0);crate::carry_planes::interleave(&planes[0],&mut plain[5..])?;plain.extend_from_slice(&payload[end+4..]);
+            // Decode only the already quantized byte column; no scale or float
+            // changes. Descriptor lengths never determine output allocations.
+            let input_planes;
+            let body=if payload[0]==14 {
+                let len=u32::from_le_bytes(payload[1..5].try_into().unwrap())as usize;
+                let end=5usize.checked_add(len).filter(|v|v.checked_add(8).is_some_and(|v|v<=payload.len())).ok_or("pair input plane range")?;
+                input_planes=crate::profile::measure("pair_input_planes",||crate::carry_planes::decode(&payload[5..end],&[(n*C,1)]))?;
+                &payload[end..]
+            }else{input_planes=vec![];&payload[1..]};
+            let len=u32::from_le_bytes(body[..4].try_into().unwrap())as usize;
+            let end=4usize.checked_add(len).filter(|v|v.checked_add(4).is_some_and(|v|v<=body.len())).ok_or("pair hidden range")?;
+            let planes=crate::profile::measure("pair_hidden_planes",||crate::carry_planes::decode(&body[4..end],&[(n*C,2)]))?;
+            let mut plain=Vec::with_capacity(5+2*n*C+body.len()-end-4+if payload[0]==14{n*C}else{0});plain.push(10);plain.extend_from_slice(&body[end..end+4]);
+            plain.resize(5+2*n*C,0);crate::carry_planes::interleave(&planes[0],&mut plain[5..])?;
+            if payload[0]==14{plain.extend_from_slice(&input_planes[0]);}
+            plain.extend_from_slice(&body[end+4..]);
             return Self::decode_compressed_follow(r,&plain,n,h,p);
         }
         if matches!(payload.first(),Some(&4)|Some(&10)) {return Self::decode_compressed_follow(r,payload,n,h,p);}
@@ -921,6 +932,11 @@ mod new_tail_tests {
   assert_eq!(PreparedMlpDeltaStream::decode(&r,&p).unwrap().plain.unwrap().len(),2*C);
   for index in [0,2*C] {let mut bad=p.clone();bad[5+index..7+index].copy_from_slice(&0x7fc0u16.to_le_bytes());assert!(PreparedMlpDeltaStream::decode(&r,&bad).is_err());}
   assert!(PreparedMlpDeltaStream::decode(&r,&p[..p.len()-1]).is_err());let mut bad=r.clone();bad.dims[1]=128;bad.dims[2]=H-128;assert!(metadata(&bad).is_err());
+  for op in ["delta_partial_finish","delta_partial_mlp_front","delta_partial_mlp_full"] {
+   let mut follow=r.clone();follow.op=op.into();if op=="delta_partial_mlp_front"{follow.dims.push(6144);}
+   assert!(metadata(&follow).is_ok());assert_eq!(inner(&follow).unwrap().op,"mlp_full_integer");
+  }
+  let mut invalid=r.clone();invalid.op="mlp_complete_delta_partial".into();assert!(metadata(&invalid).is_err());
   let input=PreparedMlpDeltaStream::decode(&r,&p).unwrap();bad=r.clone();bad.step+=1;
   let m=Manifest{version:1,model:r.model.clone(),pack_hash:r.pack_hash.clone(),bytes:0,tensors:vec![]};assert!(input.evaluate(&bad,&m,&mut|_,_|->Result<Vec<u8>>{panic!("identity read")}).is_err());
  }
@@ -929,6 +945,11 @@ mod new_tail_tests {
    let r:Request=serde_json::from_value(serde_json::json!({"version":1,"model":"a".repeat(64),"pack_hash":"b".repeat(64),"input_hash":"c".repeat(64),"step":7,"op":"delta_partial_mlp_front","encoding":NAME,"tensor":"model.language_model.layers.25.post_attention_layernorm.weight","dims":[n,1024,H-1024,10,45,6912],"scalars":[2.,1e-6],"aux":["model.language_model.layers.26.input_layernorm.weight"]})).unwrap();
    let prep=n*(C/256+2*R+64);let mut p=vec![12];p.extend(12u32.to_le_bytes());for _ in 0..2 {p.push(2);p.extend(1u32.to_le_bytes());p.push(0);}p.extend(24u32.to_le_bytes());p.extend(vec![0;n*C]);for _ in 0..n*C/256 {p.extend(1f32.to_le_bytes());}p.extend(vec![0;4*(prep-n*C/256+n*R)]);for _ in 0..12 {p.push(2);p.extend(1u32.to_le_bytes());p.push(0);}
    let input=PreparedMlpDeltaStream::decode(&r,&p).unwrap();assert!(input.follow.unwrap().0.iter().all(|v|v.to_bits()==0));
+   let mut q=vec![14];q.extend(6u32.to_le_bytes());q.push(2);q.extend(1u32.to_le_bytes());q.push(0);q.extend_from_slice(&p[1..21]);q.extend_from_slice(&p[21+n*C..]);
+   let input=PreparedMlpDeltaStream::decode(&r,&q).unwrap();assert!(input.follow.unwrap().0.iter().all(|v|v.to_bits()==0));
+   for cut in [1,5,11,q.len()-1] {assert!(PreparedMlpDeltaStream::decode(&r,&q[..cut]).is_err());}
+   let mut bad=q.clone();bad[1..5].copy_from_slice(&u32::MAX.to_le_bytes());assert!(PreparedMlpDeltaStream::decode(&r,&bad).is_err());
+   bad=q.clone();bad[10]=128;assert!(PreparedMlpDeltaStream::decode(&r,&bad).is_err());bad=q.clone();bad.push(0);assert!(PreparedMlpDeltaStream::decode(&r,&bad).is_err());
    for cut in [1,5,16,p.len()-1] {assert!(PreparedMlpDeltaStream::decode(&r,&p[..cut]).is_err());}let mut bad=p.clone();bad[1..5].copy_from_slice(&u32::MAX.to_le_bytes());assert!(PreparedMlpDeltaStream::decode(&r,&bad).is_err());bad=p.clone();bad.push(0);assert!(PreparedMlpDeltaStream::decode(&r,&bad).is_err());bad=p.clone();bad[10]=0x80;bad[16]=0x7f;assert!(PreparedMlpDeltaStream::decode(&r,&bad).is_err());
   }
  }

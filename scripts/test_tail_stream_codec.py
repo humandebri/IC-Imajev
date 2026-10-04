@@ -49,6 +49,11 @@ class TailCodecTests(unittest.TestCase):
             raw=np.stack([np.frombuffer(low,dtype=np.uint8),np.frombuffer(high,dtype=np.uint8)],axis=1).tobytes()
             self.assertEqual(b'\12'+new[5+size:9+size]+raw+new[9+size:],old)
             self.assertLess(len(frame),2_000_000)
+            extra=payload(follow(h,v,history,log,compress_base=True,compress_prefix=True,compress_hidden=True,compress_input=True))
+            self.assertEqual(extra[0],14);size2=int.from_bytes(extra[1:5],'little');qbytes,consumed=plane(extra[5:5+size2],n*C);self.assertEqual(consumed,size2)
+            body=extra[5+size2:];cut=8+int.from_bytes(body[:4],'little')
+            self.assertEqual(b'\14'+body[:cut]+qbytes+body[cut:],new)
+            with self.assertRaises(ValueError):follow(h,v,history,log,compress_base=True,compress_prefix=True,compress_input=True)
             for kwargs in [{},{'compress_base':True},{'compress_prefix':True}]:
                 with self.assertRaises(ValueError):follow(h,v,history,log,compress_hidden=True,**kwargs)
 
@@ -63,6 +68,11 @@ class TailCodecTests(unittest.TestCase):
                 with self.assertRaises(ValueError):pair(h,bad,cv,log)
             with self.assertRaises(ValueError):pair(dict(h,dims=[n,128,H-128,8,45]),v,cv,log)
             with self.assertRaises(ValueError):pair(h,v,cv,log,compress_residual=True)
+            # The next Delta carry has no MLP stream progress (begin=0).
+            _,partial=reply(n,8);rest=np.zeros(3*24*256,np.float32);logs=np.zeros(45*(12*128+24*128+24),np.float32)
+            continued=dict(h,op='delta_partial_mlp_front',dims=[n,0,H,8,45,6144])
+            self.assertLess(len(follow(continued,partial,rest,logs,compress_base=True,compress_prefix=True,compress_hidden=True)),2_000_000)
+            with self.assertRaises(ValueError):pair(dict(h,op='mlp_complete_delta_partial'),v,cv,log)
 
     def test_stream_request_progress_and_distinct_terminal_reply_shape(self):
         for n in [1,87,89]:

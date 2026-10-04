@@ -9,7 +9,7 @@ pub(crate) fn metadata(r:&Request)->Result<(usize,usize,usize,usize)> {
     if !(1..=89).contains(&n) || b==0 || b>9216 || b%256!=0 || !(1..=132).contains(&p) {return Err("Delta MLP start bounds".into());}
     let s=r.tensor.strip_prefix("model.language_model.layers.").and_then(|s|s.strip_suffix(".post_attention_layernorm.weight")).ok_or("Delta MLP start layer")?;
     let layer:usize=s.parse().map_err(|_|"Delta MLP start layer")?;
-    if (r.op=="delta_mlp_stream_start_ids" && layer!=0) || layer>=30 || layer.to_string()!=s || (layer+1)%4==0 || r.aux[0]!=format!("model.language_model.layers.{}.input_layernorm.weight",layer+1) {return Err("Delta MLP start scope".into());}
+    if (r.op=="delta_mlp_stream_start_ids" && layer!=0) || layer>30 || layer==30&&!cfg!(feature="experimental-terminal-stream") || layer.to_string()!=s || (layer+1)%4==0 || r.aux[0]!=format!("model.language_model.layers.{}.input_layernorm.weight",layer+1) {return Err("Delta MLP start scope".into());}
     Ok((n,b,p,layer))
 }
 fn mlp(r:&Request)->Result<Request> {
@@ -101,6 +101,12 @@ pub(crate) fn decode_reply(r:&Request,payload:&[u8])->Result<Vec<f32>> {
 #[cfg(test)]mod tests {
  use super::*;
  fn req()->Request {serde_json::from_value(serde_json::json!({"version":1,"model":"a".repeat(64),"pack_hash":"b".repeat(64),"input_hash":"c".repeat(64),"step":0,"op":"delta_mlp_stream_prepare","encoding":NAME,"tensor":"model.language_model.layers.0.post_attention_layernorm.weight","dims":[1,4864,45],"scalars":[2.,1e-6],"aux":["model.language_model.layers.1.input_layernorm.weight"]})).unwrap()}
+ #[test]fn terminal_layer_requires_explicit_feature_and_keeps_ids_layer_zero_only() {
+  let mut r=req();r.tensor="model.language_model.layers.30.post_attention_layernorm.weight".into();r.aux=vec!["model.language_model.layers.31.input_layernorm.weight".into()];
+  assert_eq!(metadata(&r).is_ok(),cfg!(feature="experimental-terminal-stream"));
+  r.op="delta_mlp_stream_start_ids".into();assert!(metadata(&r).is_err());
+  r.op="delta_mlp_stream_prepare".into();r.tensor="model.language_model.layers.31.post_attention_layernorm.weight".into();r.aux[0]="model.language_model.layers.32.input_layernorm.weight".into();assert!(metadata(&r).is_err());
+ }
  #[test]fn ids_scope_range_and_direction_are_checked(){
   let mut r=req();r.op="delta_mlp_stream_start_ids".into();let mut raw=vec![2];raw.extend(1u32.to_le_bytes());raw.extend(vec![0;2*(CONV+45*2048)+4*45*4128]);
   assert!(PreparedDeltaMlpStart::decode(&r,&raw).is_ok());raw[1..5].copy_from_slice(&16_777_217u32.to_le_bytes());assert!(PreparedDeltaMlpStart::decode(&r,&raw).is_err());

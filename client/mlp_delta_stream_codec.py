@@ -13,7 +13,7 @@ def layout(h):
     n,b,c,k,p=d[:5]
     if h['op']=='delta_partial_mlp_front' and not (0<d[5]<H and d[5]%128==0):raise ValueError('pair MLP front')
     if h['op']=='delta_partial_mlp_prepare_down' and not (0<d[5]<C and d[5]%32==0):raise ValueError('pair partial down rows')
-    if not 1<=n<=89 or (b!=0 if h['op']=='mlp_full_delta_partial' else b<=0) or c<=0 or b%128 or c%128 or b+c!=H or not 0<k<32 or k%2 or not 1<=p<=132:raise ValueError('pair bounds')
+    if not 1<=n<=89 or (b!=0 if h['op']=='mlp_full_delta_partial' else b<0 or b==0 and h['op']not in FOLLOW) or c<=0 or b%128 or c%128 or b+c!=H or not 0<k<32 or k%2 or not 1<=p<=132:raise ValueError('pair bounds')
     m=re.fullmatch(r'model\.language_model\.layers\.(0|[1-9][0-9]*)\.post_attention_layernorm\.weight',h.get('tensor',''))
     if not m or not 0<=int(m[1])<30 or (int(m[1])+2)%4==0 or a[0]!=f'model.language_model.layers.{int(m[1])+1}.input_layernorm.weight':raise ValueError('pair layer scope')
     return n,b,c,k,p
@@ -84,11 +84,12 @@ def decode_reply(h,payload):
     return np.concatenate([residual,integers.astype('<f4'),rest,history])
 
 
-def encode_continue_request(h,carry,history,log,*,compress_base=False,compress_prefix=False,compress_hidden=False):
+def encode_continue_request(h,carry,history,log,*,compress_base=False,compress_prefix=False,compress_hidden=False,compress_input=False):
     from transport import frame_digest
     n,b,c,k,p=layout(h)
     if compress_prefix and not compress_base:raise ValueError('pair prefix compression requires base planes')
     if compress_hidden and not (compress_base and compress_prefix):raise ValueError('pair hidden compression requires base and prefix planes')
+    if compress_input and not compress_hidden:raise ValueError('pair input compression requires hidden planes')
     if h['op'] not in FOLLOW:raise ValueError('pair continuation direction')
     v=np.asarray(carry,dtype='<f4').ravel();hc=3*k*256;tail=n*(C//256+2*R+64+C+R);fixed=2*n*C+tail
     if v.size!=fixed+hc or not np.isfinite(v).all() or np.any(v[:n*C].view('<u4')&65535) or np.any(v[-hc:].view('<u4')&65535):raise ValueError('pair continuation carry shape/precision')
@@ -112,6 +113,11 @@ def encode_continue_request(h,carry,history,log,*,compress_base=False,compress_p
                 raw=(v[:n*C].view('<u4')>>16).astype('<u2').tobytes()
                 packed=encode_plane(raw[0::2],.1)+encode_plane(raw[1::2],.1)
                 payload=bytes([12])+struct.pack('<I',len(packed))+packed+payload[1:5]+payload[5+2*n*C:]
+                if compress_input:
+                    # A small saving is enough at the 2MB boundary. Keep even
+                    # sub-10% Huffman savings; this column is already INT8.
+                    cut=9+len(packed);q=encode_plane(integers.astype(np.int8).tobytes())
+                    payload=bytes([14])+struct.pack('<I',len(q))+q+payload[1:cut]+payload[cut+n*C:]
     header=json.dumps(h,separators=(',',':'),allow_nan=False).encode();body=struct.pack('<I',len(header))+header+payload
     if len(header)>16384 or len(body)+32>2_000_000:raise ValueError('pair continuation frame bounds')
     return body+frame_digest(h,body)

@@ -22,6 +22,12 @@ class StartCodecTests(unittest.TestCase):
    with self.assertRaises(ValueError):encode_ids(h,ids,cv,log)
   h['tensor']=h['tensor'].replace('.0.','.1.');h['aux']=[h['aux'][0].replace('.1.','.2.')]
   with self.assertRaises(ValueError):layout(h)
+ def test_layer30_prepares_only_hidden_direction_and_uses_norm31(self):
+  h=dict(self.header(1,2560),tensor='model.language_model.layers.30.post_attention_layernorm.weight',aux=['model.language_model.layers.31.input_layernorm.weight'])
+  self.assertEqual(layout(h),(1,2560,45))
+  self.assertLess(len(encode_request(h,np.zeros(C,np.float32),np.zeros(C,np.float32),np.zeros(CONV,np.float32),np.zeros(45*6176,np.float32))),2_000_000)
+  with self.assertRaises(ValueError):layout(dict(h,op='delta_mlp_stream_start_ids'))
+  with self.assertRaises(ValueError):layout(dict(h,tensor='model.language_model.layers.31.post_attention_layernorm.weight',aux=['model.language_model.layers.32.input_layernorm.weight']))
  def test_scope_precision_direction_and_bounds(self):
   h=self.header(1)
   for d in [[],[True,5120,45],[1,5121,45],[1,5120,0],[90,5120,45]]:
