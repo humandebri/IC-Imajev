@@ -4,16 +4,18 @@ pub(crate) const NAME: &str = "mlp-attention-finish-exact-v1";
 const C: usize = 2560;
 const H: usize = 9216;
 const KV: usize = 2048;
+fn front(r:&Request)->bool {r.op=="mlp_finish_attention_mlp_front"}
 
 fn metadata(r: &Request) -> Result<(usize, usize, usize)> {
-    if r.encoding != NAME || !matches!(r.op.as_str(), "mlp_finish_attention_full" | "mlp_finish_attention_full_compact") || r.dims.len() != 3
+    if r.encoding != NAME || !matches!(r.op.as_str(), "mlp_finish_attention_full" | "mlp_finish_attention_full_compact" | "mlp_finish_attention_mlp_front") || r.dims.len() != if front(r){4}else{3}
         || r.aux.len() != 1 || r.scalars.len() != 2
         || r.scalars[0].to_bits() != 2f32.to_bits()
         || r.scalars[1].to_bits() != 1e-6f32.to_bits() {
         return Err("MLP attention finish metadata".into());
     }
     let (n, p, rows) = (r.dims[0], r.dims[1], r.dims[2]);
-    if !(1..=89).contains(&n) || p > 132 || !crate::mlp_pipeline::valid_partial_rows(rows) {
+    if !(1..=89).contains(&n) || p > 132 || !crate::mlp_pipeline::valid_partial_rows(rows)
+        || front(r) && (r.dims[3]==0 || r.dims[3]>=H || r.dims[3]%crate::mlp_stream::STEP!=0) {
         return Err("MLP attention finish bounds".into());
     }
     let text = r.tensor.strip_prefix("model.language_model.layers.")
@@ -36,7 +38,15 @@ fn inner(r: &Request) -> Result<Request> {
 }
 pub(crate) fn reply_count(r: &Request) -> Result<usize> {
     let (n, _, _) = metadata(r)?;
+    if front(r) {return Ok(n*(C+KV)+crate::mlp_stream::limit(&next_mlp(r)?)?);}
     Ok(n * (if r.op == "mlp_finish_attention_full_compact" {2 * C} else {3 * C} + KV))
+}
+fn next_mlp(r:&Request)->Result<Request> {
+    let(n,_,layer)=metadata(r)?;
+    if !front(r){return Err("MLP attention front direction".into());}
+    let mut mr=r.clone();mr.op="mlp_stream_prepare".into();mr.encoding=crate::mlp_stream::NAME.into();
+    mr.tensor=format!("model.language_model.layers.{}.post_attention_layernorm.weight",layer+1);
+    mr.aux=vec![format!("model.language_model.layers.{}.input_layernorm.weight",layer+2)];mr.dims=vec![n,0,r.dims[3]];Ok(mr)
 }
 /// Input fields and their complete request binding cannot be forged externally.
 /// ```compile_fail
@@ -67,6 +77,13 @@ impl PreparedMlpAttentionFinish {
     }
     pub(crate) fn evaluate<F, B>(self, r: &Request, m: &Manifest, read: &mut F) -> Result<(Vec<f32>, u64)>
     where F: FnMut(u64, usize) -> Result<B>, B: WeightBuffer {
+        self.evaluate_inner(r,m,read,false).and_then(|(reply,bytes)|Ok((reply.into_values()?,bytes)))
+    }
+    #[cfg(feature="experimental-direct-mlp-reply")]
+    pub(crate) fn evaluate_reply<F,B>(self,r:&Request,m:&Manifest,read:&mut F)->Result<(crate::EvaluatedReply,u64)>
+    where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {self.evaluate_inner(r,m,read,true)}
+    fn evaluate_inner<F,B>(self,r:&Request,m:&Manifest,read:&mut F,direct:bool)->Result<(crate::EvaluatedReply,u64)>
+    where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
         if !crate::same_request(r, &self.request) {
             return Err("MLP attention finish identity".into());
         }
@@ -84,12 +101,34 @@ impl PreparedMlpAttentionFinish {
         let (attention, used_attention) = crate::profile::measure("bridge_attention_full", ||
             crate::attention_full::evaluate(&ar, &input, m, read))?;
         if attention.len() != n * (C + KV) {return Err("MLP attention finish attention shape".into());}
+        let mut used=used_mlp.checked_add(used_attention).ok_or("MLP attention finish read overflow")?;
+        if front(r) {
+            both.truncate(n*C);let mut pair=both.clone();pair.extend_from_slice(&attention[..n*C]);
+            let mr=next_mlp(r)?;
+            #[cfg(feature="experimental-direct-mlp-reply")]
+            if direct {
+                let(reply,bytes)=crate::profile::measure("bridge_next_mlp_front",||crate::mlp_stream::prepare_direct_reply(&mr,pair,m,read))?;
+                used=used.checked_add(bytes).ok_or("MLP attention front read overflow")?;
+                let crate::EvaluatedReply::Payload(payload)=reply else{return Err("MLP attention front typed carry expected".into());};
+                return Ok((wrap_front_reply(r,&both,payload,&attention[n*C..])?,used));
+            }
+            let(carry,bytes)=crate::profile::measure("bridge_next_mlp_front",||crate::mlp_stream::prepare_direct(&mr,pair,m,read))?;
+            used=used.checked_add(bytes).ok_or("MLP attention front read overflow")?;both.extend(carry);both.extend_from_slice(&attention[n*C..]);
+            return Ok((crate::EvaluatedReply::Values(both),used));
+        }
+        #[cfg(not(feature="experimental-direct-mlp-reply"))]
+        let _=direct;
         if r.op == "mlp_finish_attention_full_compact" {both.truncate(n * C);}
         both.extend(attention);
-        Ok((both, used_mlp.checked_add(used_attention).ok_or("MLP attention finish read overflow")?))
+        Ok((crate::EvaluatedReply::Values(both),used))
     }
 }
 pub(crate) fn append_reply(out: &mut Vec<u8>, r: &Request, values: &[f32]) -> Result<()> {
+    if front(r) {
+        let(n,_,_)=metadata(r)?;let end=values.len().checked_sub(n*KV).ok_or("MLP attention front shape")?;
+        if values.len()!=reply_count(r)? || !crate::bf16_codec::classify_finite(&values[..n*C])? || !crate::bf16_codec::classify_finite(&values[end..])? {return Err("MLP attention front reply shape/precision".into());}
+        out.push(2);pack_bf(out,&values[..n*C]);crate::mlp_stream::append(out,&next_mlp(r)?,&values[n*C..end])?;pack_bf(out,&values[end..]);return Ok(());
+    }
     if values.len() != reply_count(r)? || !crate::bf16_codec::classify_finite(values)? {
         return Err("MLP attention finish reply shape/precision".into());
     }
@@ -98,6 +137,14 @@ pub(crate) fn append_reply(out: &mut Vec<u8>, r: &Request, values: &[f32]) -> Re
 }
 pub(crate) fn decode_reply(r: &Request, payload: &[u8]) -> Result<Vec<f32>> {
     let count = reply_count(r)?;
+    if front(r) {
+        let(n,_,_)=metadata(r)?;
+        if payload.first()!=Some(&2) || payload.len()<1+2*n*(C+KV){return Err("MLP attention front reply direction/length".into());}
+        let end=payload.len()-2*n*KV;let mut out=vec![0.;n*C];crate::bf16_codec::unpack(&payload[1..1+2*n*C],&mut out);
+        out.extend(crate::mlp_stream::decode_values(&next_mlp(r)?,&payload[1+2*n*C..end])?);
+        let mut kv=vec![0.;n*KV];crate::bf16_codec::unpack(&payload[end..],&mut kv);out.extend(kv);
+        if out.len()!=count || !out.iter().all(|v|v.is_finite()){return Err("MLP attention front reply finite/count".into());}return Ok(out);
+    }
     if payload.first() != Some(&0) || payload.len() != 1 + 2 * count {
         return Err("MLP attention finish reply length/direction".into());
     }
@@ -106,6 +153,13 @@ pub(crate) fn decode_reply(r: &Request, payload: &[u8]) -> Result<Vec<f32>> {
     Ok(out)
 }
 
+fn pack_bf(out:&mut Vec<u8>,v:&[f32]) {let start=out.len();out.resize(start+2*v.len(),0);crate::bf16_codec::pack(v,&mut out[start..]);}
+#[cfg(feature="experimental-direct-mlp-reply")]
+fn wrap_front_reply(r:&Request,hidden:&[f32],carry:crate::PayloadReply,kv:&[f32])->Result<crate::EvaluatedReply> {
+    let(n,_,_)=metadata(r)?;
+    if !front(r) || hidden.len()!=n*C || kv.len()!=n*KV || !crate::bf16_codec::classify_finite(hidden)? || !crate::bf16_codec::classify_finite(kv)? {return Err("MLP attention typed front shape/precision".into());}
+    let inner=carry.into_payload();let mut p=Vec::with_capacity(1+2*n*(C+KV)+inner.len());p.push(2);pack_bf(&mut p,hidden);p.extend(inner);pack_bf(&mut p,kv);Ok(crate::EvaluatedReply::payload(r,p))
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -139,6 +193,29 @@ mod tests {
         let m=Manifest{version:1,model:r.model.clone(),pack_hash:r.pack_hash.clone(),bytes:0,tensors:vec![]};
         for field in 0..11 {let mut bad=r.clone();match field {0=>bad.version+=1,1=>bad.step+=1,2=>bad.model="d".repeat(64),3=>bad.pack_hash="d".repeat(64),4=>bad.input_hash="d".repeat(64),5=>bad.op="bad".into(),6=>bad.encoding="bad".into(),7=>bad.tensor="bad".into(),8=>bad.aux.push("bad".into()),9=>bad.dims[2]=1408,_=>bad.scalars[0]=1.};
             let state=PreparedMlpAttentionFinish::decode(&r,&p).unwrap();assert_eq!(state.evaluate(&bad,&m,&mut|_,_|->Result<Vec<u8>>{panic!("identity read")}).err().unwrap(),"MLP attention finish identity");
+        }
+    }
+}
+
+#[cfg(test)]
+mod front_tests {
+    use super::*;
+    fn request(n:usize,b:usize)->Request {serde_json::from_value(serde_json::json!({"version":1,"model":"a".repeat(64),"pack_hash":"b".repeat(64),"input_hash":"c".repeat(64),"step":7,"op":"mlp_finish_attention_mlp_front","encoding":NAME,"tensor":"model.language_model.layers.22.post_attention_layernorm.weight","dims":[n,45,1280,b],"scalars":[2.,1e-6],"aux":["model.language_model.layers.23.input_layernorm.weight"]})).unwrap()}
+    fn state(n:usize,b:usize)->Vec<f32> {let mut v=vec![-0.;n*C];v.extend(vec![1.;n*C]);v.extend(vec![0.25;n*10]);v.extend(vec![0.1234567;n*128]);v.extend(vec![127.;n*b]);v.extend(vec![0.0123;n*(b/256)]);v.extend(vec![0.56789;n*64]);v}
+    #[test]fn mixed_reply_and_checked_encoder_preserve_every_bit() {
+        for n in [1,7,87,89] {for b in [256,512] {let r=request(n,b);let mut v=vec![-0.;n*C];v.extend(state(n,b));v.extend(vec![-0.;n*KV]);let frame=crate::encode(&r,&v).unwrap();let (_,out)=crate::decode(&frame).unwrap();assert!(out.iter().zip(&v).all(|(a,b)|a.to_bits()==b.to_bits()));assert!(frame.len()<2_000_000);assert!(crate::decode_query(&frame).is_err());
+            for index in [0,n*C,2*n*C,3*n*C,v.len()-1] {let mut bad=v.clone();bad[index]=f32::NAN;assert!(crate::encode(&r,&bad).is_err());}
+        }}
+        for b in [0,1,513,H,usize::MAX] {assert!(metadata(&request(1,b)).is_err());}
+    }
+    #[cfg(feature="experimental-direct-mlp-reply")]
+    #[test]fn direct_front_payload_matches_numeric_encoder_and_identity() {
+        for n in [1,87,89] {let r=request(n,512);let h=vec![-0.;n*C];let k=vec![-0.;n*KV];let carry=state(n,512);let inner=next_mlp(&r).unwrap();let mut payload=vec![];crate::mlp_stream::append(&mut payload,&inner,&carry).unwrap();
+            let make=|| {let crate::EvaluatedReply::Payload(p)=crate::EvaluatedReply::payload(&inner,payload.clone())else{panic!()};p};
+            let mut out=r.clone();out.step+=1;let mut values=h.clone();values.extend(carry);values.extend(&k);
+            assert_eq!(wrap_front_reply(&r,&h,make(),&k).unwrap().encode(&out,false).unwrap(),crate::encode(&out,&values).unwrap());
+            out.input_hash="d".repeat(64);assert!(wrap_front_reply(&r,&h,make(),&k).unwrap().encode(&out,false).is_err());
+            let mut bad=k.clone();bad[0]=0.1234567;assert!(wrap_front_reply(&r,&h,make(),&bad).is_err());
         }
     }
 }

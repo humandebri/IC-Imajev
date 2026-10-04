@@ -1,3 +1,5 @@
+2026-10-04レビュー: 連結分割指定の黙った無視とprofile参照の後付けhashを修正。MLP前倒しAPIを追加し384行/Delta8 headsまでは部分bit一致、次要求2MB超過・10 heads以上5B超過を記録。標準6/連結3条件回帰通過、主51query・約33.03M命令減・通信不変、50/32未達。[レビューと境界](docs/ATTENTION_FRONT_REVIEW.md)。
+
 2026-10-04継続レビュー: 全体連結の可逆圧縮接続漏れと参照固定を修正。主/情報不足54→51queryで全hidden/state/判断bit一致、最大変更は62query維持。主の命令約0.33%・通信約12.26%増のため実験オプション。Rust140/15/11、標準6条件・新3条件回帰、51件再開を確認。50/32未達。 [実測と限界](docs/JOINED_QUERY.md)。
 
 2026-10-04継続: 不要norm/KVの再送・展開を除くcompact Attentionを追加。87 token/5888行の部分queryで27.11M命令・801,776 bytes減、参照carry bit一致。可逆残差圧縮も追加したが、主5連結は依然上限超過。全6条件/連結3条件回帰通過、全体54 query・50/32未達。[実測と限界](docs/COMPACT_ATTENTION_CARRY.md)。

@@ -219,6 +219,8 @@ fn frame_digest(version: u32, bytes: &[u8], encoding: bool) -> Result<[u8; 32]> 
 }
 fn checked_block_encoding(name:&str)->bool{match name{
     "bf16-block256-exact-v1"=>true,
+    #[cfg(feature="experimental-mlp-attention-finish")]
+    mlp_attention_finish::NAME=>true,
     #[cfg(feature="experimental-prefix-hybrid")]
     delta_hybrid::NAME=>true,
     _=>false,
@@ -651,6 +653,8 @@ where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
     #[cfg(feature="experimental-direct-mlp-reply")]
     match input {
         DecodedQueryInput::MlpStream(input)=>return input.evaluate_reply(r,m,&mut read),
+        #[cfg(feature="experimental-mlp-attention-finish")]
+        DecodedQueryInput::MlpAttentionFinish(input)=>return input.evaluate_reply(r,m,&mut read),
         #[cfg(feature="experimental-mlp-delta-stream")]
         DecodedQueryInput::MlpDeltaStream(input)=>return input.evaluate_reply(r,m,&mut read),
         #[cfg(feature="experimental-mlp-delta-stream")]
