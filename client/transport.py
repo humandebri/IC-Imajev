@@ -97,6 +97,9 @@ def decode(b):
     if codec in ('delta-hybrid-prefix-exact-v1','mlp-delta-log-carry-exact-v1','mlp-delta-huffman-carry-exact-v1'):
         if payload[:1]!=b'\x00':raise ValueError('hybrid reply direction')
         payload=payload[1:];codec='bf16-block256-exact-v1'
+    if codec=='mlp-delta-stream-exact-v1':
+        from mlp_delta_stream_codec import decode_reply
+        return h,decode_reply(h,payload)
     if codec=='mlp-stream-exact-v1':
         from mlp_stream_codec import decode_payload
         return h,decode_payload(h,payload)
