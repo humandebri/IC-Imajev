@@ -1,3 +1,5 @@
+2026-10-04レビュー: binary/NPZ参照のhash上書きを修正し、入口query設定/metric/profileとcanister/Cargo sourceを固定。5テスト、80 tokenの入口2＋五連結5queryが参照bit一致。主87の入口は依然超過、通し54 query・50/32未達。 [レビュー記録](IMPLEMENTATION_REVIEW_ENTRY.md)。
+
 2026-10-04継続：検査済みMLP carryをF32へ展開せず直接返信し、実81 frameが従来と全byte一致。主87 tokenの部分query75.36M命令減、6272行/26 headの五連結が主・情報不足の全7箇所で成立。全6条件/現行連結3条件はbit一致、主はまだ54 query・50/32未達。 [実装・実測と通し回帰](DIRECT_MLP_REPLY.md)。
 
 2026-10-04継続レビュー：参照reportの未固定・残差診断の空/欠損ケースを拒否する修正を `42f1855` にコミット。続いてblock256のINT8量子化を維持する128行分割を追加し、実18条件のMLP状態/出力・全6条件・連結3条件のbit一致を確認。主は54 queryのまま、五連結は未成立。 [実装・実測と失敗境界](MLP_HALF_BLOCK.md)。

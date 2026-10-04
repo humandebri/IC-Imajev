@@ -3,7 +3,8 @@ import json
 import pathlib
 import tempfile
 import unittest
-from proof_inputs import read_report, residual_cases, selections
+from types import SimpleNamespace
+from proof_inputs import read_bytes, read_report, residual_cases, selections, validate_join_settings
 
 
 class ProofInputsTests(unittest.TestCase):
@@ -18,6 +19,31 @@ class ProofInputsTests(unittest.TestCase):
             path.write_text('{"queries": [1]}')
             with self.assertRaises(ValueError):
                 read_report(path, root, hashes)
+
+    def test_binary_reference_cannot_change_or_be_parsed_from_another_read(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory); path = root / 'tensor.bin'; hashes = {}
+            path.write_bytes(b'original')
+            raw = read_bytes(path, root, hashes)
+            path.write_bytes(b'changed')
+            self.assertEqual(raw, b'original')
+            with self.assertRaises(ValueError):
+                read_bytes(path, root, hashes)
+
+    def test_join_bounds_before_queries(self):
+        good = dict(front=1792, attention_front=6272, down_rows=1408,
+                    residual_raw_threshold=.1, residual_dictionary=True,
+                    compress_residual=True, entry_heads=20, entry_front=4096)
+        validate_join_settings(SimpleNamespace(**good))
+        validate_join_settings(SimpleNamespace(**dict(good, entry_front=4224)))
+        for key, value in [('front', 0), ('front', 9216), ('attention_front', 6273),
+                           ('down_rows', 2560), ('down_rows', 33),
+                           ('entry_heads', 21), ('entry_heads', 32),
+                           ('entry_front', 1), ('entry_front', 9216),
+                           ('residual_raw_threshold', float('nan')),
+                           ('compress_residual', False)]:
+            with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                validate_join_settings(SimpleNamespace(**dict(good, **{key: value})))
 
     def test_all_42_residual_cases_required_without_duplicates(self):
         cases = [dict(label=label, layer=layer, begin=begin, success=True)

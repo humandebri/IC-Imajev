@@ -3,14 +3,18 @@ import hashlib
 import json
 
 
-def read_report(path, root, hashes):
+def read_bytes(path, root, hashes):
     raw = path.read_bytes()
     key = str(path.relative_to(root))
     digest = hashlib.sha256(raw).hexdigest()
     if key in hashes and hashes[key] != digest:
         raise ValueError(f'reference changed during run: {key}')
     hashes[key] = digest
-    return json.loads(raw)
+    return raw
+
+
+def read_report(path, root, hashes):
+    return json.loads(read_bytes(path, root, hashes))
 
 
 def residual_cases(report):
@@ -30,3 +34,22 @@ def selections(raw, allowed, name):
     if not values or any(v not in allowed for v in values) or len(values) != len(set(values)):
         raise ValueError(f'invalid or duplicate {name}: {raw!r}')
     return values
+
+
+def validate_join_settings(args):
+    """Reject unsupported schedules before creating artifacts or calling queries."""
+    for name in ('front', 'attention_front'):
+        value = getattr(args, name)
+        if not 0 < value < 9216 or value % 128:
+            raise ValueError(f'invalid {name}: {value}')
+    if not 0 < args.down_rows < 2560 or args.down_rows % 32:
+        raise ValueError('invalid down_rows')
+    if not 0 <= args.residual_raw_threshold <= 1:
+        raise ValueError('invalid residual_raw_threshold')
+    if args.residual_dictionary and not args.compress_residual:
+        raise ValueError('residual_dictionary requires compress_residual')
+    if args.entry_heads is not None:
+        if not 0 < args.entry_heads < 32 or args.entry_heads % 2:
+            raise ValueError('invalid entry_heads')
+        if not 0 < args.entry_front < 9216 or args.entry_front % 128:
+            raise ValueError('invalid entry_front')
