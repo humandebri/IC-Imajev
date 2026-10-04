@@ -3,6 +3,7 @@
 NumPy is used only for routing, reshape, concatenation, zero states and reporting.
 An official token-ID fixture is input; no reference hidden state enters inference.
 """
+from decision_validation import validate_decision
 import hashlib,json,pathlib,time
 import numpy as np
 from transport import Transport,encode,decode,atomic
@@ -72,7 +73,7 @@ class JournalTransport(Transport):
             fused=op in ('terminal_attention_mlp_integer','terminal_tail_integer','mlp_stream_complete_terminal') and bool(getattr(self,'fuse_terminal_decision',False))
             if fused:
                 if saved.get('decision_options')!=self.decision_options or 'decision' not in saved['ok']:raise ValueError('terminal decision checkpoint options/result mismatch')
-                self.terminal_decision=saved['ok']['decision']
+                self.terminal_decision=validate_decision(saved['ok']['decision'],self.decision_options)
             elif 'decision_options' in saved:raise ValueError('terminal decision checkpoint mode mismatch')
             saved['replayed']=True;self.measurements.append(saved);self.index+=1;self.replayed+=1;return v
         start=time.perf_counter()

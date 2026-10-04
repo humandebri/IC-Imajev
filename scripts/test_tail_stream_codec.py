@@ -99,12 +99,16 @@ class TailCodecTests(unittest.TestCase):
                     rh=dict(h,step=1);encoded=json.dumps(rh,separators=(',',':')).encode();y=np.full(2*C+2048,-0.,np.float32)
                     body=struct.pack('<I',len(encoded))+encoded+b'\0'+(y.view('<u4')>>16).astype('<u2').tobytes()
                     pathlib.Path(cmd['output']).write_bytes(body+frame_digest(rh,body))
-                    return dict(ok=dict(instructions=100,stable_read_bytes=0,request_bytes=10,reply_bytes=20,decision=dict(value='yes')),wall_seconds=.01)
+                    return dict(ok=dict(instructions=100,stable_read_bytes=0,request_bytes=10,reply_bytes=20,decision=dict(value='yes',abstained=False,probabilities=[.8,.1],unknown_probability=.1,raw_logits=[1.,0.,-1.],instructions=5,calibration_version='p3-r2-s000291-authored')),wall_seconds=.01)
                 t.command=command;return t
             first=transport();y=first.run_encoded(h,packet);replay=transport();self.assertEqual(replay.run_encoded(h,packet).tobytes(),y.tobytes());self.assertEqual(replay.terminal_decision,first.terminal_decision);self.assertEqual(len(calls),1)
             for options,fused in [(('no','yes'),True),(('yes','no'),False)]:
                 with self.assertRaisesRegex(ValueError,'checkpoint'):transport(options,fused).run_encoded(h,packet)
-            metric=directory/'000000.metric.json';saved=json.loads(metric.read_text());del saved['ok']['decision'];metric.write_text(json.dumps(saved))
+            metric=directory/'000000.metric.json';saved=json.loads(metric.read_text())
+            bad=json.loads(metric.read_text());bad['ok']['decision']['probabilities']=[-.1,1.];bad['ok']['decision']['unknown_probability']=.1;metric.write_text(json.dumps(bad))
+            with self.assertRaisesRegex(ValueError,'dedicated decision'):transport().run_encoded(h,packet)
+            self.assertEqual(len(calls),1)
+            del saved['ok']['decision'];metric.write_text(json.dumps(saved))
             with self.assertRaisesRegex(ValueError,'checkpoint'):transport().run_encoded(h,packet)
             self.assertEqual(len(calls),1)
 

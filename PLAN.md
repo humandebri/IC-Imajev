@@ -1,3 +1,5 @@
+2026-10-05レビュー修正: 50query経路の通信/命令上限超過で別journalの標準経路へ切替。判断結果の共通validatorを新規返信/再開/単独readoutへ適用。不正確率・logits・型・calibrationを拒否。通常3条件は50/50/62queryでbit一致、標準6条件回帰も通過。実上限試験は45成功+1失敗+62標準=108queryでbit一致、再開は新規推論0件。失敗queryの未計測値をnullとして明示。[修正と検証](docs/LIMIT_FALLBACK_REVIEW.md)。
+
 2026-10-04継続: 後段のcarryを再利用し、主132 token/情報不足は51→50通常queryで全体完走。採用INT8の返却hidden/state/判断がbit一致。主234,609,007,209命令（直前比0.3209%増）・通信149,353,220 bytes（0.6372%減）。最大変更89 tokenは62query、32未達。標準6条件回帰も通過。[実測と交換条件](docs/TAIL_QUERY.md)。
 
 2026-10-04レビュー: bridge単独featureでcanister型付きデコーダが無効になる依存欠落を修正。hidden可逆圧縮と後段stream/terminal接続を追加、境界・checkpointを検証。実canister検証/全体接続は後続、現状51query・50/32未達。[レビュー記録](docs/TAIL_STREAM_REVIEW.md)。

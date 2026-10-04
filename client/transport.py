@@ -1,4 +1,5 @@
 """Binary client-held state; atomic checkpoints and bounded replay. Checksums are not authentication."""
+from decision_validation import validate_decision
 import hashlib,json,pathlib,struct,subprocess,time
 import numpy as np
 ROOT=pathlib.Path(__file__).resolve().parents[1]
@@ -202,7 +203,7 @@ class Transport:
         returned,v=decode(response.read_bytes())
         if any(returned[k]!=v for k,v in h.items() if k not in ('step','scalars')) or returned['step']!=h['step']+1 or not np.array_equal(np.asarray(returned['scalars'],dtype=np.float32),np.asarray(h['scalars'],dtype=np.float32)):raise ValueError('state identity/progress mismatch')
         if fused:
-            self.terminal_decision=result['ok']['decision']
+            self.terminal_decision=validate_decision(result['ok']['decision'],self.decision_options)
             result['decision_options']=list(self.decision_options)
         self.measurements.append({'index':self.index,'op':op,'tensor':tensor,**result});self.index+=1
         return v

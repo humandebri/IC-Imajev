@@ -4,6 +4,7 @@ import argparse,hashlib,json,pathlib,sys,time
 import numpy as np
 ROOT=pathlib.Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'client'))
 from full_inference import JournalTransport,TextGraph,delta_full_log_enabled
+from decision_validation import validate_decision
 from transport import encode,atomic
 from prefix_inference import verify_module
 
@@ -95,7 +96,7 @@ def main():
    else:
     atomic(state,encode(h,hidden[-1]));decision=t.command(dict(op='decision',method='decision_fast',input=str(state),options=record['options']))
    report['decision_query']=decision
-   result=decision['ok']['decision']
+   result=validate_decision(decision['ok']['decision'],list(record['options']))
    report['comparison']=dict(value=result['value'],typed_output_valid=bool(len(result['probabilities'])==len(record['options']) and (result['value'] is None or result['value'] in record['options']) and result['abstained']==(result['value'] is None) and abs(sum(result['probabilities'])+result['unknown_probability']-1)<1e-5),gold=record.get('gold'))
    if all(k in record for k in ('raw_result','result','hidden')):
     expected=np.array(list(record['raw_result']['raw_logits'].values()),dtype=np.float32)
