@@ -39,6 +39,15 @@ impl PreparedDeltaMlpStart {
     }
     pub(crate) fn evaluate<F,B>(self,r:&Request,m:&Manifest,read:&mut F)->Result<(Vec<f32>,u64)>
     where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
+        self.evaluate_inner(r,m,read,false).and_then(|(reply,bytes)|Ok((reply.into_values()?,bytes)))
+    }
+    #[cfg(feature="experimental-direct-mlp-reply")]
+    pub(crate) fn evaluate_reply<F,B>(self,r:&Request,m:&Manifest,read:&mut F)->Result<(crate::EvaluatedReply,u64)>
+    where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
+        self.evaluate_inner(r,m,read,true)
+    }
+    fn evaluate_inner<F,B>(self,r:&Request,m:&Manifest,read:&mut F,direct:bool)->Result<(crate::EvaluatedReply,u64)>
+    where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
         if !crate::same_request(r,&self.request) {return Err("Delta MLP start identity".into());}
         let(n,_,p,layer)=metadata(r)?;
         let(hidden,norm,mut bytes)=if !self.ids.is_empty() {
@@ -56,8 +65,24 @@ impl PreparedDeltaMlpStart {
         let mut op=dr.clone();op.op="lora_integer".into();op.tensor=format!("{root}.out_proj.weight");op.dims=vec![n,C,4096,0];op.scalars=vec![2.];op.aux=vec![format!("{root}.out_proj.lora_A.weight"),format!("{root}.out_proj.lora_B.weight")];
         let(attention,used)=crate::profile::measure("start_delta_out",||crate::evaluate_integer_with_ax(&op,&gated,m,read,None,None))?;bytes+=used;
         let mr=mlp(r)?;let mut pair=hidden;pair.extend(attention);
-        let(mut out,used)=crate::profile::measure("start_mlp_front",||crate::mlp_stream::prepare_direct(&mr,pair,m,read))?;bytes+=used;out.extend(history);Ok((out,bytes))
+        #[cfg(feature="experimental-direct-mlp-reply")]
+        if direct {
+            let(reply,used)=crate::profile::measure("start_mlp_front",||crate::mlp_stream::prepare_direct_reply(&mr,pair,m,read))?;
+            let crate::EvaluatedReply::Payload(payload)=reply else {return Err("Delta MLP typed carry expected".into());};
+            return Ok((wrap_reply(r,payload,&history)?,bytes+used));
+        }
+        #[cfg(not(feature="experimental-direct-mlp-reply"))]
+        let _=direct;
+        let(mut out,used)=crate::profile::measure("start_mlp_front",||crate::mlp_stream::prepare_direct(&mr,pair,m,read))?;bytes+=used;out.extend(history);Ok((crate::EvaluatedReply::Values(out),bytes))
     }
+}
+#[cfg(feature="experimental-direct-mlp-reply")]
+fn wrap_reply(r:&Request,carry:crate::PayloadReply,history:&[f32])->Result<crate::EvaluatedReply> {
+    metadata(r)?;
+    if history.len()!=CONV || !crate::bf16_codec::classify_finite(history)? {return Err("Delta MLP typed history".into());}
+    let inner=carry.into_payload();let mut payload=Vec::with_capacity(1+inner.len()+2*CONV);payload.push(0);payload.extend(inner);
+    let start=payload.len();payload.resize(start+2*CONV,0);crate::bf16_codec::pack(history,&mut payload[start..]);
+    Ok(crate::EvaluatedReply::payload(r,payload))
 }
 pub(crate) fn append(b:&mut Vec<u8>,r:&Request,x:&[f32])->Result<()> {
     if x.len()!=limit(r)? || !x.iter().all(|v|v.is_finite()) {return Err("Delta MLP start reply shape/finite".into());}
@@ -88,5 +113,44 @@ pub(crate) fn decode_reply(r:&Request,payload:&[u8])->Result<Vec<f32>> {
   assert_eq!(state.evaluate(&wrong,&m,&mut|_,_|->Result<Vec<u8>>{panic!("identity read")}).unwrap_err(),"Delta MLP start identity");
   for dims in [vec![],vec![0,4864,45],vec![90,4864,45],vec![1,0,45],vec![1,4865,45],vec![1,4864,133],vec![usize::MAX,4864,45]] {let mut bad=r.clone();bad.dims=dims;assert!(metadata(&bad).is_err());}
   raw[size-4..].copy_from_slice(&1.1f32.to_le_bytes());assert!(PreparedDeltaMlpStart::decode(&r,&raw).is_err());raw[0]=0;assert!(PreparedDeltaMlpStart::decode(&r,&raw).is_err());
+ }
+}
+
+#[cfg(all(test,feature="experimental-direct-mlp-reply"))]
+mod direct_tests {
+ use super::*;
+ fn request(n:usize,b:usize)->Request {
+  serde_json::from_value(serde_json::json!({"version":3,"model":"a".repeat(64),"pack_hash":"b".repeat(64),"input_hash":"c".repeat(64),"step":3,"op":"delta_mlp_stream_start_ids","encoding":NAME,"tensor":"model.language_model.layers.0.post_attention_layernorm.weight","dims":[n,b,45],"scalars":[2.,1e-6],"aux":["model.language_model.layers.1.input_layernorm.weight"]})).unwrap()
+ }
+ fn carry(r:&Request)->(Request,Vec<f32>,Vec<u8>) {
+  let(n,b,_,_)=metadata(r).unwrap();let mr=mlp(r).unwrap();let mut v=vec![0.;crate::mlp_stream::limit(&mr).unwrap()];
+  v[..n*C].fill(-0.);v[2*n*C..2*n*C+n*C/256].fill(0.0123456);
+  let scales=2*n*C+n*C/256+2*n*64+n*b;v[scales..scales+n*(b/256)].fill(0.0234567);
+  let mut payload=vec![];crate::mlp_stream::append(&mut payload,&mr,&v).unwrap();(mr,v,payload)
+ }
+ #[test]fn outer_typed_reply_preserves_entire_frame() {
+  for n in [1,7,80,87,89] {for b in [4096,4352,9216] {
+   let mut r=request(n,b);let(mr,mut values,payload)=carry(&r);let history=vec![-0.;CONV];values.extend(&history);
+   for version in [1,2,3] {
+    if version==2 && !cfg!(feature="experimental-blake3") {continue;}
+    r.version=version;let mut inner=mr.clone();inner.version=version;
+    let mut output=r.clone();output.step+=1;
+    for signed in [false,true] {
+     let crate::EvaluatedReply::Payload(p)=crate::EvaluatedReply::payload(&inner,payload.clone())else{unreachable!()};
+     let actual=wrap_reply(&r,p,&history).unwrap().encode(&output,signed).unwrap();
+     let expected=crate::encode_impl(&output,&values,signed && cfg!(feature="experimental-host-checksum")).unwrap();assert_eq!(actual,expected);
+    }
+   }
+  }}
+ }
+ #[test]fn history_precision_and_identity_fail_before_reads() {
+  let r=request(1,4352);let(mr,_,payload)=carry(&r);
+  for history in [vec![0.;CONV-1],vec![f32::NAN;CONV],vec![0.1234567;CONV]] {
+   let crate::EvaluatedReply::Payload(p)=crate::EvaluatedReply::payload(&mr,payload.clone())else{unreachable!()};assert!(wrap_reply(&r,p,&history).is_err());
+  }
+  let mut input=vec![2];input.extend(1u32.to_le_bytes());input.extend(vec![0;2*(CONV+45*2048)+4*45*4128]);
+  let state=PreparedDeltaMlpStart::decode(&r,&input).unwrap();let mut changed=r.clone();changed.step+=1;
+  let m=Manifest{version:1,model:r.model.clone(),pack_hash:r.pack_hash.clone(),bytes:0,tensors:vec![]};
+  assert_eq!(state.evaluate_reply(&changed,&m,&mut|_,_|->Result<Vec<u8>>{panic!("identity read")}).err().unwrap(),"Delta MLP start identity");
  }
 }

@@ -1,3 +1,5 @@
+2026-10-04継続: Delta/MLP startのINT8 carryを直接返信し、主54queryで493,452,112命令減・通信不変。最初のIDs/front4352が4,892,743,896命令で成立し、8query連結は主87/情報不足80の全14箇所でbit一致。標準6/連結3条件回帰・170 query frame byte一致。全体未接続、50/32未達。 [実測](DIRECT_START_REPLY.md)。
+
 2026-10-04継続: Delta/MLP pair返信のINT8→F32→INT8往復を除去。主54queryで29,270,767命令減・通信不変。標準6/連結3条件が既存INT8参照bit一致、170 queryの要求/返信もbyte一致。新配分の8query連結は13/21条件成立、主最初のIDs/startは超過で全体未接続。50/32未達。 [実装と実測](DIRECT_PAIR_REPLY.md)。
 
 2026-10-04レビュー: binary/NPZ参照のhash上書きを修正し、入口query設定/metric/profileとcanister/Cargo sourceを固定。5テスト、80 tokenの入口2＋五連結5queryが参照bit一致。主87の入口は依然超過、通し54 query・50/32未達。 [レビュー記録](IMPLEMENTATION_REVIEW_ENTRY.md)。

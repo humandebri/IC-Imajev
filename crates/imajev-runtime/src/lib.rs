@@ -635,6 +635,8 @@ where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
         DecodedQueryInput::MlpStream(input)=>return input.evaluate_reply(r,m,&mut read),
         #[cfg(feature="experimental-mlp-delta-stream")]
         DecodedQueryInput::MlpDeltaStream(input)=>return input.evaluate_reply(r,m,&mut read),
+        #[cfg(feature="experimental-mlp-delta-stream")]
+        DecodedQueryInput::DeltaMlpStart(input)=>return input.evaluate_reply(r,m,&mut read),
         #[cfg(feature="experimental-attention-mlp-stream")]
         DecodedQueryInput::AttentionMlp(input)=>return input.evaluate_reply(r,m,&mut read),
         other=>return evaluate_owned_decoded_with_prepared_buffer(r,other,m,read).map(|(v,b)|(EvaluatedReply::Values(v),b)),
