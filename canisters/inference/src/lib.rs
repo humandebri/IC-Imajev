@@ -395,6 +395,21 @@ struct TerminalDecisionMeasurement {
     decision: ChoiceResult,
 }
 fn validate_terminal_decision(r: &imajev_runtime::Request, options: &[String]) -> Result<(), String> {
+    if r.op == "mlp_stream_complete_terminal" {
+        let step = if cfg!(feature="experimental-mlp-half") {128} else {256};
+        if !cfg!(feature="experimental-terminal-stream")
+            || r.tensor != "model.language_model.layers.30.post_attention_layernorm.weight"
+            || r.encoding != "mlp-attention-finish-exact-v1"
+            || r.dims.len() != 3 || !(1..=89).contains(&r.dims[0])
+            || r.dims[1] > 132 || r.dims[2] == 0 || r.dims[2] >= 9216 || r.dims[2] % step != 0
+            || r.aux != ["model.language_model.layers.31.input_layernorm.weight"]
+            || r.scalars.len() != 2 || r.scalars[0].to_bits() != 2f32.to_bits()
+            || r.scalars[1].to_bits() != 1e-6f32.to_bits() || r.step == u64::MAX {
+            return Err("terminal stream decision metadata".into());
+        }
+        imajev_runtime::decide_candidates(options,&vec![0.;options.len().min(7)+1],1.3051569717552742)?;
+        return Ok(());
+    }
     let tail=r.op=="terminal_tail_integer" && cfg!(feature="experimental-terminal-tail");
     if !(r.op=="terminal_attention_mlp_integer" || tail)
         || r.tensor != if tail {"model.language_model.layers.30.post_attention_layernorm.weight"}else{"model.language_model.layers.31.self_attn.q_proj.weight"}
@@ -686,6 +701,32 @@ mod terminal_decision_tests {
         assert_eq!(validate_terminal_decision(&r,&options).is_ok(),cfg!(feature="experimental-terminal-tail"));
         r.dims[0]=90;assert!(validate_terminal_decision(&r,&options).is_err());
         r.dims[0]=87;r.tensor="model.language_model.layers.31.self_attn.q_proj.weight".into();assert!(validate_terminal_decision(&r,&options).is_err());
+    }
+    #[test]
+    fn stream_decision_checks_progress_scope_and_options() {
+        if cfg!(feature="experimental-mlp-attention-finish") {
+            assert!(cfg!(feature="experimental-projection-reuse"), "bridge requests require the typed query decoder");
+        }
+        let mut r=request();r.op="mlp_stream_complete_terminal".into();
+        r.tensor="model.language_model.layers.30.post_attention_layernorm.weight".into();
+        r.encoding="mlp-attention-finish-exact-v1".into();r.dims=vec![87,45,2560];
+        r.scalars=vec![2.,1e-6];r.aux=vec!["model.language_model.layers.31.input_layernorm.weight".into()];
+        let options=vec!["yes".into(),"no".into()];
+        assert_eq!(validate_terminal_decision(&r,&options).is_ok(),cfg!(feature="experimental-terminal-stream"));
+        for dims in [vec![],vec![87,45],vec![0,45,2560],vec![90,45,2560],vec![87,133,2560],vec![87,45,0],vec![87,45,9216],vec![87,45,1]] {
+            let mut invalid=r.clone();invalid.dims=dims;assert!(validate_terminal_decision(&invalid,&options).is_err());
+        }
+        for field in ["tensor","encoding","aux","scalars","step"] {
+            let mut invalid=r.clone();match field {
+                "tensor"=>invalid.tensor="model.language_model.layers.26.post_attention_layernorm.weight".into(),
+                "encoding"=>invalid.encoding="bf16-block256-exact-v1".into(),
+                "aux"=>invalid.aux.clear(),"scalars"=>invalid.scalars[1]=f32::NAN,
+                _=>invalid.step=u64::MAX,
+            };assert!(validate_terminal_decision(&invalid,&options).is_err());
+        }
+        for options in [vec![],vec!["yes".into()],vec!["yes".into(),"yes".into()],vec!["__unknown__".into(),"no".into()]] {
+            assert!(validate_terminal_decision(&r,&options).is_err());
+        }
     }
     #[test]
     fn fused_decision_contract_rejects_wrong_stage_and_options_before_inference() {

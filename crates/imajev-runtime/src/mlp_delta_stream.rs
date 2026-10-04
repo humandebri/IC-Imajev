@@ -8,11 +8,12 @@ fn is_follow(r: &Request) -> bool {matches!(r.op.as_str(), "delta_partial_mlp_pr
 const C: usize = 2560;
 const H: usize = 9216;
 const R: usize = 64;
+fn plain(r:&Request)->bool {r.op=="mlp_full_delta_partial"}
 fn metadata(r: &Request) -> Result<(usize, usize, usize, usize, usize, usize)> {
     if r.encoding != NAME
         || !matches!(
             r.op.as_str(),
-            "mlp_complete_delta_partial" | "delta_partial_mlp_prepare" | "delta_partial_mlp_prepare_down" | "delta_partial_mlp_full" | "delta_partial_finish" | "delta_partial_mlp_front"
+            "mlp_complete_delta_partial" | "mlp_full_delta_partial" | "delta_partial_mlp_prepare" | "delta_partial_mlp_prepare_down" | "delta_partial_mlp_full" | "delta_partial_finish" | "delta_partial_mlp_front"
         )
         || r.dims.len() != if matches!(r.op.as_str(),"delta_partial_mlp_prepare_down"|"delta_partial_mlp_front") {6} else {5}
         || (r.op == "delta_partial_mlp_prepare_down" && !crate::mlp_pipeline::valid_partial_rows(*r.dims.get(5).unwrap_or(&0)))
@@ -26,7 +27,7 @@ fn metadata(r: &Request) -> Result<(usize, usize, usize, usize, usize, usize)> {
     }
     let (n, b, c, h, p) = (r.dims[0], r.dims[1], r.dims[2], r.dims[3], r.dims[4]);
     if !(1..=89).contains(&n)
-        || b == 0
+        || (if plain(r) {b!=0}else{b==0})
         || c == 0
         || b % crate::mlp_stream::STEP != 0
         || c % crate::mlp_stream::STEP != 0
@@ -61,6 +62,7 @@ fn metadata(r: &Request) -> Result<(usize, usize, usize, usize, usize, usize)> {
 fn inner(r: &Request) -> Result<Request> {
     let (n, b, c, _, _, _) = metadata(r)?;
     let mut i = r.clone();
+    if plain(r){i.op="mlp_full_integer".into();i.encoding="bf16-block256-exact-v1".into();i.dims=vec![n,C];return Ok(i);}
     i.encoding = crate::mlp_stream::NAME.into();
     i.op = "mlp_stream_complete".into();
     i.dims = vec![n, b, c];
@@ -97,6 +99,7 @@ pub struct PreparedMlpDeltaStream {
     request: Request,
     mlp_request: Request,
     mlp: Option<crate::PreparedMlpStream>,
+    plain: Option<Vec<f32>>,
     follow: Option<(
         Vec<f32>,
         crate::delta_head_continue::Preparation,
@@ -112,7 +115,7 @@ impl PreparedMlpDeltaStream {
         if is_follow(r) {
             return Self::decode_follow(r, payload, n, h, p);
         }
-        if !matches!(payload.first(),Some(&1)|Some(&6)) || payload.len() < 5 {
+        if !(if plain(r){payload.first()==Some(&13)}else{matches!(payload.first(),Some(&1)|Some(&6))}) || payload.len() < 5 {
             return Err("pair request direction".into());
         }
         let len = u32::from_le_bytes(payload[1..5].try_into().unwrap()) as usize;
@@ -132,7 +135,11 @@ impl PreparedMlpDeltaStream {
             expanded=crate::profile::measure("pair_residual_planes",||expand_residual(n,begin,&payload[5..end]))?;
             &expanded[..]
         }else{&payload[5..end]};
-        let mlp = crate::PreparedMlpStream::decode(&mlp_request, carry)?;
+        let (mlp,plain_values)=if plain(r) {
+            if carry.len()!=4*n*C{return Err("pair full MLP input shape".into());}
+            let mut v=vec![0.;2*n*C];crate::bf16_codec::unpack(carry,&mut v);
+            if !v.iter().all(|v|v.is_finite()){return Err("pair full MLP finite".into());}(None,Some(v))
+        }else{(Some(crate::PreparedMlpStream::decode(&mlp_request, carry)?),None)};
         let mut history = vec![0.; hc];
         crate::bf16_codec::unpack(&payload[end..end + 2 * hc], &mut history);
         let mut log = vec![0.; kc];
@@ -152,13 +159,23 @@ impl PreparedMlpDeltaStream {
         Ok(Self {
             request: r.clone(),
             mlp_request,
-            mlp: Some(mlp),
+            mlp,
+            plain: plain_values,
             follow: None,
             history,
             log,
         })
     }
     fn decode_follow(r: &Request, payload: &[u8], n: usize, h: usize, p: usize) -> Result<Self> {
+        if payload.first()==Some(&12) {
+            if payload.len()<9 {return Err("pair hidden length".into());}
+            let len=u32::from_le_bytes(payload[1..5].try_into().unwrap())as usize;
+            let end=5usize.checked_add(len).filter(|v|v.checked_add(4).is_some_and(|v|v<=payload.len())).ok_or("pair hidden range")?;
+            let planes=crate::profile::measure("pair_hidden_planes",||crate::carry_planes::decode(&payload[5..end],&[(n*C,2)]))?;
+            let mut plain=Vec::with_capacity(5+2*n*C+payload.len()-end-4);plain.push(10);plain.extend_from_slice(&payload[end..end+4]);
+            plain.resize(5+2*n*C,0);crate::carry_planes::interleave(&planes[0],&mut plain[5..])?;plain.extend_from_slice(&payload[end+4..]);
+            return Self::decode_compressed_follow(r,&plain,n,h,p);
+        }
         if matches!(payload.first(),Some(&4)|Some(&10)) {return Self::decode_compressed_follow(r,payload,n,h,p);}
         let remaining = 32 - h;
         let hc = 3 * remaining * 256;
@@ -203,6 +220,7 @@ impl PreparedMlpDeltaStream {
             request: r.clone(),
             mlp_request: inner(r)?,
             mlp: None,
+            plain: None,
             follow: Some((hidden, prep, base, ax)),
             history,
             log,
@@ -356,6 +374,7 @@ impl PreparedMlpDeltaStream {
             return self.evaluate_follow(r, m, read, n, h, p, layer).map(|(v,b)|(crate::EvaluatedReply::Values(v),b));
         }
         let (both, mut bytes) = crate::profile::measure("pair_mlp_complete", || {
+            if let Some(v)=self.plain {return crate::mlp_pipeline::full(&self.mlp_request,&v,m,read);}
             self.mlp
                 .ok_or("pair completion direction")?
                 .evaluate(&self.mlp_request, m, read)
@@ -891,4 +910,26 @@ mod prefix_plane_tests {
             assert!(PreparedMlpDeltaStream::decode(&r,&p[..p.len()-1]).is_err());let mut bad=p.clone();bad.push(0);assert!(PreparedMlpDeltaStream::decode(&r,&bad).is_err());bad=p.clone();bad[1..5].copy_from_slice(&u32::MAX.to_le_bytes());assert!(PreparedMlpDeltaStream::decode(&r,&bad).is_err());bad=p.clone();let end=bad.len();bad[end-1]=255;assert!(PreparedMlpDeltaStream::decode(&r,&bad).is_err());
         }
     }
+}
+
+#[cfg(test)]
+mod new_tail_tests {
+ use super::*;
+ #[test]fn plain_mlp_rejects_bad_shape_finite_scope_and_identity() {
+  let r:Request=serde_json::from_value(serde_json::json!({"version":1,"model":"a".repeat(64),"pack_hash":"b".repeat(64),"input_hash":"c".repeat(64),"step":7,"op":"mlp_full_delta_partial","encoding":NAME,"tensor":"model.language_model.layers.27.post_attention_layernorm.weight","dims":[1,0,H,8,45],"scalars":[2.,1e-6],"aux":["model.language_model.layers.28.input_layernorm.weight"]})).unwrap();
+  let mut p=vec![13];p.extend((4*C as u32).to_le_bytes());p.extend(vec![0;4*C+2*(3*8*256+45*4*128)+4*45*(8*128+8)]);
+  assert_eq!(PreparedMlpDeltaStream::decode(&r,&p).unwrap().plain.unwrap().len(),2*C);
+  for index in [0,2*C] {let mut bad=p.clone();bad[5+index..7+index].copy_from_slice(&0x7fc0u16.to_le_bytes());assert!(PreparedMlpDeltaStream::decode(&r,&bad).is_err());}
+  assert!(PreparedMlpDeltaStream::decode(&r,&p[..p.len()-1]).is_err());let mut bad=r.clone();bad.dims[1]=128;bad.dims[2]=H-128;assert!(metadata(&bad).is_err());
+  let input=PreparedMlpDeltaStream::decode(&r,&p).unwrap();bad=r.clone();bad.step+=1;
+  let m=Manifest{version:1,model:r.model.clone(),pack_hash:r.pack_hash.clone(),bytes:0,tensors:vec![]};assert!(input.evaluate(&bad,&m,&mut|_,_|->Result<Vec<u8>>{panic!("identity read")}).is_err());
+ }
+ #[test]fn hidden_planes_restore_exactly_and_reject_unbounded_descriptors() {
+  for n in [1,87,89] {
+   let r:Request=serde_json::from_value(serde_json::json!({"version":1,"model":"a".repeat(64),"pack_hash":"b".repeat(64),"input_hash":"c".repeat(64),"step":7,"op":"delta_partial_mlp_front","encoding":NAME,"tensor":"model.language_model.layers.25.post_attention_layernorm.weight","dims":[n,1024,H-1024,10,45,6912],"scalars":[2.,1e-6],"aux":["model.language_model.layers.26.input_layernorm.weight"]})).unwrap();
+   let prep=n*(C/256+2*R+64);let mut p=vec![12];p.extend(12u32.to_le_bytes());for _ in 0..2 {p.push(2);p.extend(1u32.to_le_bytes());p.push(0);}p.extend(24u32.to_le_bytes());p.extend(vec![0;n*C]);for _ in 0..n*C/256 {p.extend(1f32.to_le_bytes());}p.extend(vec![0;4*(prep-n*C/256+n*R)]);for _ in 0..12 {p.push(2);p.extend(1u32.to_le_bytes());p.push(0);}
+   let input=PreparedMlpDeltaStream::decode(&r,&p).unwrap();assert!(input.follow.unwrap().0.iter().all(|v|v.to_bits()==0));
+   for cut in [1,5,16,p.len()-1] {assert!(PreparedMlpDeltaStream::decode(&r,&p[..cut]).is_err());}let mut bad=p.clone();bad[1..5].copy_from_slice(&u32::MAX.to_le_bytes());assert!(PreparedMlpDeltaStream::decode(&r,&bad).is_err());bad=p.clone();bad.push(0);assert!(PreparedMlpDeltaStream::decode(&r,&bad).is_err());bad=p.clone();bad[10]=0x80;bad[16]=0x7f;assert!(PreparedMlpDeltaStream::decode(&r,&bad).is_err());
+  }
+ }
 }

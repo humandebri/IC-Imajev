@@ -1,3 +1,5 @@
+2026-10-04レビュー: bridge単独featureでcanister型付きデコーダが無効になる依存欠落を修正。hidden可逆圧縮と後段stream/terminal接続を追加、境界・checkpointを検証。実canister検証/全体接続は後続、現状51query・50/32未達。[レビュー記録](docs/TAIL_STREAM_REVIEW.md)。
+
 2026-10-04継続: GQAでKVコピー/再帰検証を省き、積をSIMD化してF32加算順序を維持。実Wasm8条件、標準6/連結3条件がbit一致。主51query・69.27億命令（2.8767%）減・通信不変。主の後段5連結も成立、次要求2MB超過を保存。50/32未達。[実測と次の境界](docs/ATTENTION_VIEWS.md)。
 
 2026-10-04レビュー: 連結分割指定の黙った無視とprofile参照の後付けhashを修正。MLP前倒しAPIを追加し384行/Delta8 headsまでは部分bit一致、次要求2MB超過・10 heads以上5B超過を記録。標準6/連結3条件回帰通過、主51query・約33.03M命令減・通信不変、50/32未達。[レビューと境界](docs/ATTENTION_FRONT_REVIEW.md)。

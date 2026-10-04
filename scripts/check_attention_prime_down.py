@@ -89,7 +89,7 @@ try:
        y5,metric5=fifth;assert y5[:n*C].tobytes()==b25[:n*C].tobytes();assert y5[-3*next_k*256:].tobytes()==final26[:,first_cols].ravel().tobytes()
        rec5=dict(scope=scope5,success=True,full_bitwise_equal=True,calls5=record4['calls4']+[metric5]);rows.append(rec5);print(json.dumps(rec5),flush=True)
        h=header(h25,'delta_partial_mlp_front',PAIR,[n,f25,H-f25,next_k,p,a.next_mlp_front]);scope6=scope5+'-front'
-       try:packet=follow(h,y5,cv26[:,rest_cols],log_group(next_k,32),compress_base=True,compress_prefix=True)
+       try:packet=follow(h,y5,cv26[:,rest_cols],log_group(next_k,32),compress_base=True,compress_prefix=True,compress_hidden=True)
        except ValueError as e:
         if 'frame bounds'not in str(e):raise
         saved=d/f'failed-{scope6}.header.json';saved.write_text(json.dumps(h,indent=2)+'\n');row=dict(scope=scope6,success=False,stage='front_frame',frame_limit=True,error=str(e),header_file=saved.name,carry_response=f"{metric5['index']:06d}.response.bin");rows.append(row);print(json.dumps(row),flush=True);continue

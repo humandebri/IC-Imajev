@@ -5,16 +5,20 @@ const C: usize = 2560;
 const H: usize = 9216;
 const KV: usize = 2048;
 fn front(r:&Request)->bool {r.op=="mlp_finish_attention_mlp_front"}
+fn terminal(r:&Request)->bool {r.op=="mlp_stream_complete_terminal"}
+fn stream(r:&Request)->bool {r.op=="mlp_stream_complete_attention_full"||terminal(r)}
+fn compact(r:&Request)->bool {stream(r)||r.op=="mlp_finish_attention_full_compact"}
 
 fn metadata(r: &Request) -> Result<(usize, usize, usize)> {
-    if r.encoding != NAME || !matches!(r.op.as_str(), "mlp_finish_attention_full" | "mlp_finish_attention_full_compact" | "mlp_finish_attention_mlp_front") || r.dims.len() != if front(r){4}else{3}
+    if r.encoding != NAME || !matches!(r.op.as_str(), "mlp_finish_attention_full" | "mlp_finish_attention_full_compact" | "mlp_finish_attention_mlp_front" | "mlp_stream_complete_attention_full" | "mlp_stream_complete_terminal") || r.dims.len() != if front(r){4}else{3}
         || r.aux.len() != 1 || r.scalars.len() != 2
         || r.scalars[0].to_bits() != 2f32.to_bits()
         || r.scalars[1].to_bits() != 1e-6f32.to_bits() {
         return Err("MLP attention finish metadata".into());
     }
+    if terminal(r)&&!cfg!(feature="experimental-terminal-stream"){return Err("terminal stream disabled".into());}
     let (n, p, rows) = (r.dims[0], r.dims[1], r.dims[2]);
-    if !(1..=89).contains(&n) || p > 132 || !crate::mlp_pipeline::valid_partial_rows(rows)
+    if !(1..=89).contains(&n) || p > 132 || !(if stream(r){rows>0&&rows<H&&rows%crate::mlp_stream::STEP==0}else{crate::mlp_pipeline::valid_partial_rows(rows)})
         || front(r) && (r.dims[3]==0 || r.dims[3]>=H || r.dims[3]%crate::mlp_stream::STEP!=0) {
         return Err("MLP attention finish bounds".into());
     }
@@ -22,7 +26,7 @@ fn metadata(r: &Request) -> Result<(usize, usize, usize)> {
         .and_then(|v| v.strip_suffix(".post_attention_layernorm.weight"))
         .ok_or("MLP attention finish tensor")?;
     let layer: usize = text.parse().map_err(|_| "MLP attention finish layer")?;
-    if layer >= 30 || layer % 4 != 2 || layer.to_string() != text
+    if (if terminal(r){layer!=30}else{layer>=30}) || layer % 4 != 2 || layer.to_string() != text
         || r.aux[0] != format!("model.language_model.layers.{}.input_layernorm.weight", layer + 1) {
         return Err("MLP attention finish scope".into());
     }
@@ -31,6 +35,7 @@ fn metadata(r: &Request) -> Result<(usize, usize, usize)> {
 fn inner(r: &Request) -> Result<Request> {
     let (n, _, _) = metadata(r)?;
     let mut i = r.clone();
+    if stream(r) {i.op="mlp_stream_complete".into();i.encoding=crate::mlp_stream::NAME.into();i.dims=vec![n,r.dims[2],H-r.dims[2]];return Ok(i);}
     i.op = "mlp_down_norm_partial_prepared".into();
     i.encoding = crate::mlp_pipeline::NAME.into();
     i.dims = vec![n, C, r.dims[2]];
@@ -38,8 +43,9 @@ fn inner(r: &Request) -> Result<Request> {
 }
 pub(crate) fn reply_count(r: &Request) -> Result<usize> {
     let (n, _, _) = metadata(r)?;
+    if terminal(r){return Ok(2*C+n*KV);}
     if front(r) {return Ok(n*(C+KV)+crate::mlp_stream::limit(&next_mlp(r)?)?);}
-    Ok(n * (if r.op == "mlp_finish_attention_full_compact" {2 * C} else {3 * C} + KV))
+    Ok(n * (if compact(r) {2 * C} else {3 * C} + KV))
 }
 fn next_mlp(r:&Request)->Result<Request> {
     let(n,_,layer)=metadata(r)?;
@@ -48,6 +54,7 @@ fn next_mlp(r:&Request)->Result<Request> {
     mr.tensor=format!("model.language_model.layers.{}.post_attention_layernorm.weight",layer+1);
     mr.aux=vec![format!("model.language_model.layers.{}.input_layernorm.weight",layer+2)];mr.dims=vec![n,0,r.dims[3]];Ok(mr)
 }
+enum MlpInput {Down(crate::PreparedMlp),Stream(crate::PreparedMlpStream)}
 /// Input fields and their complete request binding cannot be forged externally.
 /// ```compile_fail
 /// let mut state: imajev_runtime::PreparedMlpAttentionFinish = todo!();
@@ -56,18 +63,18 @@ fn next_mlp(r:&Request)->Result<Request> {
 pub struct PreparedMlpAttentionFinish {
     request: Request,
     mlp_request: Request,
-    mlp: crate::PreparedMlp,
+    mlp: MlpInput,
     prefix: Vec<f32>,
 }
 impl PreparedMlpAttentionFinish {
     pub(crate) fn decode(r: &Request, payload: &[u8]) -> Result<Self> {
         let (n, p, _) = metadata(r)?;
-        let end = 2 + n * (2 * C + H + 400);
-        if payload.first() != Some(&1) || payload.len() != end + 2 * p * KV {
+        let end=if stream(r) {if payload.len()<5{return Err("MLP attention stream length".into());}5usize.checked_add(u32::from_le_bytes(payload[1..5].try_into().unwrap())as usize).ok_or("MLP attention stream range")?}else{2+n*(2*C+H+400)};
+        if payload.first()!=Some(&if stream(r){3}else{1}) || end.checked_add(2*p*KV)!=Some(payload.len()) {
             return Err("MLP attention finish length/direction".into());
         }
         let mlp_request = inner(r)?;
-        let mlp = crate::PreparedMlp::decode(&mlp_request, &payload[1..end])?;
+        let mlp=if stream(r){MlpInput::Stream(crate::PreparedMlpStream::decode(&mlp_request,&payload[5..end])?)}else{MlpInput::Down(crate::PreparedMlp::decode(&mlp_request,&payload[1..end])?)};
         let mut prefix = vec![0.; p * KV];
         crate::bf16_codec::unpack(&payload[end..], &mut prefix);
         if !prefix.iter().all(|v| v.is_finite()) {
@@ -89,8 +96,14 @@ impl PreparedMlpAttentionFinish {
         }
         let (n, p, layer) = metadata(r)?;
         let (mut both, used_mlp) = crate::profile::measure("bridge_mlp_finish", ||
-            self.mlp.evaluate(&self.mlp_request, m, read))?;
+            match self.mlp {MlpInput::Down(v)=>v.evaluate(&self.mlp_request,m,read),MlpInput::Stream(v)=>v.evaluate(&self.mlp_request,m,read)})?;
         if both.len() != 2 * n * C {return Err("MLP attention finish MLP shape".into());}
+        #[cfg(feature="experimental-terminal-stream")]
+        if terminal(r) {
+            let mut tr=r.clone();tr.op="terminal_attention_mlp_integer".into();tr.encoding="bf16-block256-exact-v1".into();tr.tensor="model.language_model.layers.31.self_attn.q_proj.weight".into();tr.dims=vec![n,p];tr.aux.clear();tr.scalars.clear();
+            let(y,used)=crate::profile::measure("bridge_terminal_stream",||crate::terminal_attention::evaluate_validated_parts(&tr,&both[n*C..],&both[n*C-C..n*C],&self.prefix,m,read))?;
+            return Ok((crate::EvaluatedReply::Values(y),used_mlp.checked_add(used).ok_or("terminal stream read overflow")?));
+        }
         let mut input = both[n * C..].to_vec();
         input.extend(self.prefix);
         let mut ar = r.clone();
@@ -118,7 +131,7 @@ impl PreparedMlpAttentionFinish {
         }
         #[cfg(not(feature="experimental-direct-mlp-reply"))]
         let _=direct;
-        if r.op == "mlp_finish_attention_full_compact" {both.truncate(n * C);}
+        if compact(r) {both.truncate(n * C);}
         both.extend(attention);
         Ok((crate::EvaluatedReply::Values(both),used))
     }
@@ -218,4 +231,23 @@ mod front_tests {
             let mut bad=k.clone();bad[0]=0.1234567;assert!(wrap_front_reply(&r,&h,make(),&bad).is_err());
         }
     }
+}
+
+#[cfg(test)]mod stream_tail_tests {
+ use super::*;
+ #[test]fn stream_and_terminal_shapes_reject_reply_direction_and_wrong_identity() {
+  for op in ["mlp_stream_complete_attention_full","mlp_stream_complete_terminal"] {
+   if op.ends_with("terminal")&&!cfg!(feature="experimental-terminal-stream"){continue;}
+   let layer=if op.ends_with("terminal"){30}else{26};
+   for n in [1,87,89] {
+    let r:Request=serde_json::from_value(serde_json::json!({"version":1,"model":"a".repeat(64),"pack_hash":"b".repeat(64),"input_hash":"c".repeat(64),"step":7,"op":op,"encoding":NAME,"tensor":format!("model.language_model.layers.{layer}.post_attention_layernorm.weight"),"dims":[n,45,6912],"scalars":[2.,1e-6],"aux":[format!("model.language_model.layers.{}.input_layernorm.weight",layer+1)]})).unwrap();
+    let mut v=vec![0.;n*C];v.extend(vec![1.;n*C]);v.extend(vec![0.25;n*10]);v.extend(vec![0.1234567;n*128]);v.extend(vec![127.;n*6912]);v.extend(vec![0.0123;n*27]);v.extend(vec![0.56789;n*64]);
+    let mut carry=vec![];crate::mlp_stream::append(&mut carry,&inner(&r).unwrap(),&v).unwrap();let mut p=vec![3];p.extend((carry.len()as u32).to_le_bytes());p.extend(carry);p.extend(vec![0;2*45*KV]);
+    let input=PreparedMlpAttentionFinish::decode(&r,&p).unwrap();let mut bad=r.clone();bad.input_hash="d".repeat(64);
+    let m=Manifest{version:1,model:r.model.clone(),pack_hash:r.pack_hash.clone(),bytes:0,tensors:vec![]};assert!(input.evaluate(&bad,&m,&mut|_,_|->Result<Vec<u8>>{panic!("identity read")}).is_err());
+    assert!(PreparedMlpAttentionFinish::decode(&r,&p[..p.len()-1]).is_err());let mut corrupt=p.clone();corrupt[1..5].copy_from_slice(&u32::MAX.to_le_bytes());assert!(PreparedMlpAttentionFinish::decode(&r,&corrupt).is_err());
+    let y=vec![0.;reply_count(&r).unwrap()];let frame=crate::encode(&r,&y).unwrap();assert_eq!(crate::decode(&frame).unwrap().1.len(),y.len());assert!(crate::decode_query(&frame).is_err());
+   }
+  }
+ }
 }

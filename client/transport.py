@@ -189,7 +189,7 @@ class Transport:
         op,tensor=h['op'],h['tensor']
         request=self.directory/f'{self.index:06d}.request.bin';response=self.directory/f'{self.index:06d}.response.bin'
         atomic(request,payload);last=None
-        fused=op in ('terminal_attention_mlp_integer','terminal_tail_integer') and bool(getattr(self,'fuse_terminal_decision',False))
+        fused=op in ('terminal_attention_mlp_integer','terminal_tail_integer','mlp_stream_complete_terminal') and bool(getattr(self,'fuse_terminal_decision',False))
         command={'op':'terminal_step_decision' if fused else 'step','input':str(request),'output':str(response)}
         if fused:command['options']=self.decision_options
         for attempt in range(3):

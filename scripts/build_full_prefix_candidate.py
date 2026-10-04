@@ -34,6 +34,7 @@ ap.add_argument('--direct-input', action='store_true',
                 help='Use the matched original-I16-buffer WAT ABI')
 ap.add_argument('--terminal-attention', action='store_true')
 ap.add_argument('--terminal-tail', action='store_true')
+ap.add_argument('--terminal-stream', action='store_true')
 ap.add_argument('--host-checksum',action='store_true')
 ap.add_argument('--prefix-start', action='store_true')
 ap.add_argument('--delta-no-writeback', action='store_true')
@@ -88,6 +89,7 @@ if args.delta_no_writeback:
     features += ',experimental-delta-no-writeback'
 if args.prefix_start:
     features += ',experimental-prefix-start'
+if args.terminal_stream:features += ',experimental-terminal-stream'
 if args.terminal_tail:
     assert args.terminal_attention
     features += ',experimental-terminal-tail'

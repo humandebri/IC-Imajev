@@ -15,8 +15,9 @@ sha2.workspace = true
 serde_bytes = { version = "=0.11.19", optional = true }
 
 [features]
+experimental-terminal-stream = ["experimental-mlp-attention-finish", "experimental-terminal-attention", "imajev-runtime/experimental-terminal-stream"]
 experimental-attention-views = ["imajev-runtime/experimental-attention-views"]
-experimental-mlp-attention-finish = ["imajev-runtime/experimental-mlp-attention-finish"]
+experimental-mlp-attention-finish = ["experimental-mlp-stream", "imajev-runtime/experimental-mlp-attention-finish"]
 experimental-prefix-update-hoist = ["imajev-runtime/experimental-prefix-update-hoist"]
 experimental-attention-mlp-stream = ["experimental-mlp-stream", "experimental-attention-full", "imajev-runtime/experimental-attention-mlp-stream"]
 experimental-mlp-delta-stream = ["experimental-mlp-stream", "experimental-int8-k-continue", "experimental-delta-state-layout", "experimental-mlp-full89", "imajev-runtime/experimental-mlp-delta-stream"]

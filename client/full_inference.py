@@ -69,7 +69,7 @@ class JournalTransport(Transport):
             if rh['step']!=self.index+1 or any(rh[k]!=value for k,value in h.items() if k not in ('step','scalars')) or not np.array_equal(np.asarray(rh['scalars'],dtype=np.float32),np.asarray(h['scalars'],dtype=np.float32)):raise ValueError('checkpoint reply identity')
             saved=json.loads(metric.read_text())
             if saved.get('index')!=self.index or saved.get('op')!=op or saved.get('tensor')!=tensor:raise ValueError('checkpoint metric identity mismatch')
-            fused=op in ('terminal_attention_mlp_integer','terminal_tail_integer') and bool(getattr(self,'fuse_terminal_decision',False))
+            fused=op in ('terminal_attention_mlp_integer','terminal_tail_integer','mlp_stream_complete_terminal') and bool(getattr(self,'fuse_terminal_decision',False))
             if fused:
                 if saved.get('decision_options')!=self.decision_options or 'decision' not in saved['ok']:raise ValueError('terminal decision checkpoint options/result mismatch')
                 self.terminal_decision=saved['ok']['decision']
