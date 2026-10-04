@@ -39,4 +39,3 @@
 主入力は共通prefix45＋suffix87＝132 token、rotations=1。新しい8query連結は全体へ未接続、主は54query、50/32未達。次に調べる箇所はIDs/embedを含む最初のDelta/MLP start返信のF32展開と、後続MLP/Attention境界の配分。元BF16モデルに対する判断精度とは別の回帰であり、最大変更の見逃しを解消したものではない。
 
 保護対象`4caro-hl777-77775-aaaba-cai`はRunning、module `36c04a57e9501eb9d32163c92d7725171191fa46a45a880ad03465993fceed73`のまま。Layaは参照のみ。生成物は既存gitignoreの対象で、mainnet/push/PRは行っていない。
-
