@@ -41,6 +41,7 @@ ap.add_argument('--delta-state-layout', action='store_true')
 ap.add_argument('--prefix-update-hoist',action='store_true')
 ap.add_argument('--mlp-delta-fusion', action='store_true')
 ap.add_argument('--instruction-profile', action='store_true')
+ap.add_argument('--attention-views', action='store_true')
 args = ap.parse_args()
 directory = ROOT/args.directory
 directory.mkdir(parents=True, exist_ok=True)
@@ -58,6 +59,7 @@ features = ','.join([
     'experimental-prefix-hybrid','experimental-lora-input-sharing',
     'experimental-mlp-full89','experimental-pair-wat'])
 features += ',experimental-paired-only'
+if args.attention_views:features += ',experimental-attention-views'
 if args.host_checksum:features += ',experimental-host-checksum'
 if args.strassen_raw:features += ',experimental-strassen-raw'
 if args.strassen_output128:features += ',experimental-strassen-output128'

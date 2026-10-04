@@ -1,3 +1,5 @@
+#[cfg(feature="experimental-attention-views")]
+mod attention_views;
 #[cfg(feature="experimental-mlp-attention-finish")]
 mod mlp_attention_finish;
 #[cfg(feature="experimental-mlp-attention-finish")]
@@ -1447,6 +1449,20 @@ pub fn execute(r: &Request, x: &[f32], weight: &[f32]) -> Result<Vec<f32>> {
             let kv_stride = (n + prefix) * width;
             let (queries, kv) = x.split_at(heads * stride);
             let (keys, values) = kv.split_at(heads.div_ceil(4) * kv_stride);
+            #[cfg(feature="experimental-attention-views")]
+            {
+                let mut out = Vec::with_capacity(heads * stride);
+                for head in 0..heads {
+                    let group = head / 4;
+                    out.extend(crate::profile::measure("gqa_head_views", || attention_views::head(
+                        &queries[head * stride..(head + 1) * stride],
+                        &keys[group * kv_stride..(group + 1) * kv_stride],
+                        &values[group * kv_stride..(group + 1) * kv_stride], n, width, prefix)));
+                }
+                out
+            }
+            #[cfg(not(feature="experimental-attention-views"))]
+            {
             let mut single = r.clone();
             single.op = "attention_suffix_bf16".into();
             single.dims = vec![n, width, prefix];
@@ -1461,6 +1477,7 @@ pub fn execute(r: &Request, x: &[f32], weight: &[f32]) -> Result<Vec<f32>> {
                 out.extend(execute(&single, &input, &[])?);
             }
             out
+            }
         }
         "attention_heads_bf16" if d.len() == 3 => {
             let (n, width, heads) = (d[0], d[1], d[2]);
