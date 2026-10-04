@@ -39,6 +39,17 @@ def encode_request(header,state,conv=None,log=None,raw_threshold=0.):
     return body+frame_digest(header,body)
 
 
+def encode_dictionary_plane(raw):
+    import collections
+    if not raw:return b'\0'+struct.pack('<I',0)
+    table=bytes(s for s,_ in collections.Counter(raw).most_common(15));lookup={s:i for i,s in enumerate(table)}
+    codes=bytearray((len(raw)+1)//2);escape=bytearray()
+    for i,s in enumerate(raw):
+        code=lookup.get(s,15);codes[i//2]|=code<<(4*(i%2))
+        if code==15:escape.append(s)
+    payload=bytes([len(table)])+table+codes+escape
+    return b'\3'+struct.pack('<I',len(payload))+payload
+
 def encode_plane(raw,raw_threshold=0.):
     import collections,heapq
     freq=collections.Counter(raw)

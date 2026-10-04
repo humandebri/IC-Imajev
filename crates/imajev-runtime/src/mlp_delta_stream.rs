@@ -83,7 +83,7 @@ fn expand_residual(n:usize,begin:usize,p:&[u8])->Result<Vec<u8>> {
     let mut groups=crate::carry_planes::decode(&p[9..end],&[(n*C,2)])?;
     let planes=groups.pop().ok_or("pair residual planes")?;
     let mut out=Vec::with_capacity(5+2*n*C+tail);out.extend_from_slice(&p[..5]);
-    for i in 0..n*C {out.push(planes[i]);out.push(planes[n*C+i]);}
+    out.resize(5+2*n*C,0);crate::carry_planes::interleave(&planes,&mut out[5..])?;
     out.extend_from_slice(&p[end..]);Ok(out)
 }
 /// Validated complete MLP input remains attached to the whole fusion request.
