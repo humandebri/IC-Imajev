@@ -16,10 +16,14 @@ from mlp_stream_codec import NAME as MLP_NAME,C,H,R
 ap=argparse.ArgumentParser(description=__doc__)
 for name in ['canister','wasm','directory']:ap.add_argument('--'+name,required=True)
 ap.add_argument('--continue-mlp',action='store_true')
+ap.add_argument('--down-rows',type=int,default=0)
+ap.add_argument('--layers',default='0,1,3')
 ap.add_argument('--begins',default='4352,4608,4864,5120')
 ap.add_argument('--heads',default='22,24')
 ap.add_argument('--source-case',choices=['617','insufficient','maximum'],default='617')
-a=ap.parse_args();d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=True);sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();wasm=sha(ROOT/a.wasm)
+a=ap.parse_args()
+if a.down_rows and (not a.continue_mlp or not 0<a.down_rows<C or a.down_rows%32):ap.error('--down-rows requires --continue-mlp and 32-aligned rows in 1..2559')
+d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=True);sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();wasm=sha(ROOT/a.wasm)
 m=json.loads((ROOT/'checkpoints/full-int8.manifest.json').read_bytes())
 source=ROOT/'artifacts/prefix_codec/full-capture-prepared-proof'/a.source_case;report=json.loads((source/'report.json').read_bytes())
 old=ROOT/f'artifacts/column16-v1-{a.source_case}';old_report=json.loads((old/'report.json').read_bytes())
@@ -28,7 +32,7 @@ t=Transport(m['model'],'http://localhost:8001/',a.canister,str(ROOT/'artifacts/i
 cases=[]
 try:
  verify_module(t,wasm)
- for layer in [0,1,3]:
+ for layer in [int(v)for v in a.layers.split(',')]:
   q=next(q for q in report['queries']if q['op']=='mlp_full_integer'and f'.layers.{layer}.'in q['tensor'])
   req=source/'queries'/f"{q['index']:06d}.request.bin";res=source/'queries'/f"{q['index']:06d}.response.bin";head,x=decode(req.read_bytes());_,both=decode(res.read_bytes());n=head['dims'][0];next_layer=layer+1
   tensor=f'model.language_model.layers.{next_layer}.linear_attn.in_proj_qkv.weight'
@@ -69,21 +73,35 @@ try:
     if a.continue_mlp:
      remaining=32-heads;rest_indices=np.concatenate([np.arange(heads//2*128,2048),np.arange(2048+heads//2*128,4096),np.arange(4096+cols,8192)])
      rest_log=np.concatenate([log[:p*2048].reshape(p,2048)[:,heads//2*128:].ravel(),log[p*2048:p*6144].reshape(p,4096)[:,cols:].ravel(),log[p*6144:].reshape(p,32)[:,heads:].ravel()])
-     fh=dict(h,op='delta_partial_mlp_prepare',step=t.index);follow_packet=encode_continue_request(fh,y,history[:,rest_indices],rest_log);follow_index=t.index
-     fy=t._run_encoded(fh,follow_packet);row['follow_call']=t.measurements[-1];row['follow_request_frame_bytes']=len(follow_packet)
+     fh=dict(h,op='delta_partial_mlp_prepare_down' if a.down_rows else 'delta_partial_mlp_prepare',step=t.index,dims=h['dims']+([a.down_rows]if a.down_rows else []));follow_index=t.index
+     try:follow_packet=encode_continue_request(fh,y,history[:,rest_indices],rest_log)
+     except ValueError as error:
+      if str(error)!='pair continuation frame bounds':raise
+      row.update(success=False,stage='follow_frame',instruction_limit=False,frame_limit=True,error=str(error));cases.append(row);print(json.dumps(row),flush=True);continue
+     row['follow_request_frame_bytes']=len(follow_packet)
+     try:fy=t._run_encoded(fh,follow_packet)
+     except RuntimeError as error:
+      if not is_instruction_limit(error):raise
+      failed=d/f'failed-follow-layer{layer}-begin{begin}-heads{heads}.request.bin';shutil.copyfile(d/f'{follow_index:06d}.request.bin',failed)
+      row.update(success=False,stage='follow_query',instruction_limit=True,error=str(error),failed_request_sha256=sha(failed));cases.append(row);print(json.dumps(row),flush=True);continue
+     row['follow_call']=t.measurements[-1]
      assert fy[-3*remaining*256:].tobytes()==final_history[:,rest_indices].ravel().tobytes()
      nextq=next(q for q in report['queries']if q['op']=='mlp_full_integer'and f'.layers.{next_layer}.'in q['tensor']);nextreq=source/'queries'/f"{nextq['index']:06d}.request.bin";nextres=source/'queries'/f"{nextq['index']:06d}.response.bin";nh,nx=decode(nextreq.read_bytes());_,next_expected=decode(nextres.read_bytes())
-     t.wire_codec='mlp-down-state-exact-v1';prepared=t.run('mlp_prepare_down',nx,[n,C],[2.,1e-6],tensor=nh['tensor'],aux=nh['aux'],input_hash=nh['input_hash'])
+     t.wire_codec='mlp-down-state-exact-v1';prepared=t.run('mlp_prepare_partial_down' if a.down_rows else 'mlp_prepare_down',nx,[n,C]+([a.down_rows]if a.down_rows else []),[2.,1e-6],tensor=nh['tensor'],aux=nh['aux'],input_hash=nh['input_hash'])
      assert fy[:n*(C+H+100)].tobytes()==prepared.tobytes()
-     finished=t.run('mlp_down_norm_prepared',fy[:n*(C+H+100)],[n,C],[2.,1e-6],tensor=nh['tensor'],aux=nh['aux'],input_hash=nh['input_hash']);assert finished.tobytes()==next_expected.tobytes()
-     row.update(follow_prepared_bitwise_equal=True,follow_history_bitwise_equal=True,follow_finished_hidden_norm_bitwise_equal=True,next_mlp_request_sha256=sha(nextreq),next_mlp_response_sha256=sha(nextres))
+     if a.down_rows:
+      from mlp_delta_carry import NAME as CARRY_NAME,encode_request as encode_finish
+      finish=dict(nh,version=3,step=t.index,encoding=CARRY_NAME,op='mlp_finish_partial_integer',dims=[n,0,a.down_rows]);finished=t._run_encoded(finish,encode_finish(finish,fy[:n*(C+H+100)]))
+     else:finished=t.run('mlp_down_norm_prepared',fy[:n*(C+H+100)],[n,C],[2.,1e-6],tensor=nh['tensor'],aux=nh['aux'],input_hash=nh['input_hash'])
+     assert finished.tobytes()==next_expected.tobytes()
+     row.update(finish_call=t.measurements[-1],partial_down_rows=a.down_rows,follow_prepared_bitwise_equal=True,follow_history_bitwise_equal=True,follow_finished_hidden_norm_bitwise_equal=True,next_mlp_request_sha256=sha(nextreq),next_mlp_response_sha256=sha(nextres))
      out=d/f'{follow_index:06d}.profile.response.bin';row['follow_profile']=t.command(dict(op='profile',input=str(d/f'{follow_index:06d}.request.bin'),output=str(out)));assert decode(out.read_bytes())[1].tobytes()==fy.tobytes()
     row.update(success=True,hidden_bitwise_equal=True,prepared_bitwise_equal=True,history_bitwise_equal=True,base_carry_bitwise_equal=True,A_carry_bitwise_equal=True)
     if layer==0 and begin==5120:
      out=d/f'{index:06d}.profile.response.bin';row['profile']=t.command(dict(op='profile',input=str(d/f'{index:06d}.request.bin'),output=str(out)));assert decode(out.read_bytes())[1].tobytes()==y.tobytes()
     cases.append(row);print(json.dumps(row),flush=True)
  verify_module(t,wasm);assert hashes=={str(p.relative_to(ROOT)):sha(p)for p in paths}
- result=dict(scope=__doc__,wasm_sha256=wasm,source_case=a.source_case,source_hashes=hashes,cases=cases,regular_successful_diagnostic_queries=len(t.measurements),instruction_limit_diagnostic_queries=sum(not c['success']for c in cases),goal_50_verified=False)
+ result=dict(scope=__doc__,wasm_sha256=wasm,source_case=a.source_case,source_hashes=hashes,cases=cases,regular_successful_diagnostic_queries=len(t.measurements),instruction_limit_diagnostic_queries=sum(c.get('instruction_limit',False)for c in cases),frame_limit_cases=sum(c.get('frame_limit',False)for c in cases),goal_50_verified=False)
  (d/'report.json').write_text(json.dumps(result,indent=2)+'\n')
  with zipfile.ZipFile(d/'validated-source.zip','w',zipfile.ZIP_DEFLATED)as z:
   for path in paths:z.write(path,str(path.relative_to(ROOT)))

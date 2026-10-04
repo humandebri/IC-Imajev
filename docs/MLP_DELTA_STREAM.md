@@ -33,3 +33,24 @@ runtime109/canister9 unit・integration9・compile-fail doc9、通常featureのr
 証拠は `artifacts/f32_k_continue/pair-follow-check-{617,insufficient,maximum,maximum-cuts}` のreport・source ZIP・保存frame・profile。通常成功診断282、命令上限拒否45、profile診断42を全体推論と別計上する。`scripts/archive_mlp_delta_stream_proof.py` は保存byteと参照の対応、source/build hash、全6条件のreportを検査する。全体は `artifacts/prefix_codec/full-mlp-delta-stream-proof-v3`、buildは `full-build-mlp-delta-stream-v3`。生成物はignore済み。
 
 レビューで証拠検査のsource ZIP上書きを除き、保存ZIP自身のhashを検査するよう修正した。近接requestのRustテストも実ヘッダー長で2,000,000 bytes未満を確認する。変更は検証スクリプトとtest部分で、上記Wasm実測は保存sourceに対応する。修正後、境界Rust3件・Python5件と保存証拠検査が通過した。
+
+## down projectionの前倒し（追加候補）
+
+実験module `ba3bb4423c378c5a393df6590c45ff799f4a40c877115598a7f68d59bcba8cd6`。`delta_partial_mlp_prepare_down` は6番目のdimsで処理済みdown行数を指定する（32の倍数、1〜2559）。product整数/scale/down Aを1回作り、指定行のresidualを完成hiddenへ更新する。続く `mlp_finish_partial_integer` はこの行を飛ばす。carryのサイズ・精度は従来と同じで、全状態はclientが保持する。通常の5 dims経路は維持した。
+
+|layer0の追加経路|token|down済み行|MLP完了/Delta部分query|Delta完了/部分MLP query|残りMLP finish query|3 query Candid合計bytes|
+|---|---:|---:|---:|---:|---:|---:|
+|主|87|1600|4,840,104,959|4,827,972,602|681,618,594|8,710,851|
+|最大変更|89|1280|4,866,547,795|4,758,181,780|818,726,980|8,910,750|
+
+87 tokenのlayer0/1/3では1600行が成立し、89 tokenの1600行は3条件とも後半queryが5B命令超過。89 tokenは1280行へ減らして3層とも成立した。87 layer0のfinish計測を追加した計7成立条件で、carry・conv履歴・次MLPのfinish後hidden/normが参照とビット一致。通常成功診断61、命令上限拒否3、profile診断9を保存し、保存byte/source/build検査も通過した。続くqueryの2MB入力上限拒否を診断で記録するようにした。最大requestは1,995,298 bytes。境界を全tokenへ一律適用しない。
+
+87 finishの追加profile1回（通常呼出し0）も出力一致。総681,654,203命令、演算 `carry_mlp_finish` 473,724,065、wire decode 192,480,395、その中の `carry_inflate` 165,077,908。可逆圧縮を展開する費用が残る。profileのwall timeは全体回帰との同時実行で44.398秒だったため、性能比較に用いない。次は2MB以内の未圧縮carryを直接受け取り、この復元を取り除く候補を検証する。
+
+追加featureのruntime115 unit（保存fixture依存1件ignore）/integration15/doc9、canister8 unit、Python6件が通過した。buildは `full-build-mlp-delta-stream-down-v1`、固定721重み4,065,416,192 bytesの準備は721 update・78,739,929,194命令・266.356秒。推論のquery数・通信に準備を合算しない。診断は `pair-down{1600,1280}-check-*`、保存検査は `pair-down-archive-v2.json`、finish profileは `pair-down-finish-profile-v1`。
+
+この候補も全体graphへ未接続。3 queryの表は境界の一部分で、最初のMLP準備queryも別に必要。全体query削減や総命令削減の達成値とは扱わない。
+
+追加候補の全6条件も回帰比較が通過した（`full-mlp-delta-stream-down-proof-v1`）。返却hidden・保持state・型付き判断・logits・確率は既存INT8とビット一致、非返却layer30 hiddenは直接比較しない。主は62 query・235,201,656,645命令（前module比+3,381）、最大4,716,855,277命令・Candid 123,281,081 bytes・返却時heap最大4,130,144,256 bytes・単回34.979秒。query数/通信は変わらず、時間差を速度向上としない。既存INT8の最大変更の見逃しも残る。主canisterのmodule `36c04a57…` は読取で不変を確認した。
+
+再現時は全体検証完了後に `snapshot_full_query_proof.py --directory <proof-dir>` を実行する。source hashを確認したbyteからZIPを新規作成し、既存ZIPへの上書きは拒否する。続いて `archive_mlp_delta_stream_proof.py --build <build-dir> --directories <診断directory名のcsv> --full-directory <proof-dir> --output <検査結果json>` で保存証拠を検査する。生成物はignore済み。

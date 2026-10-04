@@ -35,6 +35,16 @@ class PairCodecTests(unittest.TestCase):
     inner=dict(h,encoding=DOWN_NAME,op='mlp_prepare_down',dims=[n,C],tensor='model.language_model.layers.1.post_attention_layernorm.weight',aux=['model.language_model.layers.2.input_layernorm.weight'])
     wire=b'\3'+encode_payload(inner,prepared)+(cv.view('<u4')>>16).astype('<u2').tobytes();expected=np.concatenate([prepared,cv]);self.assertEqual(decode_reply(h,wire).tobytes(),expected.tobytes())
     with self.assertRaises(ValueError):decode_reply(h,payload)
+ def test_partial_down_progress_is_bound_and_shape_unchanged(self):
+  h=header(1,22);h['op']='delta_partial_mlp_prepare_down';h['dims'].append(1600)
+  self.assertEqual(layout(h),(1,5120,4096,22,45))
+  _,x=reply(1,22);cv=np.zeros(3*10*256,np.float32);log=np.zeros(45*(5*128+10*128+10),np.float32)
+  self.assertLess(len(encode_continue_request(h,x,cv,log)),2_000_000)
+  for rows in [0,31,2560,-32,True]:
+   h['dims'][-1]=rows
+   with self.assertRaises(ValueError):layout(h)
+  h['dims'][-1]=1600;h['op']='delta_partial_mlp_prepare'
+  with self.assertRaises(ValueError):layout(h)
  def test_incomplete_or_repeated_progress_rejected(self):
   h=header(1);cv=np.zeros(3*24*256,np.float32);log=np.zeros(45*(12*128+24*128+24),np.float32)
   for done in [4608,H]:

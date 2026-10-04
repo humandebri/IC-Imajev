@@ -5,18 +5,20 @@ import struct
 import numpy as np
 from mlp_stream_codec import C,H,R,NAME as MLP_NAME,encode_payload as encode_mlp
 NAME='mlp-delta-stream-exact-v1'
+FOLLOW=('delta_partial_mlp_prepare','delta_partial_mlp_prepare_down')
 
 def layout(h):
     d=h.get('dims',[]);a=h.get('aux',[]);s=h.get('scalars',[])
-    if h.get('encoding')!=NAME or h.get('op') not in ('mlp_complete_delta_partial','delta_partial_mlp_prepare') or len(d)!=5 or any(type(v)is not int for v in d) or len(a)!=1 or len(s)!=2 or not np.array_equal(np.asarray(s,dtype='<f4').view('<u4'),np.asarray([2.,1e-6],dtype='<f4').view('<u4')):raise ValueError('pair metadata')
-    n,b,c,k,p=d
+    if h.get('encoding')!=NAME or h.get('op') not in ('mlp_complete_delta_partial',)+FOLLOW or len(d)!=(6 if h.get('op')=='delta_partial_mlp_prepare_down' else 5) or any(type(v)is not int for v in d) or len(a)!=1 or len(s)!=2 or not np.array_equal(np.asarray(s,dtype='<f4').view('<u4'),np.asarray([2.,1e-6],dtype='<f4').view('<u4')):raise ValueError('pair metadata')
+    n,b,c,k,p=d[:5]
+    if len(d)==6 and not (0<d[5]<C and d[5]%32==0):raise ValueError('pair partial down rows')
     if not 1<=n<=89 or b<=0 or c<=0 or b%256 or c%256 or b+c!=H or not 0<k<32 or k%2 or not 1<=p<=132:raise ValueError('pair bounds')
     m=re.fullmatch(r'model\.language_model\.layers\.(0|[1-9][0-9]*)\.post_attention_layernorm\.weight',h.get('tensor',''))
     if not m or not 0<=int(m[1])<30 or (int(m[1])+2)%4==0 or a[0]!=f'model.language_model.layers.{int(m[1])+1}.input_layernorm.weight':raise ValueError('pair layer scope')
     return n,b,c,k,p
 
 def reply_count(h):
-    n,b,c,k,p=layout(h);return n*(C+H+100)+3*(32-k)*256 if h['op']=='delta_partial_mlp_prepare' else n*(3*C+C//256+3*R+64)+3*k*256
+    n,b,c,k,p=layout(h);return n*(C+H+100)+3*(32-k)*256 if h['op'] in FOLLOW else n*(3*C+C//256+3*R+64)+3*k*256
 
 def encode_request(h,state,history,log):
     from transport import frame_digest
@@ -34,7 +36,7 @@ def encode_request(h,state,history,log):
 
 def decode_reply(h,payload):
     n,b,c,k,p=layout(h)
-    if h['op']=='delta_partial_mlp_prepare':
+    if h['op'] in FOLLOW:
         from mlp_codec import NAME as DOWN_NAME,decode_payload
         end=2+n*(C*2+H+400);hc=3*(32-k)*256
         if payload[:1]!=b'\3' or len(payload)!=end+2*hc:raise ValueError('pair prepared reply length/direction')
@@ -58,7 +60,7 @@ def decode_reply(h,payload):
 def encode_continue_request(h,carry,history,log):
     from transport import frame_digest
     n,b,c,k,p=layout(h)
-    if h['op']!='delta_partial_mlp_prepare':raise ValueError('pair continuation direction')
+    if h['op'] not in FOLLOW:raise ValueError('pair continuation direction')
     v=np.asarray(carry,dtype='<f4').ravel();hc=3*k*256;tail=n*(C//256+2*R+64+C+R);fixed=2*n*C+tail
     if v.size!=fixed+hc or not np.isfinite(v).all() or np.any(v[:n*C].view('<u4')&65535) or np.any(v[-hc:].view('<u4')&65535):raise ValueError('pair continuation carry shape/precision')
     integers=v[n*C:2*n*C];rest=v[2*n*C:fixed]

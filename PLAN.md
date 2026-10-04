@@ -1,3 +1,5 @@
+2026-10-04: 部分down前倒しを追加。87 token/1600行と89 token/1280行でcarry/finish一致、89 token/1600行は5B超過。全6条件回帰も通過。全体graphは未接続で主62 query、50未達。[実測と次のボトルネック](docs/MLP_DELTA_STREAM.md)。
+
 2026-10-04: MLP完了→次層Delta部分→次queryのDelta完了/次層MLP準備を実装。39成立条件でcarry/次層finishまでビット一致、45条件は5B超過を記録。新Wasmの全6条件回帰も通過。全体は未接続で主62 query、50未達。詳細は [MLP_DELTA_STREAM.md](docs/MLP_DELTA_STREAM.md)。
 
 2026-10-04: レビュー修正を `597206a` にコミット。続いてMLP最終chunkとfinishのquery融合を実装し、45実測条件でhidden/normビット一致、分割比1 query・約92〜105M命令・約2.86〜3.18MB通信を削減。全体graphへは未接続で、主62 query。詳細は [MLP_COMPLETE.md](docs/MLP_COMPLETE.md)。
