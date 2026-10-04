@@ -20,9 +20,10 @@ def layout(h):
 def reply_count(h):
     n,b,c,k,p=layout(h);return n*(2*C if h['op']=='delta_partial_mlp_full'else C+H+100)+3*(32-k)*256 if h['op'] in FOLLOW else n*(3*C+C//256+3*R+64)+3*k*256
 
-def encode_request(h,state,history,log,*,compress_residual=False):
+def encode_request(h,state,history,log,*,compress_residual=False,residual_raw_threshold=0.):
     from transport import frame_digest
     n,b,c,k,p=layout(h)
+    if not 0<=residual_raw_threshold<=1:raise ValueError('pair residual raw threshold')
     if h['op']!='mlp_complete_delta_partial':raise ValueError('pair completion direction')
     inner=dict(h,encoding=MLP_NAME,op='mlp_stream_complete',dims=[n,b,c])
     carry=encode_mlp(inner,state)
@@ -31,7 +32,7 @@ def encode_request(h,state,history,log,*,compress_residual=False):
     if cv.size!=3*k*256 or lv.size!=p*(k//2*128+k*128+k) or not np.isfinite(cv).all() or not np.isfinite(lv).all() or np.any(cv.view('<u4')&65535) or np.any(lv[:kc].view('<u4')&65535) or np.any(lv[kc+p*k*128:]<0) or np.any(lv[kc+p*k*128:]>1):raise ValueError('pair prefix shape/finite')
     if compress_residual:
         from mlp_delta_carry import encode_plane
-        raw=carry[5:5+2*n*C];planes=encode_plane(raw[0::2])+encode_plane(raw[1::2]);carry=carry[:5]+struct.pack('<I',len(planes))+planes+carry[5+2*n*C:]
+        raw=carry[5:5+2*n*C];planes=encode_plane(raw[0::2],residual_raw_threshold)+encode_plane(raw[1::2],residual_raw_threshold);carry=carry[:5]+struct.pack('<I',len(planes))+planes+carry[5+2*n*C:]
     payload=bytes([6 if compress_residual else 1])+struct.pack('<I',len(carry))+carry+(cv.view('<u4')>>16).astype('<u2').tobytes()+(lv[:kc].view('<u4')>>16).astype('<u2').tobytes()+lv[kc:].tobytes()
     header=json.dumps(h,separators=(',',':'),allow_nan=False).encode();body=struct.pack('<I',len(header))+header+payload
     if len(header)>16384 or len(body)+32>2_000_000:raise ValueError('pair frame bounds')
