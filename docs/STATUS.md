@@ -1,3 +1,5 @@
+2026-10-04: レビュー修正を `597206a` にコミット。続いてMLP最終chunkとfinishのquery融合を実装し、45実測条件でhidden/normビット一致、分割比1 query・約92〜105M命令・約2.86〜3.18MB通信を削減。全体graphへは未接続で、主62 query。詳細は [MLP_COMPLETE.md](MLP_COMPLETE.md)。
+
 # Imajev-4Bの実装状況
 
 2026-10-04レビュー：compact tailの古いlayer30出力を除去し、MLP carry送信時の検査用全復元をRust/Pythonとも省略、frame versionの型検査を修正。候補/通常featureのRust・Python検証、保存payload315個のbyte一致、Wasmビルドを確認。実canister命令の再測定は後続に分離。主62 query・50未達を維持。 [レビュー記録](IMPLEMENTATION_REVIEW_2026_10_04.md)。

@@ -8,7 +8,7 @@ import numpy as np
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'client'))
-from mlp_stream_codec import C, H, R, NAME, encode_payload, decode_payload
+from mlp_stream_codec import C, H, R, NAME, encode_payload, decode_payload, layout
 from transport import Transport, decode
 
 
@@ -37,6 +37,18 @@ class StreamCodecTests(unittest.TestCase):
                 p = encode_payload(h, x)
                 self.assertLess(len(p), 2_000_000)
                 self.assertEqual(decode_payload(h, p).tobytes(), x.tobytes())
+
+    def test_complete_carry_and_plain_reply_are_lossless_and_bounds_are_strict(self):
+        h = header(89, 4608)
+        h.update(op='mlp_stream_complete', dims=[89, 4608, 4608])
+        x = carry(89, 4608)
+        self.assertEqual(decode_payload(h, encode_payload(h, x)).tobytes(), x.tobytes())
+        plain = np.zeros(2 * 89 * C, np.float32)
+        self.assertEqual(decode_payload(h, encode_payload(h, plain)).tobytes(), plain.tobytes())
+        for dims in [[1, 0, H], [1, H, 0], [1, 256, 256], [1, H - 256, 512]]:
+            h['dims'] = dims
+            with self.assertRaises(ValueError):
+                layout(h)
 
     def test_encoder_rejects_scales_and_noncanonical_integers(self):
         n, done = 1, 256

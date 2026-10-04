@@ -12,7 +12,7 @@ fn shape(r: &Request) -> Result<(usize, usize, usize)> {
     if r.encoding != NAME
         || !matches!(
             r.op.as_str(),
-            "mlp_stream_prepare" | "mlp_stream_next" | "mlp_stream_finish"
+            "mlp_stream_prepare" | "mlp_stream_next" | "mlp_stream_finish" | "mlp_stream_complete"
         )
         || r.dims.len() != 3
         || r.aux.len() != 1
@@ -29,6 +29,7 @@ fn shape(r: &Request) -> Result<(usize, usize, usize)> {
         || begin % 256 != 0
         || count % 256 != 0
         || begin.checked_add(count).is_none_or(|end| end > H)
+        || (r.op == "mlp_stream_complete" && begin + count != H)
         || if r.op == "mlp_stream_finish" {
             begin != H || count != 0
         } else {
@@ -204,32 +205,7 @@ impl PreparedMlpStream {
             }
         };
         if r.op == "mlp_stream_finish" {
-            let q = QuantizedRows::from_bytes(n, H, &parts.product, &parts.scales)?;
-            let mut dr = inner.clone();
-            dr.op = "lora_integer_reuse".into();
-            dr.encoding = crate::projection_codec::NAME.into();
-            dr.tensor = format!("{p}.mlp.down_proj.weight");
-            dr.dims = vec![n, C, H, 0, R];
-            dr.aux = vec![
-                format!("{p}.mlp.down_proj.lora_A.weight"),
-                format!("{p}.mlp.down_proj.lora_B.weight"),
-            ];
-            dr.scalars = vec![2.];
-            let (y, used) =
-                crate::projection_reuse::evaluate_prepared(&dr, &q, &parts.down, m, read)?;
-            bytes += used;
-            let mut pair = parts.residual;
-            pair.extend(y);
-            let mut nr = inner;
-            nr.op = "add_norm_bf16".into();
-            nr.tensor = r.aux[0].clone();
-            nr.aux.clear();
-            nr.dims = vec![n, C];
-            nr.scalars = vec![1e-6];
-            let t = m.tensors.iter().find(|t| t.name == nr.tensor).unwrap();
-            let (w, used) = crate::load_prepared_weight(t, &nr, &mut *read)?;
-            bytes += used;
-            return Ok((crate::execute(&nr, &pair, &w)?, bytes));
+            return finish(parts, r, inner, &p, n, m, read);
         }
         let mut gr = inner.clone();
         gr.op = "mlp_gate_up_reuse".into();
@@ -249,7 +225,7 @@ impl PreparedMlpStream {
             .iter()
             .find(|t| t.name == format!("{p}.mlp.down_proj.lora_A.weight"))
             .unwrap();
-        let mut ar = inner;
+        let mut ar = inner.clone();
         ar.op = "matmul".into();
         ar.dims = vec![n, R, H];
         ar.aux.clear();
@@ -281,8 +257,53 @@ impl PreparedMlpStream {
         parts.product = merged;
         parts.scales = scales;
         parts.done = begin + count;
+        if r.op == "mlp_stream_complete" {
+            let (out, used) = finish(parts, r, inner, &p, n, m, read)?;
+            return Ok((out, bytes + used));
+        }
         Ok((parts.flat(n), bytes))
     }
+}
+fn finish<F, B>(
+    parts: Parts,
+    r: &Request,
+    inner: Request,
+    p: &str,
+    n: usize,
+    m: &Manifest,
+    read: &mut F,
+) -> Result<(Vec<f32>, u64)>
+where
+    F: FnMut(u64, usize) -> Result<B>,
+    B: WeightBuffer,
+{
+    debug_assert_eq!(parts.done, H);
+    let mut bytes = 0;
+    let q = QuantizedRows::from_bytes(n, H, &parts.product, &parts.scales)?;
+    let mut dr = inner.clone();
+    dr.op = "lora_integer_reuse".into();
+    dr.encoding = crate::projection_codec::NAME.into();
+    dr.tensor = format!("{p}.mlp.down_proj.weight");
+    dr.dims = vec![n, C, H, 0, R];
+    dr.aux = vec![
+        format!("{p}.mlp.down_proj.lora_A.weight"),
+        format!("{p}.mlp.down_proj.lora_B.weight"),
+    ];
+    dr.scalars = vec![2.];
+    let (y, used) = crate::projection_reuse::evaluate_prepared(&dr, &q, &parts.down, m, read)?;
+    bytes += used;
+    let mut pair = parts.residual;
+    pair.extend(y);
+    let mut nr = inner;
+    nr.op = "add_norm_bf16".into();
+    nr.tensor = r.aux[0].clone();
+    nr.aux.clear();
+    nr.dims = vec![n, C];
+    nr.scalars = vec![1e-6];
+    let t = m.tensors.iter().find(|t| t.name == nr.tensor).unwrap();
+    let (w, used) = crate::load_prepared_weight(t, &nr, &mut *read)?;
+    bytes += used;
+    Ok((crate::execute(&nr, &pair, &w)?, bytes))
 }
 fn read_parts(r: &Request, p: &[u8]) -> Result<(usize, Parts)> {
     let (n, begin, count) = shape(r)?;
@@ -383,8 +404,12 @@ pub(crate) fn append(b: &mut Vec<u8>, r: &Request, x: &[f32]) -> Result<()> {
     // entire freshly encoded carry into another owned Parts allocation.
     let input_scales = n * C * 2;
     let product_scales = n * (C * 2 + C / 256 + 2 * R + done);
-    if x[input_scales..input_scales + n * C / 256].iter().any(|v| *v <= 0.)
-        || x[product_scales..product_scales + n * done / 256].iter().any(|v| *v <= 0.)
+    if x[input_scales..input_scales + n * C / 256]
+        .iter()
+        .any(|v| *v <= 0.)
+        || x[product_scales..product_scales + n * done / 256]
+            .iter()
+            .any(|v| *v <= 0.)
     {
         return Err("MLP stream scale".into());
     }
@@ -455,6 +480,50 @@ mod tests {
         }
     }
     #[test]
+    fn complete_requires_a_nonempty_final_chunk_and_exact_input_progress() {
+        let mut r = request();
+        r.op = "mlp_stream_complete".into();
+        for dims in [
+            vec![1, 0, H],
+            vec![1, H, 0],
+            vec![1, 256, 256],
+            vec![1, H - 256, 512],
+        ] {
+            r.dims = dims;
+            assert!(shape(&r).is_err());
+        }
+        r.dims = vec![1, 4608, 4608];
+        assert_eq!(shape(&r).unwrap(), (1, 4608, 4608));
+        let parts = Parts {
+            residual: vec![0.; C],
+            q: QuantizedRows::from_bytes(1, C, &vec![0; C], &vec![1.; C / 256]).unwrap(),
+            ax: vec![0.; 2 * R],
+            product: vec![0; 4608],
+            scales: vec![1.; 4608 / 256],
+            down: vec![0.; R],
+            done: 4608,
+        };
+        let frame = crate::encode(&r, &parts.flat(1)).unwrap();
+        assert!(crate::decode_query(&frame).unwrap().1.values().is_none());
+        // A completed carry is a reply representation, not valid input to
+        // another final-chunk query: it would repeat those columns.
+        let mut finished = r.clone();
+        finished.op = "mlp_stream_finish".into();
+        finished.dims = vec![1, H, 0];
+        let parts = Parts {
+            residual: vec![0.; C],
+            q: QuantizedRows::from_bytes(1, C, &vec![0; C], &vec![1.; C / 256]).unwrap(),
+            ax: vec![0.; 2 * R],
+            product: vec![0; H],
+            scales: vec![1.; H / 256],
+            down: vec![0.; R],
+            done: H,
+        };
+        let frame = crate::encode(&finished, &parts.flat(1)).unwrap();
+        let h = u32::from_le_bytes(frame[..4].try_into().unwrap()) as usize;
+        assert!(PreparedMlpStream::decode(&r, &frame[4 + h..frame.len() - 32]).is_err());
+    }
+    #[test]
     fn invalid_metadata_is_rejected() {
         for dims in [
             vec![],
@@ -471,17 +540,49 @@ mod tests {
     }
     #[test]
     fn identity_and_malformed_carry_reject_before_weight_reads() {
-        let mut r=request();r.dims=vec![1,256,256];
-        let mut x=vec![0.;C];x.extend(vec![0.;C]);x.extend(vec![1.;C/256]);x.extend(vec![0.1234567;2*R]);x.extend(vec![0.;256]);x.extend(vec![1.]);x.extend(vec![-0.1234567;R]);
-        let frame=crate::encode(&r,&x).unwrap();let h=u32::from_le_bytes(frame[..4].try_into().unwrap())as usize;let payload=&frame[4+h..frame.len()-32];
-        let m=Manifest{version:1,model:r.model.clone(),pack_hash:r.pack_hash.clone(),bytes:0,tensors:vec![]};
-        let mut bad=r.clone();bad.step+=1;
-        assert!(PreparedMlpStream::decode(&r,payload).unwrap().evaluate(&bad,&m,&mut|_,_|->Result<Vec<u8>>{panic!("identity read")}).is_err());
-        for offset in [5+C*2,5+C*3,5+C*3+C/256*4,5+C*3+(C/256+2*R)*4] {
-            let mut p=payload.to_vec();
-            if offset==5+C*2 || offset==5+C*3+(C/256+2*R)*4 {p[offset]=128;}else{p[offset..offset+4].copy_from_slice(&f32::NAN.to_le_bytes());}
-            assert!(PreparedMlpStream::decode(&r,&p).is_err());
+        let mut r = request();
+        r.dims = vec![1, 256, 256];
+        let mut x = vec![0.; C];
+        x.extend(vec![0.; C]);
+        x.extend(vec![1.; C / 256]);
+        x.extend(vec![0.1234567; 2 * R]);
+        x.extend(vec![0.; 256]);
+        x.extend(vec![1.]);
+        x.extend(vec![-0.1234567; R]);
+        let frame = crate::encode(&r, &x).unwrap();
+        let h = u32::from_le_bytes(frame[..4].try_into().unwrap()) as usize;
+        let payload = &frame[4 + h..frame.len() - 32];
+        let m = Manifest {
+            version: 1,
+            model: r.model.clone(),
+            pack_hash: r.pack_hash.clone(),
+            bytes: 0,
+            tensors: vec![],
+        };
+        let mut bad = r.clone();
+        bad.step += 1;
+        assert!(PreparedMlpStream::decode(&r, payload)
+            .unwrap()
+            .evaluate(&bad, &m, &mut |_, _| -> Result<Vec<u8>> {
+                panic!("identity read")
+            })
+            .is_err());
+        for offset in [
+            5 + C * 2,
+            5 + C * 3,
+            5 + C * 3 + C / 256 * 4,
+            5 + C * 3 + (C / 256 + 2 * R) * 4,
+        ] {
+            let mut p = payload.to_vec();
+            if offset == 5 + C * 2 || offset == 5 + C * 3 + (C / 256 + 2 * R) * 4 {
+                p[offset] = 128;
+            } else {
+                p[offset..offset + 4].copy_from_slice(&f32::NAN.to_le_bytes());
+            }
+            assert!(PreparedMlpStream::decode(&r, &p).is_err());
         }
-        let mut p=payload.to_vec();p.extend([0;4]);assert!(PreparedMlpStream::decode(&r,&p).is_err());
+        let mut p = payload.to_vec();
+        p.extend([0; 4]);
+        assert!(PreparedMlpStream::decode(&r, &p).is_err());
     }
 }

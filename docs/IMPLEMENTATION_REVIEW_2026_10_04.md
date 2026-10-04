@@ -15,3 +15,5 @@
 修正前のmodule `7203222a…` の全6条件・INT8列継続32条件・Delta head再利用12条件の実canister測定は保存している。今回のencoder修正後について、新しい実canister命令削減量や全6条件の再測定を行ったとは扱わない。送信byteの一致とRust/Python検証、Wasmビルドまでを今回の証拠とする。既存の最大変更の見逃しは改善していない。
 
 全体50 queryは未達で、直近の完走graphは主62 query。次はMLP後半の完了処理を所有権付き中間状態から直接実行し、Delta前半とのquery融合を実装・実測する。生成物はignoreしたまま、主canisterとLayaに変更はない。mainnet/push/PRは行わない。
+
+コミット後の継続作業ではレビュー修正を含む新候補 `c5ad3b17…` の全6条件も再検証した。詳細とMLP融合の45条件は [MLP_COMPLETE.md](MLP_COMPLETE.md) を参照。上のraw build・未再測定という記録はレビューコミット時点の検証範囲。

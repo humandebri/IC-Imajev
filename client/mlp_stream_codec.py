@@ -6,9 +6,9 @@ NAME='mlp-stream-exact-v1';C=2560;H=9216;R=64
 
 def layout(h):
     d=h.get('dims',[]);s=h.get('scalars',[]);a=h.get('aux',[]);op=h.get('op')
-    if h.get('encoding')!=NAME or op not in ('mlp_stream_prepare','mlp_stream_next','mlp_stream_finish') or len(d)!=3 or any(type(v)is not int for v in d) or len(a)!=1 or len(s)!=2 or not np.array_equal(np.asarray(s,dtype='<f4').view('<u4'),np.asarray([2.,1e-6],dtype='<f4').view('<u4')):raise ValueError('MLP stream metadata')
+    if h.get('encoding')!=NAME or op not in ('mlp_stream_prepare','mlp_stream_next','mlp_stream_finish','mlp_stream_complete') or len(d)!=3 or any(type(v)is not int for v in d) or len(a)!=1 or len(s)!=2 or not np.array_equal(np.asarray(s,dtype='<f4').view('<u4'),np.asarray([2.,1e-6],dtype='<f4').view('<u4')):raise ValueError('MLP stream metadata')
     n,begin,count=d
-    if not 1<=n<=89 or begin<0 or count<0 or begin%256 or count%256 or begin+count>H or (op=='mlp_stream_finish' and (begin!=H or count!=0)) or (op!='mlp_stream_finish' and (count==0 or (op=='mlp_stream_prepare')!=(begin==0))):raise ValueError('MLP stream bounds')
+    if not 1<=n<=89 or begin<0 or count<0 or begin%256 or count%256 or begin+count>H or (op=='mlp_stream_complete' and begin+count!=H) or (op=='mlp_stream_finish' and (begin!=H or count!=0)) or (op!='mlp_stream_finish' and (count==0 or (op=='mlp_stream_prepare')!=(begin==0))):raise ValueError('MLP stream bounds')
     m=re.fullmatch(r'model\.language_model\.layers\.(0|[1-9][0-9]*)\.post_attention_layernorm\.weight',h.get('tensor',''))
     if not m or not 0<=int(m[1])<31 or a[0]!=f'model.language_model.layers.{int(m[1])+1}.input_layernorm.weight':raise ValueError('MLP stream layer/norm')
     return n,begin,count
