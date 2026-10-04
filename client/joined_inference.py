@@ -12,6 +12,10 @@ C,H,KV=2560,9216,2048
 
 class JoinedPrefixGraph(RollPrefixGraph):
  def __init__(self,*args,**kwargs):
+  # The joined schedule has independently measured fixed chunk sizes. Do not
+  # record user overrides in the session while silently executing other sizes.
+  for name,default in [('roll_begin',4096),('roll_heads',18),('roll_down',768)]:
+   if kwargs.get(name,default)!=default:raise ValueError('joined graph uses fixed chunks; roll overrides are unsupported')
   super().__init__(*args,**kwargs)
   if not self.fuse_terminal_tail or not getattr(self.t,'fuse_terminal_decision',False):raise ValueError('joined graph requires terminal tail/decision')
  def send(self,layer,op,codec,dims,encode,*values,**kwargs):

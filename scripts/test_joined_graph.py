@@ -6,6 +6,11 @@ ROOT=pathlib.Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'cli
 from joined_inference import JoinedPrefixGraph
 from roll_inference import RollPrefixGraph
 class Tests(unittest.TestCase):
+ def test_chunk_overrides_reject_before_initialization(self):
+  for name,value in [('roll_begin',4352),('roll_heads',20),('roll_down',1280)]:
+   with patch.object(RollPrefixGraph,'__init__')as init:
+    with self.assertRaisesRegex(ValueError,'fixed chunks'):JoinedPrefixGraph(**{name:value})
+    init.assert_not_called()
  def graph(self):
   g=JoinedPrefixGraph.__new__(JoinedPrefixGraph);g.position_offset=45;g.cache={'metadata':{'token_ids':list(range(45))}}
   g.eight=lambda *a,**k:(_ for _ in ()).throw(AssertionError('unvalidated joined entry'))
