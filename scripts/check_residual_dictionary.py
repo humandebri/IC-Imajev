@@ -3,19 +3,19 @@
 import argparse,hashlib,json,pathlib,struct,subprocess,sys,time,zipfile
 import numpy as np
 ROOT=pathlib.Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'client'))
+from proof_inputs import read_report,residual_cases
 from transport import decode
 from mlp_delta_carry import encode_plane,encode_dictionary_plane
 ap=argparse.ArgumentParser(description=__doc__)
 for name in ['canister','wasm','directory']:ap.add_argument('--'+name,required=True)
 ap.add_argument("--interleave",action="store_true");a=ap.parse_args();d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=True);assert not(d/'report.json').exists()
 sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
-paths=[pathlib.Path(__file__),ROOT/'client/mlp_delta_carry.py',ROOT/'client/transport.py',ROOT/'crates/imajev-runtime/src/carry_planes.rs',ROOT/'scripts/prefix_update_bench/src/lib.rs']
+paths=[ROOT/'scripts/proof_inputs.py',pathlib.Path(__file__),ROOT/'client/mlp_delta_carry.py',ROOT/'client/transport.py',ROOT/'crates/imajev-runtime/src/carry_planes.rs',ROOT/'scripts/prefix_update_bench/src/lib.rs']
 helper=ROOT/'artifacts/bounded_i16/native/release/prefix_args';paths.append(helper);hashes={str(p.relative_to(ROOT)):sha(p)for p in paths};module=sha(ROOT/a.wasm)
 def status():return json.loads(subprocess.check_output(['icp','canister','status',a.canister,'--identity','imajev-local','--json'],text=True))['module_hash'].removeprefix('0x')
 assert status()==module
-base=ROOT/'artifacts/prefix_codec/attention-q4-all-v2';ref=base/'report.json';references={str(ref.relative_to(ROOT)):sha(ref)};rows=[]
-for case in json.loads(ref.read_text())['cases']:
- if not case['success']:continue
+base=ROOT/'artifacts/prefix_codec/attention-q4-all-v2';ref=base/'report.json';references={};cases=residual_cases(read_report(ref,ROOT,references));rows=[]
+for case in cases:
  p=base/f"{case['call']['index']:06d}.response.bin";references[str(p.relative_to(ROOT))]=sha(p);h,x=decode(p.read_bytes());n=case['tokens'];raw=(x[:n*2560].astype('<f4').view('<u4')>>16).astype('<u2').tobytes();oracle=hashlib.sha256(raw[::2]+raw[1::2]).digest()
  if a.interleave:oracle=hashlib.sha256(raw).digest()
  measures={}
