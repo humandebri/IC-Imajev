@@ -12,6 +12,7 @@ blake3 = { version = "=1.8.2", optional = true, features = ["wasm32_simd"] }
 miniz_oxide = { version = "=0.8.9", optional = true }
 
 [features]
+experimental-mlp-attention-finish = ["experimental-mlp-delta-fusion", "experimental-attention-full"]
 experimental-prefix-update-hoist = []
 experimental-attention-mlp-stream = ["experimental-mlp-stream", "experimental-attention-full"]
 experimental-mlp-delta-stream = ["experimental-mlp-delta-fusion", "experimental-mlp-stream", "experimental-int8-k-continue", "experimental-delta-state-layout", "experimental-mlp-full89"]

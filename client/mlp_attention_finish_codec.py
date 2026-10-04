@@ -1,0 +1,32 @@
+"""Frame only canister-produced INT8 MLP carry and exact prefix KV."""
+import json,re,struct
+import numpy as np
+from mlp_codec import NAME as MLP_NAME,encode_payload
+NAME='mlp-attention-finish-exact-v1'
+C,H,KV=2560,9216,2048
+
+def layout(h):
+    d=h.get('dims',[]);s=h.get('scalars',[]);a=h.get('aux',[])
+    if h.get('encoding')!=NAME or h.get('op')!='mlp_finish_attention_full' or len(d)!=3 or any(type(x)is not int for x in d) or len(a)!=1 or len(s)!=2 or not np.array_equal(np.asarray(s,dtype='<f4').view('<u4'),np.asarray([2.,1e-6],dtype='<f4').view('<u4')):raise ValueError('MLP attention metadata')
+    n,p,rows=d
+    if not 1<=n<=89 or not 0<=p<=132 or not 0<rows<C or rows%32:raise ValueError('MLP attention bounds')
+    m=re.fullmatch(r'model\.language_model\.layers\.(0|[1-9][0-9]*)\.post_attention_layernorm\.weight',h.get('tensor',''))
+    if not m or int(m[1])>=30 or int(m[1])%4!=2 or a[0]!=f'model.language_model.layers.{int(m[1])+1}.input_layernorm.weight':raise ValueError('MLP attention scope')
+    return n,p,rows
+
+def encode_request(h,carry,prefix):
+    from transport import frame_digest
+    n,p,rows=layout(h);v=np.asarray(carry,dtype='<f4').ravel();kv=np.asarray(prefix,dtype='<f4').ravel()
+    if v.size!=n*(C+H+100) or not np.isfinite(v).all() or kv.size!=p*KV or not np.isfinite(kv).all() or np.any(kv.view('<u4')&65535):raise ValueError('MLP attention input shape/finite/precision')
+    inner=dict(h,encoding=MLP_NAME,op='mlp_down_norm_partial_prepared',dims=[n,C,rows])
+    payload=b'\1'+encode_payload(inner,v)+(kv.view('<u4')>>16).astype('<u2').tobytes()
+    header=json.dumps(h,separators=(',',':'),allow_nan=False).encode();body=struct.pack('<I',len(header))+header+payload
+    if len(header)>16384 or len(body)+32>2_000_000:raise ValueError('MLP attention frame bounds')
+    return body+frame_digest(h,body)
+
+def decode_reply(h,payload):
+    n,_,_=layout(h);count=n*(3*C+KV)
+    if payload[:1]!=b'\0' or len(payload)!=1+2*count:raise ValueError('MLP attention reply length/direction')
+    values=(np.frombuffer(payload[1:],dtype='<u2').astype('<u4')<<16).view('<f4')
+    if not np.isfinite(values).all():raise ValueError('MLP attention reply finite')
+    return values
