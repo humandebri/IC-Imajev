@@ -17,7 +17,7 @@ fn root_scoped(r:&Request,allow_final:bool)->Result<(String,String)> {
     if r.aux[0]!=next {return Err("MLP pipeline next norm".into());}
     Ok((p.to_owned(),next))
 }
-fn validate_scoped(r:&Request,m:&Manifest,allow_final:bool)->Result<(String,String)> {
+pub(crate) fn validate_scoped(r:&Request,m:&Manifest,allow_final:bool)->Result<(String,String)> {
     layout(r)?;let(p,next)=root_scoped(r,allow_final)?;
     let specs=[(r.tensor.clone(),1,C,"bf16"),(next.clone(),1,C,"bf16"),
       (format!("{p}.mlp.gate_proj.weight"),H,C,"int8"),(format!("{p}.mlp.up_proj.weight"),H,C,"int8"),(format!("{p}.mlp.down_proj.weight"),C,H,"int8"),

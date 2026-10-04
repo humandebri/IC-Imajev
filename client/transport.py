@@ -27,7 +27,7 @@ def int8_prefix(header,count):
 def frame_digest(header,body):
     version=header.get('version',1)
     if type(version) is not int:raise ValueError('unsupported frame version')
-    if version==1:return hashlib.sha256(body).digest()
+    if version in (1,3):return hashlib.sha256(body).digest()
     if version==2:
         import blake3
         return blake3.blake3(body).digest()
@@ -35,13 +35,19 @@ def frame_digest(header,body):
 def encode(header,values):
     h=json.dumps(header,separators=(',',':'),allow_nan=False).encode();v=np.asarray(values,dtype='<f4').ravel()
     codec=header.get('encoding','');limit=900000 if codec in ('bf16-exact','bf16-block256-exact-v1','int8-block256-v1','projection-block256-exact-v1') else 450000
+    if codec=='mlp-stream-exact-v1':
+        from mlp_stream_codec import limit as stream_limit
+        limit=stream_limit(header)
     if codec=='mlp-down-state-exact-v1':
         from mlp_codec import layout
         _,c,q,tail=layout(header);limit=c+q+tail
     if header.get('op')=='delta_heads_bf16' and codec=='int8-block256-v1':limit=1200000
     if v.size>limit or not np.isfinite(v).all():raise ValueError('activation bounds')
     if len(h)>16384:raise ValueError('header size')
-    if codec=='mlp-down-state-exact-v1':
+    if codec=='mlp-stream-exact-v1':
+        from mlp_stream_codec import encode_payload
+        payload=encode_payload(header,v)
+    elif codec=='mlp-down-state-exact-v1':
         from mlp_codec import encode_payload
         payload=encode_payload(header,v)
     elif codec=='projection-block256-exact-v1':
@@ -91,6 +97,9 @@ def decode(b):
     if codec in ('delta-hybrid-prefix-exact-v1','mlp-delta-log-carry-exact-v1','mlp-delta-huffman-carry-exact-v1'):
         if payload[:1]!=b'\x00':raise ValueError('hybrid reply direction')
         payload=payload[1:];codec='bf16-block256-exact-v1'
+    if codec=='mlp-stream-exact-v1':
+        from mlp_stream_codec import decode_payload
+        return h,decode_payload(h,payload)
     if codec=='mlp-down-state-exact-v1':
         from mlp_codec import decode_payload
         v=decode_payload(h,payload)
@@ -143,7 +152,7 @@ def atomic(path,data):
     path=pathlib.Path(path);path.parent.mkdir(parents=True,exist_ok=True);temp=path.with_suffix(path.suffix+'.part');temp.write_bytes(data);temp.replace(path)
 class Transport:
     def __init__(self,model,url,canister,pem,directory,pack_hash,wire_codec="",frame_version=1):
-        if frame_version not in (1,2):raise ValueError('unsupported frame version')
+        if type(frame_version) is not int or frame_version not in (1,2,3):raise ValueError('unsupported frame version')
         self.frame_version=frame_version
         self.wire_codec=wire_codec;self.max_floats=900000 if wire_codec in ("bf16-exact","bf16-block256-exact-v1","int8-block256-v1","projection-block256-exact-v1") else 450000
         self.pack_hash=pack_hash;self.model=model;self.directory=pathlib.Path(directory);self.directory.mkdir(parents=True,exist_ok=True);self.index=0;self.measurements=[]

@@ -1,5 +1,13 @@
 use candid::{CandidType, Principal};
-use imajev_runtime::{decode, encode, Manifest};
+use imajev_runtime::Manifest;
+#[cfg(feature="experimental-host-checksum")]
+use imajev_runtime::{decode_signed_input as decode,encode_signed_reply as encode};
+#[cfg(not(feature="experimental-host-checksum"))]
+use imajev_runtime::{decode,encode};
+#[cfg(all(feature="experimental-projection-reuse",feature="experimental-host-checksum"))]
+use imajev_runtime::decode_signed_query as decode_query;
+#[cfg(all(feature="experimental-projection-reuse",not(feature="experimental-host-checksum")))]
+use imajev_runtime::decode_query;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::cell::RefCell;
@@ -260,7 +268,7 @@ fn step(state: StateBytes) -> std::result::Result<Measurement, String> {
     owner();
     let start = ic_cdk::api::performance_counter(0u32);
     #[cfg(feature = "experimental-projection-reuse")]
-    let (mut r, input) = imajev_runtime::decode_query(&state)?;
+    let (mut r, input) = decode_query(&state)?;
     #[cfg(feature = "experimental-projection-reuse")]
     let (y, read) = evaluate_decoded(&r, input)?;
     #[cfg(not(feature = "experimental-projection-reuse"))]
@@ -296,7 +304,7 @@ fn profile_step(state: StateBytes) -> std::result::Result<ProfileMeasurement, St
     let result = (|| {
         let start = ic_cdk::api::performance_counter(0);
         #[cfg(feature = "experimental-projection-reuse")]
-        let (mut r, input) = imajev_runtime::profile::measure("wire_decode", || imajev_runtime::decode_query(&state))?;
+        let (mut r, input) = imajev_runtime::profile::measure("wire_decode", || decode_query(&state))?;
         #[cfg(feature = "experimental-projection-reuse")]
         let (y, read) = imajev_runtime::profile::measure("evaluate_inclusive", || evaluate_decoded(&r, input))?;
         #[cfg(not(feature = "experimental-projection-reuse"))]
@@ -384,7 +392,7 @@ fn validate_terminal_decision(r: &imajev_runtime::Request, options: &[String]) -
     let tail=r.op=="terminal_tail_integer" && cfg!(feature="experimental-terminal-tail");
     if !(r.op=="terminal_attention_mlp_integer" || tail)
         || r.tensor != if tail {"model.language_model.layers.30.post_attention_layernorm.weight"}else{"model.language_model.layers.31.self_attn.q_proj.weight"}
-        || r.dims.len() != 2 || !(1..=if tail{89}else{132}).contains(&r.dims[0])
+        || !(r.dims.len()==2 || (tail && r.dims.len()==3 && r.dims[2]==0)) || !(1..=if tail{89}else{132}).contains(&r.dims[0])
         || r.dims[1] > 512 || r.dims[0] + r.dims[1] > 512
         || !r.aux.is_empty() || !r.scalars.is_empty()
         || !matches!(r.encoding.as_str(), "bf16-exact" | "bf16-block256-exact-v1")
@@ -401,7 +409,7 @@ fn terminal_step_decision(state: StateBytes, options: Vec<String>) -> Result<Ter
     let start = ic_cdk::api::performance_counter(0);
     if !cfg!(feature="experimental-terminal-attention") {return Err("terminal attention feature is disabled".into());}
     #[cfg(feature="experimental-projection-reuse")]
-    let(mut r,input)=imajev_runtime::decode_query(&state)?;
+    let(mut r,input)=decode_query(&state)?;
     #[cfg(not(feature="experimental-projection-reuse"))]
     let(mut r,x)=decode(&state)?;
     validate_terminal_decision(&r, &options)?;
@@ -409,7 +417,7 @@ fn terminal_step_decision(state: StateBytes, options: Vec<String>) -> Result<Ter
     let(y,mut read)=evaluate_decoded(&r,input)?;
     #[cfg(not(feature="experimental-projection-reuse"))]
     let(y,mut read)=evaluate(&r,&x)?;
-    let offset=if r.op=="terminal_tail_integer" {r.dims[0]*2560}else{0};
+    let offset=if r.op=="terminal_tail_integer" && r.dims.len()==2 {r.dims[0]*2560}else{0};
     if y.len() != offset + 5120 + r.dims[0]*2048 {return Err("terminal decision output shape".into());}
     let decision_start = ic_cdk::api::performance_counter(0);
     let mut dr = r.clone();
@@ -473,6 +481,7 @@ struct ChoiceResult {
 }
 #[ic_cdk::query]
 fn decision(state: StateBytes, options: Vec<String>) -> std::result::Result<ChoiceResult, String> {
+    owner();
     let (r, x) = decode(&state)?;
     if r.op != "matmul"
         || !matches!(r.tensor.as_str(), "readout-f32" | "readout-int8")

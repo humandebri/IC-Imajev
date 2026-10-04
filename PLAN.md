@@ -1,5 +1,25 @@
 # Imajev-4Bのローカルcanister実装計画
 
+2026-10-04レビュー：compact tailの古いlayer30出力を除去し、MLP carry送信時の検査用全復元をRust/Pythonとも省略、frame versionの型検査を修正。候補/通常featureのRust・Python検証、保存payload315個のbyte一致、Wasmビルドを確認。実canister命令の再測定は後続に分離。主62 query・50未達を維持。 [レビュー記録](docs/IMPLEMENTATION_REVIEW_2026_10_04.md)。
+
+2026-10-04追加：列継続のS1係数変換を新しい列だけへ限定し、余分なゼロ埋めも除去。実32条件でbit一致・命令減・通信不変、主87の2分割225万/4分割675万命令減。Delta16+6+10 headの実12条件でgated/conv履歴が一致、profileで入力量子化/Aは最初だけと確認。全6条件のgraph回帰も一致。ただし新APIは現graphへ未接続で主62 query、50/32未達。 [実装と実測](docs/INT8_COLUMN_CONTINUATION.md)。
+
+2026-10-03追加：Delta out projectionを列単位で継続し、新しい列だけをINT8量子化・base/F32 A加算、finishではF32 Bだけを実行。実8入力×4分割の32条件で一括出力とbit一致、全6条件のgraph回帰も一致。現graphは未接続で主62 queryのまま、分岐追加で1,241,192命令増。単独分割はquery/通信増のため性能改善として未採用、50/32未達。 [実装と実測](docs/INT8_COLUMN_CONTINUATION.md)。
+
+2026-10-03追加：入力量子化・gate/up F32 Aを一度だけ計算し、product量子化とdown F32 Aの部分和を保持するMLP分割APIを実装。80/87/89 token・実3層・5分割の45条件で準備状態/hidden/normが既存INT8版とbit一致、profileで再実行なしを確認。既存graphは未接続で主62 queryのまま、API分岐追加により8,528命令増。単独分割は通信/命令増のため性能改善として未採用、次はDelta分割との融合。50/32未達。 [実装と実測](docs/MLP_STREAM.md)。
+
+2026-10-03追加：分割MLPに残っていた固定F32重みの元配置復元と入力転置を除去。cold132の全推論で1,447,149,192命令（0.400601%）減、全6条件の返却hidden/保持state/判断/確率が既存INT8版とbit一致。主87は62 query・命令・通信とも同じで50/32未達。F32列部分和をクライアント保持し加算順序を保って継続する部品も、実3層・251診断queryで一致を検証。 [分割MLPの実測](docs/MLP_PREPARED_CAPTURE.md)、[F32継続演算](docs/F32_COLUMN_CONTINUATION.md)。
+
+2026-10-03追加：整数S1の出力tileを32→128行へ広げ、同じ入力ロードとtoken/scale/address処理を共有。主さらに7,888,349,165命令（3.245%）減、235,201,564,012命令。全6条件の返却hidden/保持state/判断/確率が既存INT8版とbit一致、失敗/replay0。最大変更89は63→62query、主は62で50/32未達。主単回時間20.221→35.584秒の悪化を記録。256行版はlocals上限でinstall拒否、64/128診断は全11入力一致。 [実装と実測](docs/S1_OUTPUT_TILE_REUSE.md)。
+
+2026-10-03追加：各queryの入力・出力frameハッシュを、署名検証するクライアントへ移管。主さらに2,021,749,972命令（0.825%）減、243,089,913,177命令。全6条件の返却hidden/保持state/判断/確率が既存INT8版とbit一致、失敗/replay0。62 query・通信は同じで50/32未達。署名改ざん拒否・保存状態破損の送信前拒否・不正payload48件拒否を検証。89-token tail統合は5B超過で分割維持。 [実装と実測](docs/HOST_FRAME_CHECKSUM.md)。
+
+2026-10-03追加：block codecの有限値検査とBF16分類を一走査にし、復号のゼロ埋め・再走査を除去。主さらに788,566,976命令（0.321%）減、245,111,663,149命令。全条件の返却hidden/保持state/判断/確率bit一致、失敗/replay0。62 query・通信・観測heap終了最大は同じで50/32未達。100 codec診断と正しいchecksum付き不正payload32件の拒否も検証。[実装と実測](docs/CODEC_STREAMING_CHECK.md)。
+
+2026-10-03追加：量子化で入力の有限値検査とblock256の最大値探索を一走査へ統合。主さらに1,233,003,258命令（0.499%）減、245,900,230,125命令。全条件の返却hidden/保持state/判断/確率bit一致、失敗/replay0。62 query・通信・観測heap終了最大は同じで50/32未達。単体36通常queryで整数/scale一致とInf/NaN拒否も確認。[実装と実測](docs/QUANTIZE_PEAK_SCAN.md)。
+
+2026-10-03追加：最終2層で検査済み入力を型で引き継ぎ、接続時の全走査・連結コピーと不要なlayer30 hiddenの返送を除去。主63→62 query、51,181,409命令・Candid1,342,937 bytes減、247,133,233,383命令。全条件の返却hidden/保持state/判断/確率bit一致、graph失敗/replay0。layer30 hidden非返却を明示、87以下に限定、89/132は分割経路。50/32未達。[実装と実測](docs/TERMINAL_TAIL.md)。
+
 2026-10-03追加：S1の7係数で繰り返す共通byte offsetをtoken pairごとに一度計算し再利用。全5条件の保持hidden/state/判断bit一致、graph失敗/replay0。主632,813,440命令（0.25535%）減、247,184,414,792命令。63 query・通信・観測heap終了最大は同じで50/32未達。固定pointer再利用も単体で出力一致だが1token増加により未接続。[実装と実測](docs/S1_ADDRESS_REUSE.md)。
 
 2026-10-03追加：LoRA Aのinput転置を省き、元容量の固定output32配置とK64部分和で全tokenのweight loadを共有。全5条件の保持hidden/state/判断が既存INT8版とbit一致、失敗/replay0。主さらに24.683億命令（0.9834%）減、248,528,396,096命令。64 query・通信は同じで50/32未達。主MLPを再profileし、base77.58%、A合計4.61%、B7.42%を実測。[F32_A_REUSE.md](docs/F32_A_REUSE.md)。

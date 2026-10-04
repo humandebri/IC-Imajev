@@ -24,6 +24,7 @@ def main():
     ap.add_argument('--terminal-attention', action='store_true')
     ap.add_argument('--terminal-decision', action='store_true')
     ap.add_argument('--terminal-tail', action='store_true')
+    ap.add_argument('--host-checksum',action='store_true')
     ap.add_argument('--prefix-start', action='store_true')
     args = ap.parse_args()
     directory = ROOT / args.directory
@@ -38,7 +39,7 @@ def main():
     wasm_hash = sha((ROOT/args.wasm).read_bytes())
     base = ['--canister',args.canister,'--wasm',args.wasm,
             '--reference','artifacts/reference-serving.json','--arithmetic','int8',
-            '--wire-codec','bf16-block256-exact-v1','--frame-checksum','blake3',
+            '--wire-codec','bf16-block256-exact-v1','--frame-checksum','host' if args.host_checksum else 'blake3',
             '--row-cap','16384','--token-cap','132','--work-cap','2500000000',
             '--delta-head-cap','16','--attention-head-cap','8','--mlp-full-token-cap','89']
     flags = ['--compact-lossless','--compact-heads','--fuse-add-norm','--fuse-mlp',
@@ -62,9 +63,13 @@ def main():
     def compare_states(new, old):
         for layer in range(32):
             name=f'layer-{layer:02d}'
-            a=np.load(new/'queries'/f'{name}.npy',allow_pickle=False)
-            b=np.load(old/'queries'/f'{name}.npy',allow_pickle=False)
-            assert a.dtype==b.dtype and a.shape==b.shape and a.tobytes()==b.tobytes(), ('hidden',layer)
+            if layer==30 and args.terminal_tail and not (new/'queries'/f'{name}.npy').exists():
+                layers=json.loads((new/'queries/layers.json').read_bytes())
+                assert layers[30]['hidden_exported'] is False and layers[31]['included_in_layer']==30
+            else:
+                a=np.load(new/'queries'/f'{name}.npy',allow_pickle=False)
+                b=np.load(old/'queries'/f'{name}.npy',allow_pickle=False)
+                assert a.dtype==b.dtype and a.shape==b.shape and a.tobytes()==b.tobytes(), ('hidden',layer)
             with np.load(new/'queries/states'/f'{name}.npz',allow_pickle=False) as a, np.load(old/'queries/states'/f'{name}.npz',allow_pickle=False) as b:
                 assert set(a.files)==set(b.files), ('state fields',layer)
                 for key in a.files:
@@ -85,7 +90,7 @@ def main():
             for key in ['value','abstained','raw_logits','probabilities','unknown_probability']:
                 assert a[key]==b[key], ('decision',key)
             assert np.load(new/'final-hidden.npy',allow_pickle=False).tobytes()==np.load(old/'final-hidden.npy',allow_pickle=False).tobytes()
-        results.append(dict(label=label,baseline=baseline_label,full_bitwise_equal=True,query_count=report['query_count'],total_instructions=report['total_instructions'],total_candid_bytes=report['total_candid_bytes'],max_query_instructions=report['max_query_instructions'],max_observed_heap_bytes=report['max_observed_heap_bytes'],wall_seconds=report['wall_seconds_this_run'],baseline_report_sha256=sha((old/'report.json').read_bytes()),report_sha256=sha((new/'report.json').read_bytes())))
+        results.append(dict(label=label,baseline=baseline_label,full_bitwise_equal=True,hidden_scope='All exported hidden; compact terminal tail does not export layer30 hidden',query_count=report['query_count'],total_instructions=report['total_instructions'],total_candid_bytes=report['total_candid_bytes'],max_query_instructions=report['max_query_instructions'],max_observed_heap_bytes=report['max_observed_heap_bytes'],wall_seconds=report['wall_seconds_this_run'],baseline_report_sha256=sha((old/'report.json').read_bytes()),report_sha256=sha((new/'report.json').read_bytes())))
     prefix=directory/'prefix';cache=prefix/'queries';packets=directory/'packets'
     run('prefix','scripts/run_prefix_canister.py',['--record','0','--prepare-prefix','--prefix-tokens','45','--cache',str(cache),'--directory',str(prefix)])
     verify('prefix','prefix',False)

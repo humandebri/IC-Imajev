@@ -19,12 +19,17 @@ ap.add_argument('--directory', required=True)
 ap.add_argument('--target-directory', required=True)
 ap.add_argument('--opt-level', choices=['1', '2', '3'], default='3')
 ap.add_argument('--strassen-raw',action='store_true')
+ap.add_argument('--strassen-output128',action='store_true')
+ap.add_argument('--f32-k-continue',action='store_true')
+ap.add_argument('--mlp-stream',action='store_true')
+ap.add_argument('--int8-k-continue',action='store_true')
 ap.add_argument('--f32-output-reuse',action='store_true')
 ap.add_argument('--f32-output-generic',action='store_true')
 ap.add_argument('--direct-input', action='store_true',
                 help='Use the matched original-I16-buffer WAT ABI')
 ap.add_argument('--terminal-attention', action='store_true')
 ap.add_argument('--terminal-tail', action='store_true')
+ap.add_argument('--host-checksum',action='store_true')
 ap.add_argument('--prefix-start', action='store_true')
 ap.add_argument('--delta-no-writeback', action='store_true')
 ap.add_argument('--delta-state-layout', action='store_true')
@@ -47,7 +52,12 @@ features = ','.join([
     'experimental-prefix-hybrid','experimental-lora-input-sharing',
     'experimental-mlp-full89','experimental-pair-wat'])
 features += ',experimental-paired-only'
+if args.host_checksum:features += ',experimental-host-checksum'
 if args.strassen_raw:features += ',experimental-strassen-raw'
+if args.strassen_output128:features += ',experimental-strassen-output128'
+if args.f32_k_continue:features += ',experimental-f32-k-continue'
+if args.mlp_stream:features += ',experimental-mlp-stream'
+if args.int8_k_continue:features += ',experimental-int8-k-continue'
 if args.f32_output_reuse:features += ',experimental-f32-output-reuse'
 if args.f32_output_generic:features += ',experimental-f32-output-generic'
 if args.direct_input:

@@ -11,7 +11,7 @@ pub struct PreparedTail {request:Request,values:Vec<f32>}
 fn shape(r:&Request)->Result<(usize,usize)> {
  if r.op!="terminal_tail_integer" || r.tensor!="model.language_model.layers.30.post_attention_layernorm.weight"
   || !matches!(r.encoding.as_str(),"bf16-exact"|"bf16-block256-exact-v1")
-  || r.dims.len()!=2 || !(1..=89).contains(&r.dims[0]) || r.dims[1]>512 || r.dims[0]+r.dims[1]>512
+  || !(r.dims.len()==2 || (r.dims.len()==3 && r.dims[2]==0)) || !(1..=89).contains(&r.dims[0]) || r.dims[1]>512 || r.dims[0]+r.dims[1]>512
   || !r.scalars.is_empty() || !r.aux.is_empty() {return Err("terminal tail metadata".into());}
  Ok((r.dims[0],r.dims[1]))
 }
@@ -42,11 +42,14 @@ where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
  let mut mr=r.clone();mr.op="mlp_full_integer".into();mr.dims=vec![n,C];mr.scalars=vec![2.,1e-6];mr.aux=vec!["model.language_model.layers.31.input_layernorm.weight".into()];
  let(mut mlp,rm)=crate::mlp_pipeline::full(&mr,&x[..2*count],m,read)?;
  if mlp.len()!=2*count {return Err("terminal tail MLP output".into());}
- let mut tr=r.clone();tr.op="terminal_attention_mlp_integer".into();tr.tensor="model.language_model.layers.31.self_attn.q_proj.weight".into();
+ let mut tr=r.clone();tr.op="terminal_attention_mlp_integer".into();tr.tensor="model.language_model.layers.31.self_attn.q_proj.weight".into();tr.dims.truncate(2);
  // MLP execute checks finite outputs; decoded/validated history is immutable.
  // Pass slices directly: no second concatenation or finite rescan at the join.
  let(terminal,rt)=crate::terminal_attention::evaluate_validated_parts(&tr,&mlp[count..],&mlp[count-C..count],&x[2*count..],m,read)?;
  if terminal.len()!=2*C+n*2048 {return Err("terminal tail final output".into());}
+ // Compact inference exports only the final hidden/norm and KV. Layer30
+ // hidden is consumed internally and is retained only by the diagnostic form.
+ if r.dims.len()==3 {return Ok((terminal,rm.checked_add(rt).ok_or("terminal tail read overflow")?));}
  mlp.truncate(count);mlp.extend(terminal);
  Ok((mlp,rm.checked_add(rt).ok_or("terminal tail read overflow")?))
 }
@@ -63,7 +66,7 @@ where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
  #[test]fn reject_bad_contract_before_weight_reads(){
   let m=Manifest{version:1,model:"a".repeat(64),pack_hash:"b".repeat(64),bytes:0,tensors:vec![]};
   let r:Request=serde_json::from_value(serde_json::json!({"version":2,"model":m.model,"pack_hash":m.pack_hash,"input_hash":"c".repeat(64),"step":0,"op":"terminal_tail_integer","tensor":"model.language_model.layers.30.post_attention_layernorm.weight","dims":[1,0],"scalars":[],"encoding":"bf16-exact"})).unwrap();
-  for dims in [vec![],vec![0,0],vec![90,0],vec![1,512],vec![usize::MAX,0]] {let mut bad=r.clone();bad.dims=dims;assert!(evaluate(&bad,&[],&m,&mut|_,_|->Result<Vec<u8>>{panic!("invalid read")}).is_err());}
+  for dims in [vec![],vec![0,0],vec![90,0],vec![1,512],vec![usize::MAX,0],vec![1,0,1],vec![1,0,0,0]] {let mut bad=r.clone();bad.dims=dims;assert!(evaluate(&bad,&[],&m,&mut|_,_|->Result<Vec<u8>>{panic!("invalid read")}).is_err());}
   for field in 0..5 {let mut bad=r.clone();match field {0=>bad.op="mlp_full_integer".into(),1=>bad.tensor="model.language_model.layers.31.post_attention_layernorm.weight".into(),2=>bad.encoding="int8-block256-v1".into(),3=>bad.aux.push("extra".into()),_=>bad.scalars.push(2.)};assert!(evaluate(&bad,&vec![0.;2*C],&m,&mut|_,_|->Result<Vec<u8>>{panic!("invalid read")}).is_err());}
   for x in [vec![0.;2*C-1],{let mut x=vec![0.;2*C];x[0]=f32::NAN;x}] {assert!(evaluate(&r,&x,&m,&mut|_,_|->Result<Vec<u8>>{panic!("invalid read")}).is_err());}
  }

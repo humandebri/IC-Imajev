@@ -1,3 +1,15 @@
+#[cfg(feature="experimental-int8-k-continue")]
+mod int8_k_continue;
+#[cfg(feature="experimental-int8-k-continue")]
+pub use int8_k_continue::PreparedInt8K;
+#[cfg(feature="experimental-mlp-stream")]
+mod mlp_stream;
+#[cfg(feature="experimental-mlp-stream")]
+pub use mlp_stream::PreparedMlpStream;
+#[cfg(feature="experimental-f32-k-continue")]
+mod f32_k_continue;
+#[cfg(feature="experimental-f32-k-continue")]
+pub use f32_k_continue::PreparedF32K;
 #[cfg(feature="experimental-f32-output-reuse")]
 mod f32_output;
 #[cfg(feature="experimental-mlp-delta-fusion")]
@@ -107,7 +119,6 @@ pub struct Request {
 }
 #[cfg(feature="experimental-prefix-start")]
 mod prefix_start;
-#[cfg(any(feature="experimental-prefix-start",feature="experimental-mlp-delta-fusion"))]
 pub(crate) fn same_request(a:&Request,b:&Request)->bool {
     a.version==b.version && a.model==b.model && a.pack_hash==b.pack_hash
         && a.input_hash==b.input_hash && a.step==b.step && a.op==b.op
@@ -156,6 +167,8 @@ pub fn int8_prefix(req: &Request, count: usize) -> Result<usize> {
     }
 }
 fn wire_float_limit(r: &Request) -> usize {
+    #[cfg(feature="experimental-mlp-stream")]
+    if r.encoding==mlp_stream::NAME {return mlp_stream::limit(r).unwrap_or(0);}
     #[cfg(feature="experimental-mlp-pipeline")]
     if r.encoding==mlp_pipeline::NAME {return mlp_pipeline::layout(r).map(|(_,c,q,t)|c+q+t).unwrap_or(0);}
     if r.op == "delta_heads_bf16" && r.encoding == "int8-block256-v1" {
@@ -168,13 +181,24 @@ fn wire_float_limit(r: &Request) -> usize {
 /// A bitmap marks full F32 exceptions; no rounding is performed by this codec.
 fn frame_digest(version: u32, bytes: &[u8], encoding: bool) -> Result<[u8; 32]> {
     match version {
-        1 => Ok(profile::measure(if encoding { "wire_encode_sha256" } else { "wire_decode_sha256" }, || Sha256::digest(bytes).into())),
+        1 | 3 => Ok(profile::measure(if encoding { "wire_encode_sha256" } else { "wire_decode_sha256" }, || Sha256::digest(bytes).into())),
         #[cfg(feature = "experimental-blake3")]
         2 => Ok(profile::measure(if encoding { "wire_encode_blake3" } else { "wire_decode_blake3" }, || *blake3::hash(bytes).as_bytes())),
         _ => Err("unsupported frame version".into()),
     }
 }
-pub fn encode(req: &Request, x: &[f32]) -> Result<Vec<u8>> {
+fn checked_block_encoding(name:&str)->bool{match name{
+    "bf16-block256-exact-v1"=>true,
+    #[cfg(feature="experimental-prefix-hybrid")]
+    delta_hybrid::NAME=>true,
+    _=>false,
+}}
+pub fn encode(req: &Request, x: &[f32]) -> Result<Vec<u8>> {encode_impl(req,x,false)}
+/// Use only after authenticated owner ingress. Version3 reply integrity is
+/// provided by the query signature; the host seals it before durable storage.
+#[cfg(feature="experimental-host-checksum")]
+pub fn encode_signed_reply(req:&Request,x:&[f32])->Result<Vec<u8>>{encode_impl(req,x,true)}
+fn encode_impl(req:&Request,x:&[f32],signed_transport:bool)->Result<Vec<u8>> {
     let limit = if lossless_encoding(&req.encoding) || req.encoding == "int8-block256-v1" {
         wire_float_limit(req)
     } else {
@@ -184,7 +208,9 @@ pub fn encode(req: &Request, x: &[f32]) -> Result<Vec<u8>> {
     let limit=if req.encoding==prefix_start::NAME {prefix_start::reply_count(req)?}else{limit};
     #[cfg(feature="experimental-mlp-delta-fusion")]
     let limit=if mlp_delta_fusion::is_encoding(&req.encoding) {mlp_delta_fusion::reply_count(req)?}else{limit};
-    if x.len() > limit || !x.iter().all(|v| v.is_finite()) {
+    #[cfg(feature="experimental-mlp-stream")]
+    let limit=if req.encoding==mlp_stream::NAME {mlp_stream::limit(req)?}else{limit};
+    if x.len() > limit || (!checked_block_encoding(&req.encoding) && !x.iter().all(|v| v.is_finite())) {
         return Err("invalid activation".into());
     }
     let header = serde_json::to_vec(req).map_err(|e| e.to_string())?;
@@ -195,6 +221,8 @@ pub fn encode(req: &Request, x: &[f32]) -> Result<Vec<u8>> {
     b.extend_from_slice(&(header.len() as u32).to_le_bytes());
     b.extend(header);
     match req.encoding.as_str() {
+        #[cfg(feature="experimental-mlp-stream")]
+        mlp_stream::NAME=>mlp_stream::append(&mut b,req,x)?,
         #[cfg(feature="experimental-mlp-delta-fusion")]
         mlp_delta_fusion::NAME | mlp_delta_fusion::HUFFMAN_NAME => mlp_delta_fusion::append_reply(&mut b,req,x)?,
         #[cfg(feature="experimental-prefix-start")]
@@ -256,11 +284,12 @@ pub fn encode(req: &Request, x: &[f32]) -> Result<Vec<u8>> {
     if b.len() + 32 > 2_000_000 {
         return Err("state size".into());
     }
-    let digest = frame_digest(req.version, &b, true)?;
+    let digest = if signed_transport && req.version==3 {[0;32]}else{frame_digest(req.version, &b, true)?};
     b.extend_from_slice(&digest);
     Ok(b)
 }
-fn decode_envelope(b: &[u8]) -> Result<(Request, &[u8])> {
+fn decode_envelope(b:&[u8])->Result<(Request,&[u8])>{decode_envelope_impl(b,false)}
+fn decode_envelope_impl(b: &[u8], signed_transport:bool) -> Result<(Request, &[u8])> {
     if b.len() < 36 || b.len() > 2_000_000 {
         return Err("state size".into());
     }
@@ -268,10 +297,11 @@ fn decode_envelope(b: &[u8]) -> Result<(Request, &[u8])> {
     if n > 16_384 || n + 36 > b.len() {
         return Err("header/shape".into());
     }
-    // Parse only the bounded header to choose the checksum. No payload is
-    // decoded or executed before the complete frame's digest is verified.
+    // Parse only the bounded header. Normal/file decoding verifies the whole
+    // checksum before payload decoding. The explicit signed-transport context
+    // may skip only version3 after owner ingress authentication.
     let r: Request = serde_json::from_slice(&b[4..4 + n]).map_err(|e| e.to_string())?;
-    if frame_digest(r.version, &b[..b.len() - 32], false)?.as_slice() != &b[b.len() - 32..] {
+    if !(signed_transport && r.version==3) && frame_digest(r.version, &b[..b.len() - 32], false)?.as_slice() != &b[b.len() - 32..] {
         return Err("checksum".into());
     }
     if r.model.len() != 64
@@ -294,6 +324,30 @@ fn decode_envelope(b: &[u8]) -> Result<(Request, &[u8])> {
     let payload = &b[4 + n..b.len() - 32];
     Ok((r,payload))
 }
+/// Only call after authenticating the owner of the complete IC message.
+#[cfg(feature="experimental-host-checksum")]
+pub fn decode_signed_input(b:&[u8])->Result<(Request,Vec<f32>)>{let(r,p)=decode_envelope_impl(b,true)?;let x=decode_values(&r,p)?;Ok((r,x))}
+/// A checksum-verified local version3 request. Fields cannot be forged.
+/// ```compile_fail
+/// let mut bound: imajev_runtime::HostBoundRequest = todo!();
+/// bound.request.version = 1;
+/// ```
+pub struct HostBoundRequest{request:Request}
+pub fn is_host_bound_frame(b:&[u8])->bool {
+    if b.len()<36 || b.len()>2_000_000{return false;}
+    let n=u32::from_le_bytes(b[..4].try_into().unwrap())as usize;
+    n<=16_384 && n+36<=b.len() && serde_json::from_slice::<Request>(&b[4..4+n]).is_ok_and(|r|r.version==3)
+}
+impl HostBoundRequest {
+    pub fn verify_stored(b:&[u8])->Result<Self>{let(r,_)=decode_envelope(b)?;if r.version!=3{return Err("host-bound frame version".into());}Ok(Self{request:r})}
+    /// Caller must first verify the complete IC query reply signature. This
+    /// method binds progress/identity and adds the checksum used for storage.
+    pub fn seal_verified_reply(&self,mut b:Vec<u8>)->Result<Vec<u8>> {
+        let(r,_)=decode_envelope_impl(&b,true)?;let mut expected=self.request.clone();expected.step=expected.step.checked_add(1).ok_or("progress overflow")?;
+        if !same_request(&r,&expected) || b[b.len()-32..]!=[0;32]{return Err("host-bound reply identity/footer".into());}
+        let end=b.len()-32;let digest: [u8;32]=Sha256::digest(&b[..end]).into();b[end..].copy_from_slice(&digest);Ok(b)
+    }
+}
 pub fn decode(b: &[u8]) -> Result<(Request, Vec<f32>)> {
     let (r,payload)=decode_envelope(b)?;
     let x=decode_values(&r,payload)?;
@@ -301,6 +355,8 @@ pub fn decode(b: &[u8]) -> Result<(Request, Vec<f32>)> {
 }
 fn decode_values(r:&Request,payload:&[u8])->Result<Vec<f32>> {
     let x: Vec<f32> = match r.encoding.as_str() {
+        #[cfg(feature="experimental-mlp-stream")]
+        mlp_stream::NAME=>mlp_stream::decode_values(r,payload)?,
         #[cfg(feature="experimental-mlp-delta-fusion")]
         mlp_delta_fusion::NAME | mlp_delta_fusion::HUFFMAN_NAME => mlp_delta_fusion::decode_reply(r,payload)?,
         #[cfg(feature="experimental-prefix-start")]
@@ -314,9 +370,9 @@ fn decode_values(r:&Request,payload:&[u8])->Result<Vec<f32>> {
                 .map(|c| f32::from_le_bytes(c.try_into().unwrap()))
                 .collect()
         }
-        "bf16-block256-exact-v1" => block_codec::decode(payload)?,
+        "bf16-block256-exact-v1" => return block_codec::decode(payload),
         #[cfg(feature="experimental-prefix-hybrid")]
-        delta_hybrid::NAME => {if payload.first()!=Some(&0){return Err("hybrid direction".into());}block_codec::decode(&payload[1..])?},
+        delta_hybrid::NAME => {if payload.first()!=Some(&0){return Err("hybrid direction".into());}return block_codec::decode(&payload[1..]);},
         #[cfg(feature="experimental-mlp-pipeline")]
         mlp_pipeline::NAME=>mlp_pipeline::decode_values(r,payload)?,
         #[cfg(feature = "experimental-projection-reuse")]
@@ -422,14 +478,26 @@ pub use projection_codec::PreparedProjection;
 #[cfg(feature="experimental-mlp-pipeline")]
 pub use mlp_pipeline::PreparedMlp;
 #[cfg(feature="experimental-projection-reuse")]
-pub enum DecodedQueryInput { #[cfg(feature="experimental-terminal-tail")] TerminalTail(PreparedTail), #[cfg(feature="experimental-mlp-delta-fusion")] MlpDelta(mlp_delta_fusion::PreparedCarry), #[cfg(feature="experimental-prefix-start")] PrefixStart(prefix_start::PreparedPrefixStart), #[cfg(feature="experimental-prefix-hybrid")] DeltaHybrid(delta_hybrid::PreparedDeltaHybrid), Values(Vec<f32>), Projection(PreparedProjection), #[cfg(feature="experimental-mlp-pipeline")] Mlp(PreparedMlp) }
+pub enum DecodedQueryInput { #[cfg(feature="experimental-int8-k-continue")] Int8K(PreparedInt8K), #[cfg(feature="experimental-mlp-stream")] MlpStream(PreparedMlpStream), #[cfg(feature="experimental-f32-k-continue")] F32K(PreparedF32K), #[cfg(feature="experimental-terminal-tail")] TerminalTail(PreparedTail), #[cfg(feature="experimental-mlp-delta-fusion")] MlpDelta(mlp_delta_fusion::PreparedCarry), #[cfg(feature="experimental-prefix-start")] PrefixStart(prefix_start::PreparedPrefixStart), #[cfg(feature="experimental-prefix-hybrid")] DeltaHybrid(delta_hybrid::PreparedDeltaHybrid), Values(Vec<f32>), Projection(PreparedProjection), #[cfg(feature="experimental-mlp-pipeline")] Mlp(PreparedMlp) }
 #[cfg(feature="experimental-projection-reuse")]
 impl DecodedQueryInput {
-    pub fn values(&self)->Option<&[f32]> {match self {#[cfg(feature="experimental-terminal-tail")] Self::TerminalTail(_)=>None, #[cfg(feature="experimental-mlp-delta-fusion")] Self::MlpDelta(_)=>None, #[cfg(feature="experimental-prefix-start")] Self::PrefixStart(_)=>None, #[cfg(feature="experimental-prefix-hybrid")] Self::DeltaHybrid(_)=>None, Self::Values(v)=>Some(v),Self::Projection(_)=>None, #[cfg(feature="experimental-mlp-pipeline")] Self::Mlp(_)=>None}}
+    pub fn values(&self)->Option<&[f32]> {match self {#[cfg(feature="experimental-int8-k-continue")] Self::Int8K(_)=>None, #[cfg(feature="experimental-mlp-stream")] Self::MlpStream(_)=>None, #[cfg(feature="experimental-f32-k-continue")] Self::F32K(_)=>None, #[cfg(feature="experimental-terminal-tail")] Self::TerminalTail(_)=>None, #[cfg(feature="experimental-mlp-delta-fusion")] Self::MlpDelta(_)=>None, #[cfg(feature="experimental-prefix-start")] Self::PrefixStart(_)=>None, #[cfg(feature="experimental-prefix-hybrid")] Self::DeltaHybrid(_)=>None, Self::Values(v)=>Some(v),Self::Projection(_)=>None, #[cfg(feature="experimental-mlp-pipeline")] Self::Mlp(_)=>None}}
 }
 #[cfg(feature="experimental-projection-reuse")]
-pub fn decode_query(b:&[u8])->Result<(Request,DecodedQueryInput)> {
-    let (r,payload)=decode_envelope(b)?;
+pub fn decode_query(b:&[u8])->Result<(Request,DecodedQueryInput)>{decode_query_impl(b,false)}
+/// Requires authenticated owner ingress before invocation. Only version3 skips
+/// the canister checksum pass; version1/2 still use their full checksum.
+#[cfg(all(feature="experimental-projection-reuse",feature="experimental-host-checksum"))]
+pub fn decode_signed_query(b:&[u8])->Result<(Request,DecodedQueryInput)>{decode_query_impl(b,true)}
+#[cfg(feature="experimental-projection-reuse")]
+fn decode_query_impl(b:&[u8],signed_transport:bool)->Result<(Request,DecodedQueryInput)> {
+    let (r,payload)=decode_envelope_impl(b,signed_transport)?;
+    #[cfg(feature="experimental-int8-k-continue")]
+    if matches!(r.op.as_str(),"linear_integer_k_continue"|"linear_integer_k_finish") {let input=PreparedInt8K::decode(&r,payload)?;return Ok((r,DecodedQueryInput::Int8K(input)));}
+    #[cfg(feature="experimental-mlp-stream")]
+    if r.encoding==mlp_stream::NAME {let input=PreparedMlpStream::decode(&r,payload)?;return Ok((r,DecodedQueryInput::MlpStream(input)));}
+    #[cfg(feature="experimental-f32-k-continue")]
+    if r.op=="matmul_k_continue" {let input=PreparedF32K::decode(&r,payload)?;return Ok((r,DecodedQueryInput::F32K(input)));}
     #[cfg(feature="experimental-terminal-tail")]
     if r.op=="terminal_tail_integer" {let input=PreparedTail::decode(&r,payload)?;return Ok((r,DecodedQueryInput::TerminalTail(input)));}
     #[cfg(feature="experimental-mlp-delta-fusion")]
@@ -460,6 +528,12 @@ where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer,
 {
     if r.model!=m.model || r.pack_hash!=m.pack_hash {return Err("model mismatch".into());}
     match input {
+        #[cfg(feature="experimental-f32-k-continue")]
+        DecodedQueryInput::F32K(input)=>input.evaluate(r,m,&mut read),
+        #[cfg(feature="experimental-int8-k-continue")]
+        DecodedQueryInput::Int8K(input)=>input.evaluate(r,m,&mut read),
+        #[cfg(feature="experimental-mlp-stream")]
+        DecodedQueryInput::MlpStream(_)=>Err("MLP stream requires owned evaluation".into()),
         #[cfg(feature="experimental-terminal-tail")]
         DecodedQueryInput::TerminalTail(input)=>input.evaluate(r,m,&mut read),
         #[cfg(feature="experimental-mlp-delta-fusion")]
@@ -482,6 +556,8 @@ where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer,
 {
     if r.model!=m.model || r.pack_hash!=m.pack_hash {return Err("model mismatch".into());}
     match input {
+        #[cfg(feature="experimental-mlp-stream")]
+        DecodedQueryInput::MlpStream(input)=>input.evaluate(r,m,&mut read),
         #[cfg(feature="experimental-prefix-start")]
         DecodedQueryInput::PrefixStart(input)=>input.evaluate_owned(r,m,&mut read),
         #[cfg(feature="experimental-prefix-hybrid")]
@@ -2138,6 +2214,12 @@ where F: FnMut(u64, usize) -> Result<B>, B: WeightBuffer,
     if r.model != m.model || r.pack_hash != m.pack_hash {
         return Err("model mismatch".into());
     }
+    #[cfg(feature="experimental-mlp-stream")]
+    if r.encoding==mlp_stream::NAME {let b=encode(r,x)?;let(_,payload)=decode_envelope(&b)?;let input=PreparedMlpStream::decode(r,payload)?;return input.evaluate(r,m,&mut read);}
+    #[cfg(feature="experimental-int8-k-continue")]
+    if matches!(r.op.as_str(),"linear_integer_k_continue"|"linear_integer_k_finish") {return int8_k_continue::evaluate(r,x,m,&mut read);}
+    #[cfg(feature="experimental-f32-k-continue")]
+    if r.op=="matmul_k_continue" {return f32_k_continue::evaluate(r,x,m,&mut read);}
     #[cfg(feature = "experimental-projection-reuse")]
     if matches!(r.op.as_str(), "lora_integer_capture" | "lora_integer_reuse") {
         return projection_reuse::evaluate(r, x, m, &mut read);
@@ -2886,10 +2968,10 @@ mod frame_checksum_tests {
     }
     #[test]
     fn unsupported_versions_cannot_encode_or_decode() {
-        assert!(encode(&request(3,""), &[1.]).is_err());
+        assert!(encode(&request(4,""), &[1.]).is_err());
         let mut b = encode(&request(1,""), &[1.]).unwrap();
         let at = b.windows(11).position(|w| w == b"\"version\":1").unwrap()+10;
-        b[at]=b'3';
+        b[at]=b'4';
         assert!(decode(&b).is_err());
         #[cfg(not(feature="experimental-blake3"))]
         assert!(encode(&request(2,""), &[1.]).is_err());
@@ -2921,3 +3003,19 @@ mod frame_checksum_tests {
 
 #[cfg(all(test,feature="experimental-delta-state-layout"))]
 mod delta_state_layout_tests;
+
+#[cfg(test)]mod host_checksum_tests {
+ use super::*;
+ fn request()->Request{serde_json::from_value(serde_json::json!({"version":3,"model":"a".repeat(64),"pack_hash":"b".repeat(64),"input_hash":"c".repeat(64),"step":7,"op":"bf16","tensor":"","dims":[],"scalars":[],"encoding":"bf16-block256-exact-v1"})).unwrap()}
+ #[test]fn stored_v3_is_checked_and_reply_progress_is_bound(){
+  let r=request();let input=encode(&r,&[1.,-0.,f32::from_bits(1)]).unwrap();assert!(is_host_bound_frame(&input));let bound=HostBoundRequest::verify_stored(&input).unwrap();
+  for at in [4,input.len()-33,input.len()-1]{let mut b=input.clone();b[at]^=1;assert!(HostBoundRequest::verify_stored(&b).is_err());}
+  let mut reply=r.clone();reply.step+=1;let mut wire=encode(&reply,&[1.,-0.,f32::from_bits(1)]).unwrap();let end=wire.len()-32;wire[end..].fill(0);assert!(decode(&wire).is_err());let sealed=bound.seal_verified_reply(wire.clone()).unwrap();let(h,x)=decode(&sealed).unwrap();assert_eq!(h.step,8);assert_eq!(x[1].to_bits(),(-0f32).to_bits());assert!(bound.seal_verified_reply(sealed).is_err());
+  for field in 0..11{let mut other=reply.clone();match field{0=>other.version=1,1=>other.model="d".repeat(64),2=>other.pack_hash="d".repeat(64),3=>other.input_hash="d".repeat(64),4=>other.step+=1,5=>other.op="embed".into(),6=>other.tensor="other".into(),7=>other.dims.push(1),8=>other.scalars.push(1.),9=>other.aux.push("other".into()),_=>other.encoding="bf16-exact".into()};let mut b=encode(&other,&[1.]).unwrap();let end=b.len()-32;b[end..].fill(0);assert!(bound.seal_verified_reply(b).is_err());}
+ }
+ #[cfg(feature="experimental-host-checksum")]
+ #[test]fn trusted_context_only_skips_v3_checksum_not_input_validation(){
+  for version in [1,2,3]{if version==2&&!cfg!(feature="experimental-blake3"){continue;}let mut r=request();r.version=version;let mut b=encode(&r,&[1.]).unwrap();let end=b.len()-32;b[end..].fill(0);assert!(decode(&b).is_err());assert_eq!(decode_signed_input(&b).is_ok(),version==3);}
+  let r=request();let mut b=encode(&r,&[1.]).unwrap();let n=u32::from_le_bytes(b[..4].try_into().unwrap())as usize;let pos=4+n+5;b[pos..pos+2].copy_from_slice(&0x7fc0u16.to_le_bytes());assert!(decode_signed_input(&b).is_err());
+ }
+}

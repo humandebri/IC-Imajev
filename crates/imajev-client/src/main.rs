@@ -147,6 +147,15 @@ async fn parallel_upload(
         json!({"uploaded":m.bytes,"update_calls_this_run":updates,"candid_chunk_request_bytes_this_run":sent,"concurrency":concurrency}),
     )
 }
+// Version3 is checked before signing the outgoing message. Seal only after
+// Agent::query().call() has verified the incoming node signature.
+fn read_inference_state(path:&str)->Result<(Vec<u8>,Option<imajev_runtime::HostBoundRequest>),Box<dyn std::error::Error>> {
+    let b=fs::read(path)?;
+    let bound=if imajev_runtime::is_host_bound_frame(&b){Some(imajev_runtime::HostBoundRequest::verify_stored(&b).map_err(io::Error::other)?)}else{None};Ok((b,bound))
+}
+fn store_inference_reply(path:&str,state:Vec<u8>,bound:Option<imajev_runtime::HostBoundRequest>)->Result<(),Box<dyn std::error::Error>> {
+    let state=if let Some(bound)=bound{bound.seal_verified_reply(state).map_err(io::Error::other)?}else{state};fs::write(path,state)?;Ok(())
+}
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<_> = std::env::args().collect();
@@ -156,6 +165,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let agent = Agent::builder()
         .with_url(url)
+        .with_verify_query_signatures(true)
         .with_identity(Secp256k1Identity::from_pem_file(&args[3])?)
         .build()?;
     agent.fetch_root_key().await?;
@@ -198,29 +208,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
    Ok(json!({"uploaded":offset,"update_calls":updates+1,"candid_request_bytes":bytes}))
  },
  "decision"=>{
- let state=fs::read(cmd["input"].as_str().ok_or("input")?)?;let options:Vec<String>=serde_json::from_value(cmd["options"].clone())?;let arg=Encode!(&state,&options)?;let b=agent.query(&canister,match cmd["method"].as_str().unwrap_or("decision") { "decision"=>"decision", "decision_fast"=>"decision_fast", _=>return Err("decision method".into()) }).with_arg(arg.clone()).call().await?;let d=Decode!(&b,Result<ChoiceResult,String>)?.map_err(io::Error::other)?;Ok(json!({"decision":d,"request_bytes":arg.len(),"reply_bytes":b.len()}))
+ let (state,_bound)=read_inference_state(cmd["input"].as_str().ok_or("input")?)?;let options:Vec<String>=serde_json::from_value(cmd["options"].clone())?;let arg=Encode!(&state,&options)?;let b=agent.query(&canister,match cmd["method"].as_str().unwrap_or("decision") { "decision"=>"decision", "decision_fast"=>"decision_fast", _=>return Err("decision method".into()) }).with_arg(arg.clone()).call().await?;let d=Decode!(&b,Result<ChoiceResult,String>)?.map_err(io::Error::other)?;Ok(json!({"decision":d,"request_bytes":arg.len(),"reply_bytes":b.len()}))
  },
  "terminal_step_decision"=>{
-   let state=fs::read(cmd["input"].as_str().ok_or("input")?)?;
+   let (state,bound)=read_inference_state(cmd["input"].as_str().ok_or("input")?)?;
    let options:Vec<String>=serde_json::from_value(cmd["options"].clone())?;
    let arg=Encode!(&state,&options)?;
    let b=agent.query(&canister,"terminal_step_decision").with_arg(arg.clone()).call().await?;
    let result=Decode!(&b,Result<TerminalDecisionMeasurement,String>)?.map_err(io::Error::other)?;
-   let m=result.measurement;fs::write(cmd["output"].as_str().ok_or("output")?,&m.state)?;
+   let m=result.measurement;store_inference_reply(cmd["output"].as_str().ok_or("output")?,m.state,bound)?;
    Ok(json!({"instructions":m.instructions,"stable_read_bytes":m.stable_read_bytes,
     "heap_pages":m.heap_pages,"stable_pages":m.stable_pages,"request_bytes":arg.len(),
     "reply_bytes":b.len(),"decision":result.decision}))
  },
  "profile"=>{
-   let state=fs::read(cmd["input"].as_str().ok_or("input")?)?;let arg=Encode!(&state)?;
+   let (state,bound)=read_inference_state(cmd["input"].as_str().ok_or("input")?)?;let arg=Encode!(&state)?;
    let b=agent.query(&canister,"profile_step").with_arg(arg.clone()).call().await?;
    let p=Decode!(&b,Result<ProfileMeasurement,String>)?.map_err(io::Error::other)?;
-   fs::write(cmd["output"].as_str().ok_or("output")?,&p.measurement.state)?;
+   store_inference_reply(cmd["output"].as_str().ok_or("output")?,p.measurement.state,bound)?;
    Ok(json!({"instructions":p.measurement.instructions,"spans":p.spans,"request_bytes":arg.len(),"reply_bytes":b.len(),"stable_read_bytes":p.measurement.stable_read_bytes}))
  },
  "step"=>{
-   let state=fs::read(cmd["input"].as_str().ok_or("input")?)?;let arg=Encode!(&state)?;let b=agent.query(&canister,"step").with_arg(arg.clone()).call().await?;
-   let m=Decode!(&b,Result<Measurement,String>)?.map_err(io::Error::other)?;fs::write(cmd["output"].as_str().ok_or("output")?,&m.state)?;
+   let (state,bound)=read_inference_state(cmd["input"].as_str().ok_or("input")?)?;let arg=Encode!(&state)?;let b=agent.query(&canister,"step").with_arg(arg.clone()).call().await?;
+   let m=Decode!(&b,Result<Measurement,String>)?.map_err(io::Error::other)?;store_inference_reply(cmd["output"].as_str().ok_or("output")?,m.state,bound)?;
    Ok(json!({"instructions":m.instructions,"stable_read_bytes":m.stable_read_bytes,"heap_pages":m.heap_pages,"stable_pages":m.stable_pages,"request_bytes":arg.len(),"reply_bytes":b.len()}))
  },
  _=>Err("unknown op".into())

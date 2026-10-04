@@ -15,6 +15,10 @@ sha2.workspace = true
 serde_bytes = { version = "=0.11.19", optional = true }
 
 [features]
+experimental-int8-k-continue = ["experimental-strassen-raw", "experimental-projection-reuse", "imajev-runtime/experimental-int8-k-continue"]
+experimental-mlp-stream = ["experimental-mlp-pipeline", "experimental-f32-k-continue", "imajev-runtime/experimental-mlp-stream"]
+experimental-f32-k-continue = ["experimental-f32-output-generic", "imajev-runtime/experimental-f32-k-continue"]
+experimental-host-checksum = ["experimental-projection-reuse", "imajev-runtime/experimental-host-checksum"]
 experimental-terminal-tail = ["experimental-terminal-attention", "experimental-mlp-full89", "imajev-runtime/experimental-terminal-tail"]
 experimental-f32-output-generic = ["experimental-f32-output-reuse","imajev-runtime/experimental-f32-output-generic"]
 experimental-f32-output-reuse = ["imajev-runtime/experimental-f32-output-reuse"]
@@ -24,6 +28,7 @@ experimental-delta-no-writeback = ["imajev-runtime/experimental-delta-no-writeba
 experimental-prefix-start = ["experimental-prefix-hybrid", "imajev-runtime/experimental-prefix-start"]
 experimental-terminal-attention = ["experimental-attention-full", "imajev-runtime/experimental-terminal-attention"]
 experimental-strassen-raw = ["experimental-pair-wat", "imajev-runtime/experimental-strassen-raw"]
+experimental-strassen-output128 = ["experimental-strassen-raw", "imajev-runtime/experimental-strassen-output128"]
 experimental-pair-direct-input = ["experimental-pair-wat", "imajev-runtime/experimental-pair-direct-input"]
 experimental-paired-only = ["experimental-prepared-output-pairs", "imajev-runtime/experimental-paired-only"]
 experimental-pair-wat = ["experimental-prepared-output-pairs", "imajev-runtime/experimental-pair-wat"]
