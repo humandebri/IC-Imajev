@@ -58,3 +58,15 @@ raw `mlp_down_norm_partial_prepared` は87 token/1600行で499,734,957命令、8
 生成物はGit対象外。Laya・保護された主canister・mainnetは変更しない。push/PRも行わない。
 
 次は、連結経路で復活したprefix log復元と圧縮carry展開、full attentionの前後に残るquery境界を測る。現在の主54queryは命令数の下限ではなく、5B/queryと2MB/frameの制約下で実測した境界である。
+
+## コミット後の継続改善：carry展開
+
+先頭1ブロックを、新7query/既存8queryの同じlayer0〜3範囲でprofileした。最後の融合queryのDEFLATE展開は238,203,186命令（6stream）、wire decode合計308,010,161命令。16件の実carryで既存Huffman codecを比較し、全件のhidden/attention/convがビット一致、命令と要求bytesが減った。既存codecを使うためRust/Wasm・モデル・丸め順序は変更していない。
+
+連結経路をHuffmanへ切り替え、全3条件を通常queryで再測定した。主は54queryのまま241,643,972,178命令・133,896,992 Candid bytes・単回36.751秒。直前の連結版から866,900,972命令・621,991 bytes減った。情報不足は54query・221,142,986,097命令・125,114,808 bytes・34.021秒。最大変更の標準62queryへの切替も35.302秒で一致。全層保存対象・判断・logits・確率のビット一致と失敗/replay0を確認した。
+
+主の標準62query経路と比べると、最終連結版でも命令2.739%増・通信8.611%増。query削減以外の改善とは扱わず、実験オプションを維持する。50/32未達。
+
+最終source/buildは `artifacts/prefix_codec/full-build-roll-huffman-v9`、全体比較/source ZIPは `artifacts/prefix_codec/full-roll-huffman-graph-v9`。再現コマンドのWasmをこのbuildへ変更する。profile15件は `artifacts/prefix_codec/roll-profile-review-v1`、codec比較16通常+16 profile queryは `artifacts/prefix_codec/roll-huffman-review-v1`。各profile出力を元の通常query出力とbit比較した。
+
+残る対象は、prefix logを各Delta入口で状態へ再構成する処理と、carryのdecode/encode。先頭2つのDeltaのprefix復元だけで326,621,017命令を要する。新7queryのwire encodeは合計197,835,292命令、既存8queryは46,727,678命令で、追加状態の返信が負担になる。spanには包含関係があるので全spanを総命令へ加算しない。full attention周辺は約4.02BとMLP約4.05Bで、それぞれ1queryを占める。50へはこれらの境界を、演算順序と2MB/frameを保って再配置する必要がある。

@@ -5,7 +5,7 @@ from full_inference import TextGraph,atomic,PREFIX
 from prefix_inference import PrefixTextGraph
 from delta_mlp_start_codec import NAME as START_NAME,CONV,encode_ids
 from mlp_delta_stream_codec import NAME as PAIR_NAME,encode_request,encode_continue_request
-from mlp_delta_carry import NAME as FINISH_NAME,encode_request as encode_finish
+from mlp_delta_carry import HUFFMAN_NAME as FINISH_NAME,encode_request as encode_finish
 
 class RollPrefixGraph(PrefixTextGraph):
  def __init__(self,*args,roll_begin=4096,roll_heads=18,roll_down=768,**kwargs):
