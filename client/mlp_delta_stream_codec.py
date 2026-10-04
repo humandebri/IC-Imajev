@@ -12,7 +12,7 @@ def layout(h):
     if h.get('encoding')!=NAME or h.get('op') not in ('mlp_complete_delta_partial',)+FOLLOW or len(d)!=(6 if h.get('op')=='delta_partial_mlp_prepare_down' else 5) or any(type(v)is not int for v in d) or len(a)!=1 or len(s)!=2 or not np.array_equal(np.asarray(s,dtype='<f4').view('<u4'),np.asarray([2.,1e-6],dtype='<f4').view('<u4')):raise ValueError('pair metadata')
     n,b,c,k,p=d[:5]
     if len(d)==6 and not (0<d[5]<C and d[5]%32==0):raise ValueError('pair partial down rows')
-    if not 1<=n<=89 or b<=0 or c<=0 or b%256 or c%256 or b+c!=H or not 0<k<32 or k%2 or not 1<=p<=132:raise ValueError('pair bounds')
+    if not 1<=n<=89 or b<=0 or c<=0 or b%128 or c%128 or b+c!=H or not 0<k<32 or k%2 or not 1<=p<=132:raise ValueError('pair bounds')
     m=re.fullmatch(r'model\.language_model\.layers\.(0|[1-9][0-9]*)\.post_attention_layernorm\.weight',h.get('tensor',''))
     if not m or not 0<=int(m[1])<30 or (int(m[1])+2)%4==0 or a[0]!=f'model.language_model.layers.{int(m[1])+1}.input_layernorm.weight':raise ValueError('pair layer scope')
     return n,b,c,k,p
@@ -27,7 +27,7 @@ def encode_request(h,state,history,log,*,compress_residual=False,residual_raw_th
     if h['op']!='mlp_complete_delta_partial':raise ValueError('pair completion direction')
     inner=dict(h,encoding=MLP_NAME,op='mlp_stream_complete',dims=[n,b,c])
     carry=encode_mlp(inner,state)
-    if carry[:1]!=b'\1' or int.from_bytes(carry[1:5],'little')!=b:raise ValueError('pair input progress')
+    if carry[:1]!=bytes([1 if b%256==0 else 2]) or int.from_bytes(carry[1:5],'little')!=b:raise ValueError('pair input progress')
     cv=np.asarray(history,dtype='<f4').ravel();lv=np.asarray(log,dtype='<f4').ravel();kc=p*k//2*128
     if cv.size!=3*k*256 or lv.size!=p*(k//2*128+k*128+k) or not np.isfinite(cv).all() or not np.isfinite(lv).all() or np.any(cv.view('<u4')&65535) or np.any(lv[:kc].view('<u4')&65535) or np.any(lv[kc+p*k*128:]<0) or np.any(lv[kc+p*k*128:]>1):raise ValueError('pair prefix shape/finite')
     if compress_residual:

@@ -27,8 +27,8 @@ fn metadata(r: &Request) -> Result<(usize, usize, usize, usize, usize, usize)> {
     if !(1..=89).contains(&n)
         || b == 0
         || c == 0
-        || b % 256 != 0
-        || c % 256 != 0
+        || b % crate::mlp_stream::STEP != 0
+        || c % crate::mlp_stream::STEP != 0
         || b.checked_add(c) != Some(H)
         || h == 0
         || h >= 32
@@ -75,10 +75,10 @@ pub(crate) fn reply_count(r: &Request) -> Result<usize> {
 }
 // Dimensions are bounded by metadata; compressed descriptors never size allocations.
 fn expand_residual(n:usize,begin:usize,p:&[u8])->Result<Vec<u8>> {
-    if p.len()<9 || p[0]!=1 || u32::from_le_bytes(p[1..5].try_into().unwrap())as usize!=begin {return Err("pair residual progress".into());}
+    if p.len()<9 || p[0]!=if begin%256==0{1}else{2} || u32::from_le_bytes(p[1..5].try_into().unwrap())as usize!=begin {return Err("pair residual progress".into());}
     let size=u32::from_le_bytes(p[5..9].try_into().unwrap())as usize;
     let end=9usize.checked_add(size).filter(|&end|end<=p.len()).ok_or("pair residual length")?;
-    let tail=n*(C+begin+4*(C/256+begin/256+3*R));
+    let tail=n*(C+begin+begin%256+4*(C/256+begin/256+3*R));
     if p.len()-end!=tail {return Err("pair residual tail".into());}
     let mut groups=crate::carry_planes::decode(&p[9..end],&[(n*C,2)])?;
     let planes=groups.pop().ok_or("pair residual planes")?;
@@ -737,7 +737,7 @@ mod tests {
 #[cfg(test)]mod full_follow_tests {
  use super::*;
  #[test]fn residual_planes_preserve_bytes_and_reject_malformed(){
-  let(n,begin)=(1,256);let tail=n*(C+begin+4*(C/256+begin/256+3*R));
+  let(n,begin)=(1,256);let tail=n*(C+begin+begin%256+4*(C/256+begin/256+3*R));
   let mut planes=vec![];for byte in [0u8,128] {planes.push(2);planes.extend(1u32.to_le_bytes());planes.push(byte);}
   let mut p=vec![1];p.extend((begin as u32).to_le_bytes());p.extend((planes.len()as u32).to_le_bytes());p.extend(planes);p.extend(vec![17;tail]);
   let mut expected=vec![1];expected.extend((begin as u32).to_le_bytes());expected.extend(vec![0,128].repeat(n*C));expected.extend(vec![17;tail]);

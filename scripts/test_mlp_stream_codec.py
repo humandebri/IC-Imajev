@@ -24,8 +24,9 @@ def carry(n, done):
                            np.full(n * C, -127., np.float32),
                            np.full(n * C // 256, .0123, np.float32),
                            np.full(n * 2 * R, .1234567, np.float32),
-                           np.full(n * done, 127., np.float32),
-                           np.full(n * done // 256, .009, np.float32),
+                           np.full(n * (done//256*256), 127., np.float32),
+                           np.full(n * (done%256), -0., np.float32),
+                           np.full(n * (done // 256), .009, np.float32),
                            np.full(n * R, -.1234567, np.float32)])
 
 
@@ -37,6 +38,22 @@ class StreamCodecTests(unittest.TestCase):
                 p = encode_payload(h, x)
                 self.assertLess(len(p), 2_000_000)
                 self.assertEqual(decode_payload(h, p).tobytes(), x.tobytes())
+
+    def test_half_block_pending_is_bf16_and_scales_use_per_token_floor(self):
+        for n in [1,7,87,89]:
+            for done in [128,384,6016,H-128]:
+                h,x=header(n,done),carry(n,done)
+                h["dims"][2]=128
+                p=encode_payload(h,x)
+                self.assertEqual(p[0],2)
+                self.assertEqual(decode_payload(h,p).tobytes(),x.tobytes())
+                self.assertLess(len(p)+16424,2_000_000)
+                with self.assertRaises(ValueError):decode_payload(h,bytes([1])+p[1:])
+                with self.assertRaises(ValueError):decode_payload(h,p[:-1])
+                offset=n*(2*C+C//256+2*R+done//256*256)
+                for value in [.1234567,np.inf,np.nan]:
+                    bad=x.copy();bad[offset]=value
+                    with self.assertRaises(ValueError):encode_payload(h,bad)
 
     def test_complete_carry_and_plain_reply_are_lossless_and_bounds_are_strict(self):
         h = header(89, 4608)

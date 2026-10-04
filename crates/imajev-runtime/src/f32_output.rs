@@ -146,7 +146,7 @@ mod continuation_tests {
  #[test]fn every_cut_preserves_full_scalar_order_with_extremes_cancellation_and_partial_output_rows(){
   for cols in [128,2560,9216]{let rows=64;let raw:Vec<f32>=(0..rows*cols).map(|i|[1.,-1.,-0.,0.,0.1234567,f32::MIN_POSITIVE][i%6]).collect();let bytes:Vec<_>=raw.iter().flat_map(|x|x.to_le_bytes()).collect();let fixed=PreparedF32::from_le_bytes_output(&bytes,rows,cols).unwrap();
    for(n,start,width)in[(1,0,64),(7,2,8),(45,31,33),(87,32,32)]{let view=fixed.slice(start*cols,width*cols).unwrap();let x:Vec<f32>=(0..n*cols).map(|i|[1.,-1.,-0.,0.,1e-30,0.2345678][i%6]).collect();let expected=crate::matrix_reference(&x,&raw[start*cols..(start+width)*cols],n,width,cols).unwrap();
-    for chunk in [64,256,1024]{let mut out=vec![0.;n*width];for begin in(0..cols).step_by(chunk){let count=(cols-begin).min(chunk);let mut part=Vec::with_capacity(n*count);for t in 0..n{part.extend_from_slice(&x[t*cols+begin..t*cols+begin+count]);}out=continue_columns(&part,&out,&view,n,width,cols,begin,count).unwrap();}assert!(out.iter().zip(&expected).all(|(a,b)|a.to_bits()==b.to_bits()),"cols={cols} n={n} chunk={chunk}");}
+    for chunk in [64,128,256,1024]{let mut out=vec![0.;n*width];for begin in(0..cols).step_by(chunk){let count=(cols-begin).min(chunk);let mut part=Vec::with_capacity(n*count);for t in 0..n{part.extend_from_slice(&x[t*cols+begin..t*cols+begin+count]);}out=continue_columns(&part,&out,&view,n,width,cols,begin,count).unwrap();}assert!(out.iter().zip(&expected).all(|(a,b)|a.to_bits()==b.to_bits()),"cols={cols} n={n} chunk={chunk}");}
    }
   }
  }

@@ -6,6 +6,13 @@ from attention_mlp_stream_codec import NAME,C,KV,layout,encode_request,decode_re
 from test_mlp_stream_codec import carry
 class Tests(unittest.TestCase):
  def h(self,n=87):return dict(version=3,model='a'*64,pack_hash='b'*64,input_hash='c'*64,step=0,encoding=NAME,op='mlp_complete_attention_kv',tensor='model.language_model.layers.2.post_attention_layernorm.weight',aux=['model.language_model.layers.3.input_layernorm.weight'],dims=[n,1024,8192,45],scalars=[2.,1e-6])
+ def test_half_pending_completes_into_attention_without_repacking(self):
+  import struct
+  from mlp_stream_codec import encode_payload,NAME as MLP
+  for n in [1,7,87,89]:
+   h=self.h(n);h.update(op='mlp_complete_attention_kv_q4',dims=[n,6016,3200,45]);state=carry(n,6016)
+   frame=encode_request(h,state,np.zeros(45*KV,np.float32));size=struct.unpack('<I',frame[:4])[0];p=frame[4+size:-32];length=struct.unpack('<I',p[1:5])[0];inner=p[5:5+length]
+   self.assertEqual(inner[0],2);self.assertEqual(inner,encode_payload(dict(h,encoding=MLP,op='mlp_stream_complete',dims=[n,6016,3200]),state));self.assertLess(len(frame),2_000_000)
  def test_prepare_carry_and_next_frame_fit_and_preserve_bits(self):
   for n in [1,80,87,89]:
    h=self.h(n);self.assertLess(len(encode_request(h,carry(n,1024))),2_000_000)

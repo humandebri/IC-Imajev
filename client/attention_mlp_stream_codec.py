@@ -10,7 +10,7 @@ def layout(h):
  if h.get('encoding')!=NAME or h.get('op')not in COMPLETE+FINISH or len(d)!=(4 if complete else 3)or any(type(v)is not int for v in d)or len(a)!=1 or len(s)!=2 or not np.array_equal(np.asarray(s,dtype='<f4').view('<u4'),np.asarray([2.,1e-6],dtype='<f4').view('<u4')):raise ValueError('attention MLP metadata')
  n,b=d[:2];p=d[-1]
  m=re.fullmatch(r'model\.language_model\.layers\.(0|[1-9][0-9]*)\.post_attention_layernorm\.weight',h.get('tensor',''))
- if not 1<=n<=89 or not 0<b<9216 or b%256 or not 0<=p<=132 or n+p>512 or complete and b+d[2]!=9216 or not m or int(m[1])>=30 or int(m[1])%4!=(2 if complete else 3)or a[0]!=f'model.language_model.layers.{int(m[1])+1}.input_layernorm.weight':raise ValueError('attention MLP bounds/scope')
+ if not 1<=n<=89 or not 0<b<9216 or b%128 or not 0<=p<=132 or n+p>512 or complete and b+d[2]!=9216 or not m or int(m[1])>=30 or int(m[1])%4!=(2 if complete else 3)or a[0]!=f'model.language_model.layers.{int(m[1])+1}.input_layernorm.weight':raise ValueError('attention MLP bounds/scope')
  return n,b,p
 
 def inner(h):
@@ -33,7 +33,7 @@ def encode_request(h,state,prefix=None):
  n,b,p=layout(h);v=np.asarray(state,dtype='<f4').ravel();q4=h['op']in ('mlp_complete_attention_kv_q4','attention_finish_mlp_front_q4','attention_finish_mlp_front_q4_compact')
  if h['op']in COMPLETE:
   payload=encode_payload(inner(h),v)
-  if payload[:1]!=b'\1' or int.from_bytes(payload[1:5],'little')!=b:raise ValueError('attention MLP progress')
+  if payload[:1]!=bytes([1 if b%256==0 else 2]) or int.from_bytes(payload[1:5],'little')!=b:raise ValueError('attention MLP progress')
   if q4:payload=b'\4'+struct.pack('<I',len(payload))+payload+bf_bytes(prefix_values(prefix,p))
   return frame(h,payload)
  bf=n*(2*C+KV);qend=bf+n*C;send=qend+n*C//256;gend=send+(n*1024 if q4 else 0);count=gend+(n*64 if q4 else 0)

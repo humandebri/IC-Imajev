@@ -8,6 +8,7 @@ pub(crate) const NAME: &str = "mlp-stream-exact-v1";
 const C: usize = 2560;
 const H: usize = 9216;
 const R: usize = 64;
+pub(crate) const STEP: usize = if cfg!(feature = "experimental-mlp-half") { 128 } else { 256 };
 fn shape(r: &Request) -> Result<(usize, usize, usize)> {
     if r.encoding != NAME
         || !matches!(
@@ -26,8 +27,8 @@ fn shape(r: &Request) -> Result<(usize, usize, usize)> {
     if n == 0
         || n > 89
         || begin > H
-        || begin % 256 != 0
-        || count % 256 != 0
+        || begin % STEP != 0
+        || count % STEP != 0
         || begin.checked_add(count).is_none_or(|end| end > H)
         || (r.op == "mlp_stream_complete" && begin + count != H)
         || if r.op == "mlp_stream_finish" {
@@ -74,6 +75,8 @@ struct Parts {
     q: QuantizedRows,
     ax: Vec<f32>,
     product: Vec<u8>,
+    // Original BF16 values for an incomplete block; never quantized alone.
+    pending: Vec<f32>,
     scales: Vec<f32>,
     down: Vec<f32>,
     done: usize,
@@ -86,6 +89,7 @@ impl Parts {
         out.extend_from_slice(&self.q.scales()[..n * C / 256]);
         out.extend(self.ax);
         out.extend(self.product.into_iter().map(|b| b as i8 as f32));
+        out.extend(self.pending);
         out.extend(self.scales);
         out.extend(self.down);
         out
@@ -205,6 +209,7 @@ impl PreparedMlpStream {
                 q,
                 ax,
                 product: vec![],
+                pending: vec![],
                 scales: vec![],
                 down: vec![0.; n * R],
                 done: 0,
@@ -223,9 +228,6 @@ impl PreparedMlpStream {
         let (product, used) =
             crate::mlp_reuse::evaluate_prepared(&gr, &parts.q, &parts.ax, m, read)?;
         bytes += used;
-        let chunk = crate::profile::measure("stream_product_quantize_once", || {
-            crate::int8_kernel::quantize_rows(&product, n, count)
-        })?;
         let t = m
             .tensors
             .iter()
@@ -244,31 +246,64 @@ impl PreparedMlpStream {
         parts.down = crate::profile::measure("stream_down_A_continue", || {
             crate::f32_output::continue_columns(&product, &parts.down, &w, n, R, H, begin, count)
         })?;
-        let mut merged = Vec::with_capacity(n * (begin + count));
-        let mut scales = Vec::with_capacity(n * ((begin + count) / 256));
-        for token in 0..n {
-            merged.extend_from_slice(&parts.product[token * begin..(token + 1) * begin]);
-            merged.extend(
-                chunk.values()[token * count..(token + 1) * count]
-                    .iter()
-                    .map(|v| *v as i8 as u8),
-            );
-            scales.extend_from_slice(
-                &parts.scales[token * (begin / 256)..(token + 1) * (begin / 256)],
-            );
-            scales.extend_from_slice(
-                &chunk.scales()[token * (count / 256)..(token + 1) * (count / 256)],
-            );
-        }
-        parts.product = merged;
-        parts.scales = scales;
-        parts.done = begin + count;
+        crate::profile::measure("stream_product_quantize_once", || {
+            extend_product(&mut parts, &product, n, count)
+        })?;
         if r.op == "mlp_stream_complete" {
             let (out, used) = finish(parts, r, inner, &p, n, m, read)?;
             return Ok((out, bytes + used));
         }
         Ok((parts.flat(n), bytes))
     }
+}
+/// Preserve block256 scales regardless of a query's 128-row boundary.
+fn extend_product(parts: &mut Parts, product: &[f32], n: usize, count: usize) -> Result<()> {
+    let begin = parts.done;
+    let old_full = begin / 256 * 256;
+    let old_rem = begin % 256;
+    let available = old_rem + count;
+    let full = available / 256 * 256;
+    let rem = available % 256;
+    if product.len() != n * count || parts.pending.len() != n * old_rem {
+        return Err("MLP stream product precision/shape".into());
+    }
+    // Old aligned requests avoid copying their BF16 chunk into another buffer.
+    let mut combined = Vec::new();
+    let mut pending = Vec::with_capacity(n * rem);
+    if old_rem != 0 || rem != 0 {
+        combined.reserve(n * full);
+        for token in 0..n {
+            let old = &parts.pending[token * old_rem..(token + 1) * old_rem];
+            let fresh = &product[token * count..(token + 1) * count];
+            if full == 0 {
+                pending.extend_from_slice(old);
+                pending.extend_from_slice(fresh);
+            } else {
+                combined.extend_from_slice(old);
+                combined.extend_from_slice(&fresh[..full - old_rem]);
+                pending.extend_from_slice(&fresh[full - old_rem..]);
+            }
+        }
+    }
+    let quantized = if full == 0 { None } else {
+        Some(crate::int8_kernel::quantize_rows(
+            if old_rem == 0 && rem == 0 { product } else { &combined }, n, full)?)
+    };
+    let mut merged = Vec::with_capacity(n * (old_full + full));
+    let mut scales = Vec::with_capacity(n * ((old_full + full) / 256));
+    for token in 0..n {
+        merged.extend_from_slice(&parts.product[token * old_full..(token + 1) * old_full]);
+        scales.extend_from_slice(&parts.scales[token * (old_full / 256)..(token + 1) * (old_full / 256)]);
+        if let Some(chunk) = &quantized {
+            merged.extend(chunk.values()[token * full..(token + 1) * full].iter().map(|v| *v as i8 as u8));
+            scales.extend_from_slice(&chunk.scales()[token * (full / 256)..(token + 1) * (full / 256)]);
+        }
+    }
+    parts.product = merged;
+    parts.scales = scales;
+    parts.pending = pending;
+    parts.done = begin + count;
+    Ok(())
 }
 fn finish<F, B>(
     parts: Parts,
@@ -313,15 +348,16 @@ where
 }
 fn read_parts(r: &Request, p: &[u8]) -> Result<(usize, Parts)> {
     let (n, begin, count) = shape(r)?;
-    if p.len() < 5 || p[0] != 1 {
+    if p.len() < 5 || !matches!(p[0], 1 | 2) {
         return Err("MLP stream state direction".into());
     }
     let done = u32::from_le_bytes(p[1..5].try_into().unwrap()) as usize;
     if done == 0
         || done > H
-        || done % 256 != 0
+        || done % STEP != 0
         || !(done == begin || done == begin + count)
-        || p.len() != 5 + n * (C * 2 + C + done + (C / 256 + done / 256 + 3 * R) * 4)
+        || p[0] != if done % 256 == 0 {1} else {2}
+        || p.len() != 5 + n * (C * 2 + C + done + done % 256 + (C / 256 + done / 256 + 3 * R) * 4)
     {
         return Err("MLP stream state size/progress".into());
     }
@@ -339,13 +375,18 @@ fn read_parts(r: &Request, p: &[u8]) -> Result<(usize, Parts)> {
     let q = QuantizedRows::from_bytes(n, C, integers, &sx)?;
     let ax = f32s(&p[cursor..cursor + n * 2 * R * 4])?;
     cursor += n * 2 * R * 4;
-    let product = p[cursor..cursor + n * done].to_vec();
-    cursor += n * done;
+    let full = done / 256 * 256;
+    let product = p[cursor..cursor + n * full].to_vec();
+    cursor += n * full;
+    let mut pending = vec![0.; n * (done % 256)];
+    crate::bf16_codec::unpack(&p[cursor..cursor + pending.len() * 2], &mut pending);
+    cursor += pending.len() * 2;
+    if !pending.iter().all(|v|v.is_finite()) {return Err("MLP stream pending finite".into());}
     if product.contains(&128) {
         return Err("MLP stream product integer".into());
     }
-    let scales = f32s(&p[cursor..cursor + n * done / 256 * 4])?;
-    cursor += n * done / 256 * 4;
+    let scales = f32s(&p[cursor..cursor + n * (done / 256) * 4])?;
+    cursor += n * (done / 256) * 4;
     if scales.iter().any(|v| *v <= 0.) {
         return Err("MLP stream product scale".into());
     }
@@ -357,6 +398,7 @@ fn read_parts(r: &Request, p: &[u8]) -> Result<(usize, Parts)> {
             q,
             ax,
             product,
+            pending,
             scales,
             down,
             done,
@@ -382,7 +424,7 @@ pub(crate) fn append(b: &mut Vec<u8>, r: &Request, x: &[f32]) -> Result<()> {
     if done == 0 || !crate::bf16_codec::all_bf16(&x[..n * C]) || !x.iter().all(|v| v.is_finite()) {
         return Err("MLP stream state precision".into());
     }
-    let mut p = vec![1];
+    let mut p = vec![if done % 256 == 0 {1} else {2}];
     p.extend_from_slice(&(done as u32).to_le_bytes());
     let start = p.len();
     p.resize(start + n * C * 2, 0);
@@ -399,9 +441,16 @@ pub(crate) fn append(b: &mut Vec<u8>, r: &Request, x: &[f32]) -> Result<()> {
     }
     cursor += tail;
     let start = p.len();
-    p.resize(start + n * done, 0);
-    crate::projection_codec::pack_integers(&x[cursor..cursor + n * done], &mut p[start..])?;
-    cursor += n * done;
+    let full = done / 256 * 256;
+    p.resize(start + n * full, 0);
+    crate::projection_codec::pack_integers(&x[cursor..cursor + n * full], &mut p[start..])?;
+    cursor += n * full;
+    let pending = n * (done % 256);
+    if !crate::bf16_codec::all_bf16(&x[cursor..cursor + pending]) {return Err("MLP stream pending precision".into());}
+    let start = p.len();
+    p.resize(start + 2 * pending, 0);
+    crate::bf16_codec::pack(&x[cursor..cursor + pending], &mut p[start..]);
+    cursor += pending;
     for v in &x[cursor..] {
         p.extend_from_slice(&v.to_le_bytes());
     }
@@ -413,7 +462,7 @@ pub(crate) fn append(b: &mut Vec<u8>, r: &Request, x: &[f32]) -> Result<()> {
     if x[input_scales..input_scales + n * C / 256]
         .iter()
         .any(|v| *v <= 0.)
-        || x[product_scales..product_scales + n * done / 256]
+        || x[product_scales..product_scales + n * (done / 256)]
             .iter()
             .any(|v| *v <= 0.)
     {
@@ -442,6 +491,63 @@ mod tests {
     fn request() -> Request {
         serde_json::from_value(serde_json::json!({"version":1,"model":"a".repeat(64),"pack_hash":"b".repeat(64),"input_hash":"c".repeat(64),"step":0,"op":"mlp_stream_next","tensor":"model.language_model.layers.0.post_attention_layernorm.weight","dims":[87,4096,5120],"scalars":[2.,1e-6],"aux":["model.language_model.layers.1.input_layernorm.weight"],"encoding":NAME})).unwrap()
     }
+    #[cfg(feature = "experimental-mlp-half")]
+    #[test]
+    fn half_chunks_keep_original_block256_quantization_and_wire_bits() {
+        for n in [1,7,87,89] {
+            let input: Vec<f32> = (0..n*H).map(|i| {
+                let x = ((i*71 % 1023) as f32 - 511.) / 32.;
+                f32::from_bits(x.to_bits() & 0xffff0000)
+            }).collect();
+            let expected = crate::int8_kernel::quantize_rows(&input,n,H).unwrap();
+            for chunks in [vec![128,128,H-256],vec![6016,3200],vec![128,256,128,H-512]] {
+                let mut parts = Parts { residual:vec![-0.;n*C],
+                    q:QuantizedRows::from_bytes(n,C,&vec![0;n*C],&vec![1.;n*C/256]).unwrap(),
+                    ax:vec![0.1234567;n*2*R],product:vec![],pending:vec![],scales:vec![],
+                    down:vec![-0.1234567;n*R],done:0 };
+                let mut begin=0;
+                for count in chunks {
+                    let mut fresh=Vec::with_capacity(n*count);
+                    for t in 0..n {fresh.extend_from_slice(&input[t*H+begin..t*H+begin+count]);}
+                    extend_product(&mut parts,&fresh,n,count).unwrap();
+                    begin+=count;
+                    if begin%256==128 {
+                        for t in 0..n {assert_eq!(parts.pending[t*128..(t+1)*128],input[t*H+begin-128..t*H+begin]);}
+                    }
+                    // Simulate the byte-exact client carry boundary at every chunk.
+                    let mut r=request();r.dims=vec![n,begin,if begin==H{0}else{128}];
+                    if begin==H {r.op="mlp_stream_finish".into();}
+                    let flat=parts.flat(n);let mut encoded=Vec::new();append(&mut encoded,&r,&flat).unwrap();
+                    assert_eq!(encoded[0],if begin%256==0{1}else{2});
+                    let (_,decoded)=read_parts(&r,&encoded).unwrap();
+                    let again=decode_values(&r,&encoded).unwrap();
+                    assert!(flat.iter().zip(&again).all(|(a,b)|a.to_bits()==b.to_bits()));
+                    parts=decoded;
+                }
+                assert!(parts.pending.is_empty());
+                assert_eq!(parts.product,expected.values()[..n*H].iter().map(|v|*v as i8 as u8).collect::<Vec<_>>());
+                assert!(parts.scales.iter().zip(expected.scales()).all(|(a,b)|a.to_bits()==b.to_bits()));
+            }
+        }
+    }
+    #[cfg(feature = "experimental-mlp-half")]
+    #[test]
+    fn half_pending_rejects_changed_tag_nonfinite_and_non_bf16() {
+        let mut r=request();r.dims=vec![1,128,128];
+        let parts=Parts {residual:vec![0.;C],q:QuantizedRows::from_bytes(1,C,&vec![0;C],&vec![1.;C/256]).unwrap(),
+            ax:vec![0.;2*R],product:vec![],pending:vec![-0.;128],scales:vec![],down:vec![0.;R],done:128};
+        let mut flat=parts.flat(1);let mut p=Vec::new();append(&mut p,&r,&flat).unwrap();
+        let offset=5+3*C+4*(C/256+2*R);
+        let mut bad=p.clone();bad[0]=1;assert!(read_parts(&r,&bad).is_err());
+        let mut bad=p.clone();bad[offset..offset+2].copy_from_slice(&0x7f80u16.to_le_bytes());assert!(read_parts(&r,&bad).is_err());
+        flat[2*C+C/256+2*R]=0.1234567;assert!(append(&mut vec![],&r,&flat).is_err());
+        assert!(read_parts(&r,&p[..p.len()-1]).is_err());
+    }
+    #[cfg(not(feature = "experimental-mlp-half"))]
+    #[test]
+    fn half_boundary_requires_explicit_feature() {
+        let mut r=request();r.dims=vec![1,128,128];assert!(shape(&r).is_err());
+    }
     #[test]
     fn maximum_carry_is_lossless_and_bounded() {
         for n in [1, 7, 87, 89] {
@@ -453,7 +559,7 @@ mod tests {
             x.extend(vec![0.0123; n * C / 256]);
             x.extend(vec![0.1234567; n * 2 * R]);
             x.extend(vec![127.; n * done]);
-            x.extend(vec![0.009; n * done / 256]);
+            x.extend(vec![0.009; n * (done / 256)]);
             x.extend(vec![-0.1234567; n * R]);
             let frame = crate::encode(&r, &x).unwrap();
             assert!(frame.len() < 2_000_000);
@@ -505,6 +611,7 @@ mod tests {
             q: QuantizedRows::from_bytes(1, C, &vec![0; C], &vec![1.; C / 256]).unwrap(),
             ax: vec![0.; 2 * R],
             product: vec![0; 4608],
+            pending: vec![],
             scales: vec![1.; 4608 / 256],
             down: vec![0.; R],
             done: 4608,
@@ -521,6 +628,7 @@ mod tests {
             q: QuantizedRows::from_bytes(1, C, &vec![0; C], &vec![1.; C / 256]).unwrap(),
             ax: vec![0.; 2 * R],
             product: vec![0; H],
+            pending: vec![],
             scales: vec![1.; H / 256],
             down: vec![0.; R],
             done: H,

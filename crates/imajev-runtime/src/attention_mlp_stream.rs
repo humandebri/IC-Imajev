@@ -89,7 +89,7 @@ fn metadata(r: &Request) -> Result<(usize, usize, usize, usize)> {
     if !(1..=89).contains(&n)
         || b == 0
         || b >= 9216
-        || b % 256 != 0
+        || b % crate::mlp_stream::STEP != 0
         || p > 132
         || n + p > 512
         || complete && b.checked_add(r.dims[2]) != Some(9216)
