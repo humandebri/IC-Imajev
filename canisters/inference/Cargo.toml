@@ -15,6 +15,7 @@ sha2.workspace = true
 serde_bytes = { version = "=0.11.19", optional = true }
 
 [features]
+experimental-single-quad = ["experimental-strassen-raw", "imajev-runtime/experimental-single-quad"]
 experimental-terminal-stream = ["experimental-mlp-attention-finish", "experimental-terminal-attention", "imajev-runtime/experimental-terminal-stream"]
 experimental-attention-views = ["imajev-runtime/experimental-attention-views"]
 experimental-mlp-attention-finish = ["experimental-mlp-stream", "imajev-runtime/experimental-mlp-attention-finish"]

@@ -18,6 +18,7 @@ ap = argparse.ArgumentParser(description=__doc__)
 ap.add_argument('--directory', required=True)
 ap.add_argument('--target-directory', required=True)
 ap.add_argument('--opt-level', choices=['1', '2', '3'], default='3')
+ap.add_argument('--single-quad',action='store_true')
 ap.add_argument('--strassen-raw',action='store_true')
 ap.add_argument('--strassen-output128',action='store_true')
 ap.add_argument('--f32-k-continue',action='store_true')
@@ -60,6 +61,7 @@ features = ','.join([
     'experimental-prefix-hybrid','experimental-lora-input-sharing',
     'experimental-mlp-full89','experimental-pair-wat'])
 features += ',experimental-paired-only'
+if args.single_quad:features += ',experimental-single-quad'
 if args.attention_views:features += ',experimental-attention-views'
 if args.host_checksum:features += ',experimental-host-checksum'
 if args.strassen_raw:features += ',experimental-strassen-raw'

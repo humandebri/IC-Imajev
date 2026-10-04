@@ -80,6 +80,8 @@ unsafe fn prepare(q:&QuantizedRows,pairs:usize,out:*mut i16){use core::arch::was
 pub(crate) fn pack(bytes:&[u8],rows:usize,cols:usize)->Vec<u8>{let stride=rows/4*cols;let mut data=vec![0;rows*cols];for quartet in 0..rows/4{for pair in 0..2{for block in 0..cols/256{for k in(0..128).step_by(4){let p=(quartet*4+pair*2)*cols+block*256+k;let dst=quartet*cols+block*256+k*2+pair*4;for(m,start)in[p,p+128,p+cols,p+cols+128].into_iter().enumerate(){data[m*stride+dst..m*stride+dst+4].copy_from_slice(&bytes[start..start+4]);}}}}}data.extend_from_slice(&bytes[rows*cols..]);data}
 pub(crate) fn index(rows:usize,cols:usize,row:usize,c:usize)->usize{let m=(row%2)*2+(c%256)/128;let k=c%128;m*(rows/4)*cols+(row/4)*cols+(c/256)*256+(k/4)*8+((row%4)/2)*4+k%4}
 pub(crate) fn project(q:&QuantizedRows,w:&PackedView,sw:&[f32])->Result<Vec<f32>>{
+ #[cfg(feature="experimental-single-quad")]
+ if q.rows()==1 && (w.start/q.cols())%4==0 {return single_quad(q,w,sw);}
  let a=q.strassen_operands();debug_assert_eq!(a.cols,q.cols());let cols=q.cols();let rows=w.rows();let start=w.start/cols;let fixed=&w.fixed;let stride=fixed.rows/4*cols;let mut out=vec![0.;q.rows()*rows];
  #[cfg(target_arch="wasm32")]
  {let ap:[*const i16;7]=core::array::from_fn(|m|a.data.as_ptr().wrapping_add(m*a.pairs*cols));let tile=if cfg!(feature="experimental-strassen-output128") && rows%128==0 && start%4==0 {128}else{32};for r in(0..rows).step_by(tile){let width=(rows-r).min(tile);let pad;let scales;let wp:[*const u8;4];let s:&[f32];
@@ -99,6 +101,53 @@ pub(crate) fn project(q:&QuantizedRows,w:&PackedView,sw:&[f32])->Result<Vec<f32>
  }}}}
  if out.iter().any(|v|!v.is_finite()){return Err("raw S1 projection finite".into());}Ok(out)
 }
+// One real token needs no two-token Strassen operands. Integer reductions are
+// exact within I32 (256*127*128); scale and K256 F32 summation order stay fixed.
+#[cfg(feature="experimental-single-quad")]
+fn single_quad(q:&QuantizedRows,w:&PackedView,sw:&[f32])->Result<Vec<f32>> {
+ let cols=q.cols();let rows=w.rows();let start=w.start/cols;
+ if q.rows()!=1 || start%4!=0 || rows%4!=0 || sw.len()!=rows {return Err("single quad shape".into());}
+ let mut out=vec![0f32;rows];
+ #[cfg(target_arch="wasm32")]
+ // SAFETY: checked QuantizedRows owns initialized I16 lanes and K256 scales.
+ // PackedView bounds are immutable, with aligned groups of four complete rows.
+ // Every load is inside the selected K256 block of one of four packed planes;
+ // output and scales each have exactly rows elements and do not alias inputs.
+ unsafe {single_quad_simd(q,w,sw,&mut out);}
+ #[cfg(not(target_arch="wasm32"))]
+ for r in 0..rows {for block in 0..cols/256 {
+  let mut dot=0i32;for k in 0..256 {let c=block*256+k;dot+=q.values()[c]as i32*w.fixed.data[index(w.fixed.rows,cols,start+r,c)]as i8 as i32;}
+  out[r]+=(dot as f32*q.scales()[block])*sw[r];
+ }}
+ if out.iter().any(|v|!v.is_finite()){return Err("single quad finite".into());}Ok(out)
+}
+#[cfg(all(target_arch="wasm32",feature="experimental-single-quad"))]
+#[target_feature(enable="simd128")]
+unsafe fn single_quad_simd(q:&QuantizedRows,w:&PackedView,sw:&[f32],out:&mut[f32]) {
+ use core::arch::wasm32::*;
+ let cols=q.cols();let start=w.start/cols;let stride=w.fixed.rows/4*cols;
+ for r in (0..w.rows()).step_by(4) {for block in 0..cols/256 {
+  let x=q.values().as_ptr().add(block*256);let base=(start+r)/4*cols+block*256;
+  let p=w.fixed.data.as_ptr().add(base);let mut even=i32x4_splat(0);let mut odd=i32x4_splat(0);
+  let p1=p.add(stride);let p2=p.add(2*stride);let p3=p.add(3*stride);
+  // Constant offsets let Wasm loads carry their offsets directly and remove
+  // the 32 repeated loop/address updates. I32 additions remain exact.
+  macro_rules! dot4 {($k:expr)=>{{
+   let a=v128_load64_splat(x.add($k).cast());let b=v128_load64_splat(x.add($k+128).cast());
+   even=i32x4_add(even,i32x4_add(i32x4_dot_i16x8(a,i16x8_load_extend_i8x8(p.add($k*2).cast())),i32x4_dot_i16x8(b,i16x8_load_extend_i8x8(p1.add($k*2).cast()))));
+   odd=i32x4_add(odd,i32x4_add(i32x4_dot_i16x8(a,i16x8_load_extend_i8x8(p2.add($k*2).cast())),i32x4_dot_i16x8(b,i16x8_load_extend_i8x8(p3.add($k*2).cast()))));
+  }}}
+  dot4!(0);dot4!(4);dot4!(8);dot4!(12);dot4!(16);dot4!(20);dot4!(24);dot4!(28);
+  dot4!(32);dot4!(36);dot4!(40);dot4!(44);dot4!(48);dot4!(52);dot4!(56);dot4!(60);
+  dot4!(64);dot4!(68);dot4!(72);dot4!(76);dot4!(80);dot4!(84);dot4!(88);dot4!(92);
+  dot4!(96);dot4!(100);dot4!(104);dot4!(108);dot4!(112);dot4!(116);dot4!(120);dot4!(124);
+  even=i32x4_add(even,i32x4_shuffle::<1,0,3,2>(even,even));odd=i32x4_add(odd,i32x4_shuffle::<1,0,3,2>(odd,odd));
+  let dots=i32x4_shuffle::<0,4,2,6>(even,odd);
+  let scaled=f32x4_mul(f32x4_mul(f32x4_convert_i32x4(dots),f32x4_splat(q.scales()[block])),v128_load(sw.as_ptr().add(r).cast()));
+  v128_store(out.as_mut_ptr().add(r).cast(),f32x4_add(v128_load(out.as_ptr().add(r).cast()),scaled));
+ }}
+}
+
 #[cfg(target_arch="wasm32")]
 #[export_name="__imajev_s1_raw_accumulate"]#[inline(never)]
 unsafe extern "C" fn accumulate(q:*const i16,w:*const i8,cols:usize,start:usize,sx:*const f32,stride:usize,sw:*const f32,sums:*mut f32,n:usize){let marker=core::hint::black_box((q as usize)^(w as usize)^cols^start^(sx as usize)^stride^(sw as usize)^(sums as usize)^n)as u32;for i in 0..n*32{core::ptr::write_volatile(sums.add(i),f32::from_bits(marker|0x7fc00000));}}
