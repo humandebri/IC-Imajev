@@ -5,18 +5,19 @@ const C: usize = 2560;
 const STOP: u64 = 34_000_000_000;
 #[derive(Default)]
 struct Prefix { values: Vec<f32>, packet: Vec<u8> }
+struct PrefixBank { prefix: Vec<Prefix>, tokens: usize }
 #[derive(Default)]
-struct GraphStore { prefix: Vec<Prefix>, prefix_tokens: usize, session: Option<Session>, next_id: u64 }
+struct GraphStore { banks: Vec<PrefixBank>, selected: usize, session: Option<Session>, next_id: u64 }
 struct Session {
     id: u64, stage: u64, n: usize, prefix_tokens: usize, options: Vec<String>, request: Request,
     hidden: Vec<f32>, norm: Vec<f32>, attention: Vec<f32>,
     hidden_hashes: Vec<String>, state_hashes: Vec<String>, decision: Option<ChoiceResult>,
 }
-#[derive(CandidType, Deserialize)]
+#[derive(CandidType, Deserialize, Clone)]
 pub(super) struct UpdateProgress {
-    id: u64, stage: u64, done: bool, instructions: u64, stable_read_bytes: u64,
-    operations: Vec<(String,u64)>, hidden_hashes: Vec<String>, state_hashes: Vec<String>,
-    final_hidden: Vec<f32>, decision: Option<ChoiceResult>, heap_pages: u64,
+    pub(super) id: u64, pub(super) stage: u64, pub(super) done: bool, pub(super) instructions: u64, pub(super) stable_read_bytes: u64,
+    pub(super) operations: Vec<(String,u64)>, pub(super) hidden_hashes: Vec<String>, pub(super) state_hashes: Vec<String>,
+    pub(super) final_hidden: Vec<f32>, pub(super) decision: Option<ChoiceResult>, pub(super) heap_pages: u64,
 }
 thread_local! {static GRAPH: RefCell<GraphStore> = RefCell::new(GraphStore::default());}
 fn digest(v: &[f32]) -> String {
@@ -25,7 +26,7 @@ fn digest(v: &[f32]) -> String {
 }
 #[ic_cdk::update]
 fn update_prefix(layer: u32, values: Vec<f32>, packet: StateBytes) -> Result<(),String> {
-    owner();let i=layer as usize;
+    owner();paid_admin_guard();let i=layer as usize;
     if i>=32 || !values.iter().all(|v|v.is_finite() && v.to_bits() & 65535 == 0) {return Err("prefix bounds/precision".into());}
     let p=if i%4==3 {
         if values.len()%2048!=0 {return Err("prefix KV shape".into());}
@@ -44,12 +45,13 @@ fn update_prefix(layer: u32, values: Vec<f32>, packet: StateBytes) -> Result<(),
         let mut input=vec![0.;C];input.extend_from_slice(&values);
         imajev_runtime::server_delta_hybrid_input(&r,&input,&packet)?;
     }
-    GRAPH.with(|g| {let mut g=g.borrow_mut();if g.session.is_some(){return Err("prefix frozen after inference start".into());}
-        if g.prefix_tokens!=0 && g.prefix_tokens!=p {return Err("prefix length mismatch".into());}
-        if g.prefix.is_empty(){g.prefix=(0..32).map(|_|Prefix::default()).collect();}
-        if !g.prefix[i].values.is_empty(){return Err("prefix already installed".into());}
-        g.prefix_tokens=p;
-        g.prefix[i]=Prefix{values,packet:packet.into_vec()};Ok(())})
+    GRAPH.with(|g| {let mut g=g.borrow_mut();if g.session.as_ref().is_some_and(|s|s.stage<64){return Err("prefix frozen after inference start".into());}
+        let bank=if let Some(i)=g.banks.iter().position(|b|b.tokens==p){i}else{
+            if g.banks.len()>=2{return Err("prefix bank capacity".into());}
+            g.banks.push(PrefixBank{tokens:p,prefix:(0..32).map(|_|Prefix::default()).collect()});g.banks.len()-1
+        };
+        if !g.banks[bank].prefix[i].values.is_empty(){return Err("prefix already installed".into());}
+        g.banks[bank].prefix[i]=Prefix{values,packet:packet.into_vec()};g.selected=bank;Ok(())})
 }
 fn template() -> Request {
     STORE.with(|s| {let s=s.borrow();let m=s.manifest.as_ref().expect("prepared manifest");Request{
@@ -58,10 +60,13 @@ fn template() -> Request {
 }
 #[ic_cdk::update]
 fn update_infer_start(ids: Vec<u32>, options: Vec<String>) -> Result<UpdateProgress,String> {
-    owner();if !(1..=89).contains(&ids.len()){return Err("suffix token bounds".into());}
+    owner();paid_admin_guard();start(ids,options)
+}
+pub(super) fn start(ids: Vec<u32>, options: Vec<String>) -> Result<UpdateProgress,String> {
+    if !(1..=89).contains(&ids.len()){return Err("suffix token bounds".into());}
     STORE.with(|s|if s.borrow().ready {Ok(())}else{Err("not ready".to_string())})?;
     imajev_runtime::decide_candidates(&options,&vec![0.;options.len().min(7)+1],1.3051569717552742)?;
-    GRAPH.with(|g| -> Result<(),String> {let g=g.borrow();if g.prefix.len()!=32 || g.prefix.iter().any(|p|p.values.is_empty()){return Err("prefix incomplete".into());}
+    GRAPH.with(|g| -> Result<(),String> {let g=g.borrow();if g.banks.get(g.selected).is_none_or(|b|b.prefix.iter().any(|p|p.values.is_empty())){return Err("prefix incomplete".into());}
         if g.session.as_ref().is_some_and(|s|s.stage<64){return Err("inference already active".into());}Ok(())})?;
     let mut r=template();let n=ids.len();r.op="embed".into();r.tensor="model.language_model.embed_tokens.weight".into();r.dims=vec![n,C];
     let started=ic_cdk::api::performance_counter(0);let before=started;
@@ -71,13 +76,16 @@ fn update_infer_start(ids: Vec<u32>, options: Vec<String>) -> Result<UpdateProgr
     let before=ic_cdk::api::performance_counter(0);let(norm,b)=evaluate(&r,&hidden).unwrap_or_else(|e|ic_cdk::trap(&e));reads+=b;
     let initial_norm=ic_cdk::api::performance_counter(0)-before;
     let id=GRAPH.with(|g| {let mut g=g.borrow_mut();g.next_id=g.next_id.checked_add(1).expect("session id overflow");g.next_id});
-    let prefix_tokens=GRAPH.with(|g|g.borrow().prefix_tokens);
+    let prefix_tokens=GRAPH.with(|g|g.borrow().banks[g.borrow().selected].tokens);
     let s=Session{id,stage:0,n,prefix_tokens,options,request:r,hidden,norm,attention:vec![],hidden_hashes:vec![],state_hashes:vec![],decision:None};
     Ok(run(s,started,reads,vec![("embed".into(),embedding),("initial_norm".into(),initial_norm)]))
 }
 #[ic_cdk::update]
 fn update_infer_continue(id:u64, stage:u64) -> Result<UpdateProgress,String> {
-    owner();GRAPH.with(|g| -> Result<(),String> {let g=g.borrow();let s=g.session.as_ref().ok_or("missing session")?;
+    owner();paid_admin_guard();continue_graph(id,stage)
+}
+pub(super) fn continue_graph(id:u64,stage:u64) -> Result<UpdateProgress,String> {
+    GRAPH.with(|g| -> Result<(),String> {let g=g.borrow();let s=g.session.as_ref().ok_or("missing session")?;
         if s.id!=id || s.stage!=stage || stage>=64 {return Err("session progress mismatch".into());}Ok(())})?;
     let start=ic_cdk::api::performance_counter(0);
     let s=GRAPH.with(|g|g.borrow_mut().session.take().unwrap());Ok(run(s,start,0,vec![]))
@@ -89,13 +97,13 @@ fn run(mut s:Session,start:u64,mut reads:u64,mut ops:Vec<(String,u64)>) -> Updat
         if s.stage%2==0 {
             if layer%4==3 {
                 r.op="attention_full_integer".into();r.tensor=format!("{root}.self_attn.q_proj.weight");r.dims=vec![s.n,s.prefix_tokens,usize::from(layer==31)];
-                let mut x=s.norm.clone();GRAPH.with(|g|x.extend_from_slice(&g.borrow().prefix[layer].values));
+                let mut x=s.norm.clone();GRAPH.with(|g|x.extend_from_slice(&g.borrow().banks[g.borrow().selected].prefix[layer].values));
                 let(y,b)=evaluate(&r,&x).unwrap_or_else(|e|ic_cdk::trap(&e));reads+=b;
                 let count=if layer==31 {C}else{s.n*C};s.state_hashes.push(digest(&y[count..]));s.attention=y[..count].to_vec();
                 if layer==31 {s.hidden=s.hidden[s.hidden.len()-C..].to_vec();s.n=1;}
             } else {
                 r.op="delta_full_hybrid_integer".into();r.tensor=format!("{root}.linear_attn.in_proj_qkv.weight");r.dims=vec![s.n,32,s.prefix_tokens,0];r.encoding="delta-hybrid-prefix-exact-v1".into();
-                let input=GRAPH.with(|g| {let g=g.borrow();let p=&g.prefix[layer];let mut x=s.norm.clone();x.extend_from_slice(&p.values);
+                let input=GRAPH.with(|g| {let g=g.borrow();let p=&g.banks[g.selected].prefix[layer];let mut x=s.norm.clone();x.extend_from_slice(&p.values);
                     imajev_runtime::server_delta_hybrid_input(&r,&x,&p.packet).unwrap_or_else(|e|ic_cdk::trap(&e))});
                 let(y,b)=evaluate_decoded(&r,input).unwrap_or_else(|e|ic_cdk::trap(&e));reads+=b;
                 let y=y.into_values().unwrap_or_else(|e|ic_cdk::trap(&e));s.state_hashes.push(digest(&y[s.n*C..]));s.attention=y[..s.n*C].to_vec();
@@ -120,12 +128,14 @@ fn run(mut s:Session,start:u64,mut reads:u64,mut ops:Vec<(String,u64)>) -> Updat
     let heap_pages=core::arch::wasm32::memory_size(0) as u64;
     #[cfg(not(target_arch="wasm32"))]
     let heap_pages=0;
-    #[cfg(target_arch="wasm32")]
-    let heap_pages=core::arch::wasm32::memory_size(0)as u64;
-    #[cfg(not(target_arch="wasm32"))]
-    let heap_pages=0;
     let reply=UpdateProgress{id:s.id,stage:s.stage,done:s.stage==64,instructions:ic_cdk::api::performance_counter(0)-start,stable_read_bytes:reads,operations:ops,
         hidden_hashes:s.hidden_hashes.clone(),state_hashes:s.state_hashes.clone(),final_hidden:if s.stage==64{s.norm.clone()}else{vec![]},decision:s.decision.clone(),
         heap_pages};
     GRAPH.with(|g|g.borrow_mut().session=Some(s));reply
 }
+
+pub(super) fn bank_ready(tokens:usize)->bool {GRAPH.with(|g|g.borrow().banks.iter().any(|b|b.tokens==tokens && b.prefix.iter().all(|p|!p.values.is_empty())))}
+pub(super) fn select_bank(tokens:usize)->Result<(),String> {GRAPH.with(|g|{let mut g=g.borrow_mut();g.selected=g.banks.iter().position(|b|b.tokens==tokens).ok_or("prefix incomplete")?;Ok(())})}
+pub(super) fn busy()->bool {GRAPH.with(|g|g.borrow().session.as_ref().is_some_and(|s|s.stage<64))}
+pub(super) fn release(){GRAPH.with(|g|g.borrow_mut().session=None);}
+fn paid_admin_guard(){#[cfg(feature="paid-update-inference")]crate::paid_inference::admin_guard();}

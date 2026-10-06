@@ -1,3 +1,5 @@
+2026-10-06：都度払いの`infer`を実装。利用者canisterの外部update 1回で結果を返し、内部workerは617/620/653で5/4/5回。各3回のローカル測定で判定・保存中間状態が元モデルとbit一致。前払いcredit口座・timerは使わない。[実測と利用手順](docs/PAID_UPDATE_INFERENCE_MEASURED.md)。
+
 [ランタイムと再利用知見](docs/runtime/README.md)：共通crate、命名、モデルとの境界、llama_cpp_canister比較を整理。
 
 [計算量削減の手段まとめ](docs/COMPUTE_REDUCTION.md)：削減した処理、実測効果、準備費用、採用・未採用の状況を一覧化。
