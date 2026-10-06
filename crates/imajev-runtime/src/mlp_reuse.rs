@@ -69,7 +69,9 @@ where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer,
             let a=m.tensors.iter().find(|t|t.name==request.aux[0]).unwrap();
             let mut ar=request.clone();ar.op="matmul".into();ar.dims=vec![n,rank,cols];
             let (aw,bytes)=crate::load_prepared_weight(a,&ar,&mut *read)?;
-            let values=crate::profile::measure("lora_matmul_A",||crate::matrix(x,&aw,n,rank,cols))?;
+            // Preserve the fixed output layout instead of materializing row-major
+            // weights and packing the same input again for every capture query.
+            let values=crate::profile::measure("lora_matmul_A",||crate::matrix_loaded(x,&aw,n,rank,cols))?;
             ax.extend_from_slice(&values);read_bytes+=bytes;
         }
         let (mut out,bytes)=output(&requests,&q,&ax,m,read)?;
@@ -85,6 +87,40 @@ where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer,
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature="experimental-f32-output-generic")]
+    #[test]
+    fn capture_uses_prepared_a_without_materializing_original_weights() {
+        use crate::prepared_weights::{PreparedF32,WeightBuffer};
+        struct Buffer {raw:Vec<u8>,prepared:Option<PreparedF32>}
+        impl AsRef<[u8]> for Buffer {fn as_ref(&self)->&[u8]{&self.raw}}
+        impl WeightBuffer for Buffer {fn prepared_f32(&self)->Option<PreparedF32>{self.prepared.clone()}}
+        let mut data=Vec::new();let mut tensors=Vec::new();let mut prepared=Vec::new();
+        for (which,name) in ["layer.mlp.gate_proj","layer.mlp.up_proj"].into_iter().enumerate() {
+            for (suffix,rows,cols,int8) in [("weight",32,256,true),("lora_A.weight",64,256,false),("lora_B.weight",32,64,false)] {
+                let offset=data.len() as u64;
+                for i in 0..rows*cols {
+                    if int8 {data.push(((i*17+which*11)%255) as u8);}
+                    else {data.extend_from_slice(&(((i%19) as f32-9.+which as f32)/37.).to_le_bytes());}
+                }
+                if int8 {for i in 0..rows {data.extend_from_slice(&(0.0027+i as f32*0.0001).to_le_bytes());}}
+                let bytes=data.len() as u64-offset;
+                if !int8 {prepared.push((offset,bytes,PreparedF32::from_le_bytes_output(&data[offset as usize..],rows,cols).unwrap()));}
+                tensors.push(crate::Tensor{name:format!("{name}.{suffix}"),offset,rows,cols,dtype:if int8 {"int8"}else{"f32"}.into(),bytes});
+            }
+        }
+        let m=Manifest{version:1,model:"a".repeat(64),pack_hash:"b".repeat(64),bytes:data.len() as u64,tensors};
+        for n in [1,7,87,132] {
+            let x:Vec<_>=(0..n*256).map(|i|crate::bf(((i%29)as f32-14.)/11.)).collect();
+            let mut r:Request=serde_json::from_value(serde_json::json!({"version":1,"model":m.model,"pack_hash":m.pack_hash,"input_hash":"c".repeat(64),"step":0,"op":"mlp_gate_up_integer","tensor":"layer.mlp.gate_proj.weight","dims":[n,16,256,0],"scalars":[2.],"aux":["layer.mlp.up_proj.weight"],"encoding":"bf16-block256-exact-v1"})).unwrap();
+            let expected=crate::evaluate_with_reader(&r,&x,&m,|o,l|Ok(data[o as usize..o as usize+l].to_vec())).unwrap().0;
+            r.op="mlp_gate_up_capture".into();r.encoding=crate::projection_codec::NAME.into();r.dims.push(64);
+            let actual=crate::evaluate_with_prepared_buffer(&r,&x,&m,|o,l|Ok(Buffer{raw:data[o as usize..o as usize+l].to_vec(),prepared:prepared.iter().find(|(start,len,_)|*start==o && *len==l as u64).map(|(_,_,v)|v.clone())})).unwrap().0;
+            assert!(expected.iter().zip(&actual[..n*16]).all(|(a,b)|a.to_bits()==b.to_bits()));
+            // A's exact full view is returned by clone, so this observes any
+            // accidental Deref materialization in the capture path itself.
+            assert!(prepared.iter().filter(|(_,_,v)|v.len()==64*256).all(|(_,_,v)|!v.original_materialized()));
+        }
+    }
     #[test]
     fn both_original_a_products_reuse_without_rounding_and_bad_rank_is_rejected() {
         let mut data=Vec::new();let mut tensors=Vec::new();

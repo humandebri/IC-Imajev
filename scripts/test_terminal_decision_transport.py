@@ -18,7 +18,7 @@ class TerminalDecisionTests(unittest.TestCase):
    self.assertEqual(cmd['op'],'terminal_step_decision');self.assertEqual(cmd['options'],list(options))
    h,_=decode(pathlib.Path(cmd['input']).read_bytes());h['step']+=1
    pathlib.Path(cmd['output']).write_bytes(encode(h,np.array([0.,-0.,1.],dtype=np.float32)))
-   return dict(ok=dict(instructions=100,stable_read_bytes=0,request_bytes=10,reply_bytes=20,decision=dict(value='yes',instructions=5)),wall_seconds=.01)
+   return dict(ok=dict(instructions=100,stable_read_bytes=0,request_bytes=10,reply_bytes=20,decision=dict(value='yes',abstained=False,probabilities=[.8,.1],unknown_probability=.1,raw_logits=[1.,0.,-1.],instructions=5,calibration_version='p3-r2-s000291-authored')),wall_seconds=.01)
   t.command=command
   return t
  def run_terminal(self,t):

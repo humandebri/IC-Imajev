@@ -1,4 +1,5 @@
 """Binary client-held state; atomic checkpoints and bounded replay. Checksums are not authentication."""
+from decision_validation import validate_decision
 import hashlib,json,pathlib,struct,subprocess,time
 import numpy as np
 ROOT=pathlib.Path(__file__).resolve().parents[1]
@@ -27,7 +28,7 @@ def int8_prefix(header,count):
 def frame_digest(header,body):
     version=header.get('version',1)
     if type(version) is not int:raise ValueError('unsupported frame version')
-    if version==1:return hashlib.sha256(body).digest()
+    if version in (1,3):return hashlib.sha256(body).digest()
     if version==2:
         import blake3
         return blake3.blake3(body).digest()
@@ -35,13 +36,19 @@ def frame_digest(header,body):
 def encode(header,values):
     h=json.dumps(header,separators=(',',':'),allow_nan=False).encode();v=np.asarray(values,dtype='<f4').ravel()
     codec=header.get('encoding','');limit=900000 if codec in ('bf16-exact','bf16-block256-exact-v1','int8-block256-v1','projection-block256-exact-v1') else 450000
+    if codec=='mlp-stream-exact-v1':
+        from mlp_stream_codec import limit as stream_limit
+        limit=stream_limit(header)
     if codec=='mlp-down-state-exact-v1':
         from mlp_codec import layout
         _,c,q,tail=layout(header);limit=c+q+tail
     if header.get('op')=='delta_heads_bf16' and codec=='int8-block256-v1':limit=1200000
     if v.size>limit or not np.isfinite(v).all():raise ValueError('activation bounds')
     if len(h)>16384:raise ValueError('header size')
-    if codec=='mlp-down-state-exact-v1':
+    if codec=='mlp-stream-exact-v1':
+        from mlp_stream_codec import encode_payload
+        payload=encode_payload(header,v)
+    elif codec=='mlp-down-state-exact-v1':
         from mlp_codec import encode_payload
         payload=encode_payload(header,v)
     elif codec=='projection-block256-exact-v1':
@@ -88,9 +95,27 @@ def decode(b):
     if codec=='prefix-start-exact-v1':
         from prefix_start import decode_reply
         return h,decode_reply(h,payload)
+    if codec in ('mlp-delta-log-carry-exact-v1','mlp-delta-huffman-carry-exact-v1')and h['op']=='mlp_finish_delta_log_mlp_front':
+        from mlp_delta_carry import decode_front_reply
+        return h,decode_front_reply(h,payload)
     if codec in ('delta-hybrid-prefix-exact-v1','mlp-delta-log-carry-exact-v1','mlp-delta-huffman-carry-exact-v1'):
         if payload[:1]!=b'\x00':raise ValueError('hybrid reply direction')
         payload=payload[1:];codec='bf16-block256-exact-v1'
+    if codec=='mlp-attention-finish-exact-v1':
+        from mlp_attention_finish_codec import decode_reply
+        return h,decode_reply(h,payload)
+    if codec=='attention-mlp-stream-exact-v1':
+        from attention_mlp_stream_codec import decode_reply
+        return h,decode_reply(h,payload)
+    if codec=='delta-mlp-start-exact-v1':
+        from delta_mlp_start_codec import decode_reply
+        return h,decode_reply(h,payload)
+    if codec=='mlp-delta-stream-exact-v1':
+        from mlp_delta_stream_codec import decode_reply
+        return h,decode_reply(h,payload)
+    if codec=='mlp-stream-exact-v1':
+        from mlp_stream_codec import decode_payload
+        return h,decode_payload(h,payload)
     if codec=='mlp-down-state-exact-v1':
         from mlp_codec import decode_payload
         v=decode_payload(h,payload)
@@ -142,12 +167,12 @@ def decode(b):
 def atomic(path,data):
     path=pathlib.Path(path);path.parent.mkdir(parents=True,exist_ok=True);temp=path.with_suffix(path.suffix+'.part');temp.write_bytes(data);temp.replace(path)
 class Transport:
-    def __init__(self,model,url,canister,pem,directory,pack_hash,wire_codec="",frame_version=1):
-        if frame_version not in (1,2):raise ValueError('unsupported frame version')
+    def __init__(self,model,url,canister,pem,directory,pack_hash,wire_codec="",frame_version=1,bridge_binary=None):
+        if type(frame_version) is not int or frame_version not in (1,2,3):raise ValueError('unsupported frame version')
         self.frame_version=frame_version
         self.wire_codec=wire_codec;self.max_floats=900000 if wire_codec in ("bf16-exact","bf16-block256-exact-v1","int8-block256-v1","projection-block256-exact-v1") else 450000
         self.pack_hash=pack_hash;self.model=model;self.directory=pathlib.Path(directory);self.directory.mkdir(parents=True,exist_ok=True);self.index=0;self.measurements=[]
-        self.process=subprocess.Popen([str(ROOT/'target/release/imajev-client'),url,canister,pem],stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
+        self.process=subprocess.Popen([str(bridge_binary or ROOT/'target/release/imajev-client'),url,canister,pem],stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
     def command(self,cmd):
         self.process.stdin.write(json.dumps(cmd)+'\n');self.process.stdin.flush();line=self.process.stdout.readline()
         if not line:raise RuntimeError('bridge exited')
@@ -165,7 +190,7 @@ class Transport:
         op,tensor=h['op'],h['tensor']
         request=self.directory/f'{self.index:06d}.request.bin';response=self.directory/f'{self.index:06d}.response.bin'
         atomic(request,payload);last=None
-        fused=op in ('terminal_attention_mlp_integer','terminal_tail_integer') and bool(getattr(self,'fuse_terminal_decision',False))
+        fused=op in ('terminal_attention_mlp_integer','terminal_tail_integer','mlp_stream_complete_terminal') and bool(getattr(self,'fuse_terminal_decision',False))
         command={'op':'terminal_step_decision' if fused else 'step','input':str(request),'output':str(response)}
         if fused:command['options']=self.decision_options
         for attempt in range(3):
@@ -178,7 +203,7 @@ class Transport:
         returned,v=decode(response.read_bytes())
         if any(returned[k]!=v for k,v in h.items() if k not in ('step','scalars')) or returned['step']!=h['step']+1 or not np.array_equal(np.asarray(returned['scalars'],dtype=np.float32),np.asarray(h['scalars'],dtype=np.float32)):raise ValueError('state identity/progress mismatch')
         if fused:
-            self.terminal_decision=result['ok']['decision']
+            self.terminal_decision=validate_decision(result['ok']['decision'],self.decision_options)
             result['decision_options']=list(self.decision_options)
         self.measurements.append({'index':self.index,'op':op,'tensor':tensor,**result});self.index+=1
         return v

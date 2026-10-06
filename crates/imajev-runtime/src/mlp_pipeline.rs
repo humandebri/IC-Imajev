@@ -4,7 +4,13 @@ pub(crate) const NAME:&str="mlp-down-state-exact-v1";
 pub(crate) fn valid_partial_rows(rows:usize)->bool{rows>0 && rows<2560 && rows%32==0}
 const C:usize=2560;const H:usize=9216;const R:usize=64;
 pub(crate) fn layout(r:&Request)->Result<(usize,usize,usize,usize)> {
-    if r.encoding!=NAME || !(matches!(r.op.as_str(),"mlp_prepare_down"|"mlp_down_norm_prepared") || cfg!(feature="experimental-mlp-delta-fusion") && r.op=="mlp_prepare_partial_down") || !(r.dims.len()==2 || cfg!(feature="experimental-mlp-delta-fusion") && r.op=="mlp_prepare_partial_down" && r.dims.len()==3 && valid_partial_rows(r.dims[2])) || r.dims[0]==0 || r.dims[0]>89 || r.dims[1]!=C || r.scalars.len()!=2 || r.scalars[0].to_bits()!=2f32.to_bits() || r.scalars[1].to_bits()!=1e-6f32.to_bits() || r.aux.len()!=1 {return Err("MLP pipeline metadata".into());}
+    let partial=cfg!(feature="experimental-mlp-delta-fusion") && matches!(r.op.as_str(),"mlp_prepare_partial_down"|"mlp_down_norm_partial_prepared");
+    let shape=match r.dims.as_slice() {
+        [n,c]=>*n>0 && *n<=89 && *c==C && r.op!="mlp_down_norm_partial_prepared",
+        [n,c,rows]=>partial && *n>0 && *n<=89 && *c==C && valid_partial_rows(*rows),
+        _=>false,
+    };
+    if r.encoding!=NAME || !(matches!(r.op.as_str(),"mlp_prepare_down"|"mlp_down_norm_prepared") || partial) || !shape || r.scalars.len()!=2 || r.scalars[0].to_bits()!=2f32.to_bits() || r.scalars[1].to_bits()!=1e-6f32.to_bits() || r.aux.len()!=1 {return Err("MLP pipeline metadata".into());}
     let n=r.dims[0];Ok((n,n*C,n*H,n*(H/256+R)))
 }
 fn root(r:&Request)->Result<(String,String)> {root_scoped(r,false)}
@@ -17,7 +23,7 @@ fn root_scoped(r:&Request,allow_final:bool)->Result<(String,String)> {
     if r.aux[0]!=next {return Err("MLP pipeline next norm".into());}
     Ok((p.to_owned(),next))
 }
-fn validate_scoped(r:&Request,m:&Manifest,allow_final:bool)->Result<(String,String)> {
+pub(crate) fn validate_scoped(r:&Request,m:&Manifest,allow_final:bool)->Result<(String,String)> {
     layout(r)?;let(p,next)=root_scoped(r,allow_final)?;
     let specs=[(r.tensor.clone(),1,C,"bf16"),(next.clone(),1,C,"bf16"),
       (format!("{p}.mlp.gate_proj.weight"),H,C,"int8"),(format!("{p}.mlp.up_proj.weight"),H,C,"int8"),(format!("{p}.mlp.down_proj.weight"),C,H,"int8"),
@@ -35,7 +41,7 @@ where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
     let(state,bytes)=prepare_internal(r,x,m,read,false)?;
     let n=r.dims[0];let mut flat=Vec::with_capacity(n*(C+H+H/256+R));flat.extend(state.residual);state.q.append_wire_values(&mut flat);flat.extend_from_slice(&state.q.scales()[..n*(H/256)]);flat.extend(state.ax);Ok((flat,bytes))
 }
-/// Move the first 256 independent down-projection rows into the preparation query.
+/// Move a specified number of independent down-projection rows into the preparation query.
 #[cfg(feature="experimental-mlp-delta-fusion")]
 pub(crate) fn prepare_partial<F,B>(r:&Request,x:&[f32],m:&Manifest,read:&mut F)->Result<(Vec<f32>,u64)>
 where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
@@ -92,7 +98,7 @@ pub struct PreparedMlp {request:Request,residual:Vec<f32>,q:crate::int8_kernel::
 impl PreparedMlp {
     pub(crate) fn decode(r:&Request,p:&[u8])->Result<Self> {
         let(n,count,q,tail)=layout(r)?;root(r)?;
-        if r.op!="mlp_down_norm_prepared" || p.first()!=Some(&1) || p.len()!=1+count*2+q+tail*4 {return Err("MLP pipeline state length/direction".into());}
+        if !(r.op=="mlp_down_norm_prepared" || cfg!(feature="experimental-mlp-delta-fusion") && r.op=="mlp_down_norm_partial_prepared") || p.first()!=Some(&1) || p.len()!=1+count*2+q+tail*4 {return Err("MLP pipeline state length/direction".into());}
         let mut residual=vec![0.;count];crate::bf16_codec::unpack(&p[1..1+count*2],&mut residual);
         let cursor=1+count*2;let floats:Vec<f32>=p[cursor+q..].chunks_exact(4).map(|b|f32::from_le_bytes(b.try_into().unwrap())).collect();
         if !residual.iter().chain(&floats).all(|v|v.is_finite()) {return Err("MLP pipeline finite state".into());}
@@ -101,9 +107,14 @@ impl PreparedMlp {
     }
     pub(crate) fn evaluate<F,B>(&self,r:&Request,m:&Manifest,read:&mut F)->Result<(Vec<f32>,u64)>
     where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
+        #[cfg(feature="experimental-mlp-delta-fusion")]
+        if r.op=="mlp_down_norm_partial_prepared" {
+            if !crate::same_request(r,&self.request) {return Err("partial MLP identity".into());}
+            return self.evaluate_partial(r,m,read,self.request.dims[2]);
+        }
         self.evaluate_internal(r,m,read,false,None)
     }
-    /// Residual slots 0..256 already contain finished BF16 hidden values.
+    /// Residual slots 0..rows already contain finished BF16 hidden values.
     #[cfg(feature="experimental-mlp-delta-fusion")]
     pub(crate) fn evaluate_partial<F,B>(&self,r:&Request,m:&Manifest,read:&mut F,rows:usize)->Result<(Vec<f32>,u64)>
     where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
@@ -153,6 +164,19 @@ pub(crate) fn decode_values(r:&Request,p:&[u8])->Result<Vec<f32>> {
 #[cfg(test)] mod tests {
  use super::*;
  fn req(n:usize)->Request {serde_json::from_value(serde_json::json!({"version":1,"model":"a".repeat(64),"pack_hash":"b".repeat(64),"input_hash":"c".repeat(64),"step":0,"op":"mlp_prepare_down","tensor":"model.language_model.layers.0.post_attention_layernorm.weight","dims":[n,C],"scalars":[2.,1e-6],"aux":["model.language_model.layers.1.input_layernorm.weight"],"encoding":NAME})).unwrap()}
+ #[cfg(feature="experimental-mlp-delta-fusion")]
+ #[test] fn raw_partial_finish_binds_progress_and_rejects_plain_input(){
+  let mut r=req(89);r.op="mlp_down_norm_partial_prepared".into();r.dims.push(1600);
+  let mut v=vec![-0.;89*C];v.extend(vec![0.;89*H]);v.extend(vec![0.01;89*36]);v.extend(vec![0.;89*R]);
+  let frame=crate::encode(&r,&v).unwrap();assert!(frame.len()<2_000_000);
+  assert!(matches!(crate::decode_query(&frame).unwrap().1,crate::DecodedQueryInput::Mlp(_)));
+  assert!(crate::decode_query(&crate::encode(&r,&vec![0.;2*89*C]).unwrap()).is_err());
+  let (_,state)=crate::decode_query(&frame).unwrap();
+  let m=Manifest{version:1,model:r.model.clone(),pack_hash:r.pack_hash.clone(),bytes:0,tensors:vec![]};
+  let mut bad=r.clone();bad.dims.clear();
+  assert_eq!(crate::evaluate_decoded_with_prepared_buffer(&bad,&state,&m,|_,_|->Result<Vec<u8>>{panic!("partial identity read")}).unwrap_err(),"partial MLP identity");
+  for rows in [0,31,2560,usize::MAX] {r.dims[2]=rows;assert!(layout(&r).is_err());}
+ }
  #[test] fn invalid_input_fails_before_weight_read() {let m=Manifest{version:1,model:"a".repeat(64),pack_hash:"b".repeat(64),bytes:0,tensors:vec![]};let mut read=|_,_|->Result<Vec<u8>>{panic!("invalid weight read")};for n in [0,90,usize::MAX]{assert!(prepare(&req(n),&[],&m,&mut read).is_err());}assert!(prepare(&req(1),&vec![0.;2*C],&m,&mut read).is_err());}
  #[cfg(feature="experimental-mlp-full")]
  #[test] fn full_bounds_and_final_layer_scope_reject_before_read(){

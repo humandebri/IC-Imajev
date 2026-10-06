@@ -76,6 +76,16 @@ impl PackedView {
     pub(crate) fn scales(&self)->&[f32] {let start=self.start/self.cols();&self.fixed.scales[start..start+self.rows]}
     fn values(&self)->&[u8] {&self.fixed.data[self.start..self.start+self.rows*self.cols()]}
 }
+#[cfg(feature="experimental-int8-k-continue")]
+pub(crate) fn project_continued(q:&QuantizedRows,w:&PackedView,begin:usize,count:usize,initial:&[f32])->Result<Vec<f32>> {
+    if !w.fixed.quad || q.cols()!=w.cols() || q.rows()==0 || q.rows()>132
+        || q.rows().checked_mul(w.rows())!=Some(initial.len()) || initial.len()>crate::MAX_FLOATS
+        || begin%256!=0 || count==0 || count%256!=0 || begin.checked_add(count).is_none_or(|end|end>q.cols())
+        || !initial.iter().all(|v|v.is_finite()) {
+        return Err("continued integer projection bounds/layout".into());
+    }
+    strassen_raw::project_continued(q,w,w.scales(),begin,count,initial)
+}
 pub(crate) fn duplicate(input:&[i16])->Vec<i16> {
     debug_assert_eq!(input.len()%4,0);
     let mut data:Vec<i16>=Vec::with_capacity(input.len()*2);

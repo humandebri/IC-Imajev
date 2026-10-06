@@ -12,7 +12,7 @@ def main():
     helper=ROOT/'artifacts/matrix-tail/native-target/release/pair_args'
     wasm=ROOT/'artifacts/matrix-tail/target/wasm32-unknown-unknown/release/imajev_pair_bench.wasm'
     sha=lambda b:hashlib.sha256(b).hexdigest()
-    files=[*sorted((ROOT/'crates/imajev-runtime/src').glob('*.rs')),ROOT/'crates/imajev-runtime/Cargo.toml',ROOT/'crates/imajev-runtime/tests/matrix_tail.rs',*sorted((ROOT/'scripts/pair_bench/src').glob('*.rs')),ROOT/'scripts/pair_bench/src/bin/pair_args.rs',ROOT/'scripts/pair_bench/Cargo.toml',ROOT/'scripts/pair_bench/Cargo.lock',pathlib.Path(__file__)]
+    files=[*sorted((ROOT/'crates/imajev-runtime/src').glob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml'],ROOT/'crates/imajev-runtime/Cargo.toml',ROOT/'crates/imajev-runtime/tests/matrix_tail.rs',*sorted((ROOT/'scripts/pair_bench/src').glob('*.rs')),ROOT/'scripts/pair_bench/src/bin/pair_args.rs',ROOT/'scripts/pair_bench/Cargo.toml',ROOT/'scripts/pair_bench/Cargo.lock',pathlib.Path(__file__)]
     hashes={str(p.relative_to(ROOT)):sha(p.read_bytes()) for p in files}
     def native(*args):return json.loads(subprocess.check_output([str(helper),*map(str,args)],text=True,cwd=ROOT))
     def status():return json.loads(subprocess.check_output(['icp','canister','status',a.canister,'--network','local','--identity','imajev-local','--json'],text=True,cwd=ROOT))['module_hash'].removeprefix('0x')

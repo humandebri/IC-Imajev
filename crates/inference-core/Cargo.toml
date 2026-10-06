@@ -1,0 +1,13 @@
+[package]
+name = "inference-core"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Exact F32 projection and lossless activation codecs for native and Wasm inference"
+publish = false
+
+[dependencies]
+
+[[example]]
+name = "wasm_contract"
+crate-type = ["cdylib"]

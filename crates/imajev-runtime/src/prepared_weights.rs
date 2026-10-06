@@ -48,6 +48,8 @@ impl PreparedF32 {
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
+    #[cfg(all(test,feature="experimental-f32-output-reuse"))]
+    pub(crate) fn original_materialized(&self)->bool {self.original.get().is_some()}
     #[cfg(feature = "experimental-f32-output-reuse")]
     pub fn from_le_bytes_output64(bytes: &[u8], rows: usize) -> Result<Self> {
         Self::from_le_bytes_output(bytes, rows, 64)

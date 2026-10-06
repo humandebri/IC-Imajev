@@ -1,0 +1,22 @@
+[package]
+name = "imajev-prefix-update-bench"
+version = "0.1.0"
+edition = "2021"
+[workspace]
+[lib]
+crate-type = ["cdylib", "rlib"]
+[features]
+default = ["experimental-delta-state-layout"]
+experimental-delta-state-layout = []
+experimental-prefix-update-hoist = []
+[dependencies]
+ic-cdk = "=0.20.3"
+candid = "=0.10.35"
+serde = { version = "1", features = ["derive"] }
+sha2 = "=0.10.9"
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+overflow-checks = true

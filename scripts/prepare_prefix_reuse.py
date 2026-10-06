@@ -24,11 +24,11 @@ def sha(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def validate_packet(packet):
+def validate_packet(packet, expected_tokens=45):
     if not 12 <= len(packet) <= 1_990_000:
         raise ValueError('prefix packet size')
     magic, tokens, mask = struct.unpack('<4sII', packet[:12])
-    if magic != b'NPF1' or tokens != 45 or mask.bit_count() != 18:
+    if magic != b'NPF1' or not 1 <= tokens <= 132 or tokens != expected_tokens or mask.bit_count() != 18:
         raise ValueError('prefix packet header')
     if any(((mask >> (2 * p)) & 3) not in (0, 3) for p in range(16)):
         raise ValueError('prefix packet shared-K pairs')
@@ -37,21 +37,23 @@ def validate_packet(packet):
 def source_identity(directory):
     raw = (directory / 'report.json').read_bytes()
     report = json.loads(raw)
-    if report.get('prefix_mode') != 'prepare' or report.get('tokens') != 45:
-        raise ValueError('requires a saved 45-token canister prefix preparation')
+    tokens = report.get('tokens')
+    if report.get('prefix_mode') != 'prepare' or type(tokens) is not int or not 1 <= tokens <= 132:
+        raise ValueError('requires a saved 1..132-token canister prefix preparation')
     if report.get('fuse_delta_full_log') != 'full32-exact-prefix-innovation-v1':
         raise ValueError('requires original exact innovation logs')
     files = {str(i): sha((directory / f'queries/states/layer-{i:02d}.npz').read_bytes()) for i in LAYERS}
     return dict(version=1, codec_module=CODEC_MODULE, source_report_sha256=sha(raw),
                 model=report['model'], pack_hash=report['pack_hash'],
                 input_hash=report['input_hash'], source_module=report['wasm_sha256'],
-                tokens=45, layers=files)
+                tokens=tokens, layers=files)
 
 
-def prepare_cache(source, destination, canister, status, prepare):
+def prepare_cache(source, destination, canister, status, prepare, codec_module=CODEC_MODULE):
     """Callbacks keep the cache policy independently testable; no host state encoder."""
     identity = source_identity(source)
-    if status() != CODEC_MODULE:
+    identity['codec_module'] = codec_module
+    if status() != codec_module:
         raise ValueError('prefix preparation canister module mismatch')
     manifest_path = destination / 'cache.json'
     if manifest_path.exists():
@@ -63,7 +65,7 @@ def prepare_cache(source, destination, canister, status, prepare):
             packet = (destination / name).read_bytes()
             if sha(packet) != entry['sha256'] or len(packet) != entry['bytes']:
                 raise ValueError('prefix cache packet hash mismatch')
-            validate_packet(packet)
+            validate_packet(packet, identity['tokens'])
         result = dict(cache_hit=True, preparation_queries=0, preparation_instructions=0,
                       preparation_candid_bytes=0, packets=saved['packets'])
     else:
@@ -78,18 +80,20 @@ def prepare_cache(source, destination, canister, status, prepare):
                 raise ValueError('prefix source changed')
             with np.load(io.BytesIO(raw), allow_pickle=False) as state:
                 log = state['delta_log'].copy()
-            if log.shape != (45 * 6176,) or log.dtype != np.float32 or not np.isfinite(log).all():
+            if log.shape != (identity['tokens'] * 6176,) or log.dtype != np.float32 or not np.isfinite(log).all():
                 raise ValueError('prefix log shape/precision')
             packet, measured = prepare(layer, log.astype('<f4').tobytes())
-            validate_packet(packet)
+            validate_packet(packet, identity['tokens'])
             name = f'layer-{layer:02d}.npf1'
             (destination / name).write_bytes(packet)
             packets[str(layer)] = dict(sha256=sha(packet), bytes=len(packet),
                                       state_digest=measured['digest'])
             measurements.append(measured)
-        if source_identity(source) != identity:
+        final_identity = source_identity(source)
+        final_identity['codec_module'] = codec_module
+        if final_identity != identity:
             raise ValueError('prefix source changed during preparation')
-        if status() != CODEC_MODULE:
+        if status() != codec_module:
             raise ValueError('prefix canister changed during preparation')
         # Publish only after all 24 packets and source/module bookends succeed.
         temporary = destination / 'cache.json.pending'
@@ -99,7 +103,7 @@ def prepare_cache(source, destination, canister, status, prepare):
                       preparation_instructions=sum(m['instructions'] for m in measurements),
                       preparation_candid_bytes=sum(m['request_candid_bytes'] + m['reply_candid_bytes'] for m in measurements),
                       packets=packets, measurements=measurements)
-    result.update(codec_canister=canister, codec_module=CODEC_MODULE,
+    result.update(codec_canister=canister, codec_module=codec_module,
                   cache_identity_sha256=sha(manifest_path.read_bytes()),
                   scope='Client-held prefix codec preparation/reuse only; full inference is not connected.')
     return result
@@ -111,6 +115,7 @@ def main():
     ap.add_argument('--directory', required=True, type=pathlib.Path)
     ap.add_argument('--canister', required=True)
     ap.add_argument('--run-report', required=True, type=pathlib.Path)
+    ap.add_argument('--codec-module', default=CODEC_MODULE, help='Expected hash of the deployed preparation module')
     args = ap.parse_args()
     helper = ROOT / 'artifacts/bounded_i16/native/release/prefix_args'
     base = ['--network', 'local', '--identity', 'imajev-local']
@@ -139,7 +144,7 @@ def main():
         return output.read_bytes(), measured
 
     start = time.monotonic()
-    result = prepare_cache(args.prefix_directory, args.directory, args.canister, status, prepare)
+    result = prepare_cache(args.prefix_directory, args.directory, args.canister, status, prepare, args.codec_module)
     result.update(wall_seconds=time.monotonic() - start, helper_sha256=sha(helper.read_bytes()),
                   client_source_sha256=sha(pathlib.Path(__file__).read_bytes()))
     args.run_report.parent.mkdir(parents=True, exist_ok=True)
