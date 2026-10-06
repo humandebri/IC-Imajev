@@ -10,7 +10,8 @@ from vision_decision.scoring import compile_question
 from vision_decision.calibration import TemperatureCalibrator
 
 def main():
-    ap=argparse.ArgumentParser();ap.add_argument('--serving',action='store_true');ap.add_argument('--first-only',action='store_true');ap.add_argument('--orders',action='store_true');ap.add_argument('--output',default='artifacts/reference.json');args=ap.parse_args()
+    ap=argparse.ArgumentParser();ap.add_argument('--serving',action='store_true');ap.add_argument('--first-only',action='store_true');ap.add_argument('--orders',action='store_true');ap.add_argument('--repeat',type=int,default=1,help='Repeat cases in one process for warm timing');ap.add_argument('--output',default='artifacts/reference.json');args=ap.parse_args()
+    if not 1<=args.repeat<=100:raise ValueError('repeat must be 1..100')
     output=ROOT/args.output
     if output.exists():raise SystemExit('Refusing to overwrite existing output')
     bundle=ROOT/'artifacts/base-bundle.json';bundle.write_text(json.dumps({'path':str(ROOT/'checkpoints/base')}))
@@ -26,7 +27,7 @@ def main():
         capture['hidden']=hidden.astype(engine.mx.float32).tolist()
         return original(hidden,ids,readout_indices)
     engine._candidate_logits=hooked
-    for c in cases:
+    for sequence,c in enumerate(cases*args.repeat):
         options=c['options']
         for offset in range(len(options) if args.orders else 1):
             order=options[offset:]+options[:offset]
@@ -43,6 +44,7 @@ def main():
                 result,meta=engine.score_compiled(None,prompt,labels,choices)
             calibrated=cal.calibrate_result(result,'choice',len(options),image=False)
             record={'path':'official_serving_shared_prefix' if args.serving else 'official_uncached_full_forward','id':c['id'],'offset':offset,'options':order,'gold':c['gold'],'rotations':1,'result':calibrated.model_dump(),'raw_result':result.model_dump(),'metadata':meta,'wall_seconds':time.perf_counter()-start,'hidden':capture['hidden'],'token_ids':rendered[0][0].tolist(),'prompt':prompt,'input_sha256':hashlib.sha256(bytes(json.dumps(rendered[0][0].tolist()),'utf8')).hexdigest()}
+            if args.repeat>1:record['repeat']=sequence//len(cases)
             records.append(record);output.write_text(json.dumps({'model_lock_sha256':hashlib.sha256((ROOT/'MODEL_LOCK.json').read_bytes()).hexdigest(),'records':records},indent=2)+'\n')
             print(c['id'],offset,calibrated.value,calibrated.scores,meta['input_tokens'],flush=True)
 if __name__=='__main__':main()
