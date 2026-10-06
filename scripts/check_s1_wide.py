@@ -11,12 +11,18 @@ sys.path.insert(0,str(ROOT/'client'))
 from transport import decode
 
 def main():
- ap=argparse.ArgumentParser();ap.add_argument("--tile",type=int,choices=[64,128,256],required=True);ap.add_argument('--canister',required=True);ap.add_argument('--directory',required=True);a=ap.parse_args()
- d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=True);helper=ROOT/'artifacts/bounded_i16/native/release/wat_s1_args';wasm=ROOT/f'artifacts/s1_wide/build{a.tile}/diagnostic.wasm';sha=lambda b:hashlib.sha256(b).hexdigest()
+ ap=argparse.ArgumentParser();ap.add_argument("--tile",type=int,choices=[64,128,256],required=True);ap.add_argument('--canister',required=True);ap.add_argument('--directory',required=True);ap.add_argument('--build-directory');ap.add_argument('--extra-source',action='append',default=[]);ap.add_argument('--boundary-tokens',default='1,7,8,32,64,88');a=ap.parse_args()
+ boundary_tokens=[int(v) for v in a.boundary_tokens.split(',')]
+ if not boundary_tokens or len(set(boundary_tokens))!=len(boundary_tokens) or any(not 1<=n<=109 for n in boundary_tokens):raise ValueError('Unique boundary token counts must be in1..109')
+ build_dir=ROOT/(a.build_directory or f'artifacts/s1_wide/build{a.tile}')
+ d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=True)
+ if any(d.iterdir()):raise ValueError('Use a fresh evidence directory')
+ helper=ROOT/'artifacts/bounded_i16/native/release/wat_s1_args';wasm=build_dir/'diagnostic.wasm';sha=lambda b:hashlib.sha256(b).hexdigest()
  sources=list((ROOT/'scripts/s1_wide_bench/src').rglob('*.rs'))+[ROOT/'scripts/build_s1_wide.py',ROOT/'scripts/generate_wat_s1_wide.py',ROOT/f'artifacts/s1_wide/build{a.tile}/kernel.wat',ROOT/'artifacts/s1_address_reuse/build/kernel.wat',ROOT/'scripts/wasm_patch/src/main.rs',pathlib.Path(__file__),ROOT/'MODEL_LOCK.json',ROOT/'checkpoints/full-int8.manifest.json',ROOT/'client/transport.py']
+ sources += [ROOT/p for p in a.extra_source]+[build_dir/'kernel.wat']
  hashes={str(p.relative_to(ROOT)):sha(p.read_bytes()) for p in sources}
  def status():return json.loads(subprocess.check_output(['icp','canister','status',a.canister,'--network','local','--identity','imajev-local','--json'],text=True,cwd=ROOT))['module_hash'].removeprefix('0x')
- expected=sha(wasm.read_bytes());patch=json.loads((ROOT/f'artifacts/s1_wide/build{a.tile}/wide.patch.json').read_text());build=json.loads((ROOT/f'artifacts/s1_wide/raw{a.tile}/report.json').read_text());control=json.loads((ROOT/f'artifacts/s1_wide/build{a.tile}/control.patch.json').read_text());assert patch['output_sha256']==expected and patch['original_sha256']==control['output_sha256'] and control['original_sha256']==build['wasm_sha256'];assert patch['source_sha256']==sha((ROOT/f'artifacts/s1_wide/build{a.tile}/kernel.wat').read_bytes());assert status()==expected
+ expected=sha(wasm.read_bytes());patch=json.loads((build_dir/'wide.patch.json').read_text());build=json.loads((ROOT/f'artifacts/s1_wide/raw{a.tile}/report.json').read_text());control=json.loads((build_dir/'control.patch.json').read_text());assert patch['output_sha256']==expected and patch['original_sha256']==control['output_sha256'] and control['original_sha256']==build['wasm_sha256'];assert patch['source_sha256']==sha((build_dir/'kernel.wat').read_bytes());assert status()==expected
  def call(method,path=None,query=False,decode_as='preparation'):
   cmd=['icp','canister','call',a.canister,method,'--network','local','--identity','imajev-local','--output','hex']
   if path:cmd+=['--args-file',str(path),'--args-format','bin']
@@ -47,7 +53,7 @@ def main():
   row=dict(label=label,tokens=n,rows=rows,cols=2560,source_request=str(request.relative_to(ROOT)),source_request_sha256=sha(request.read_bytes()),source_report_sha256=sha(report_raw),input_sha256=sha(input_path.read_bytes()),native=native,measurements=measured)
   row['total_change_percent']=100*(measured[keys[methods[-1]]]['total_instructions']/measured['raw_s1_nozero']['total_instructions']-1);cases.append(row);print(json.dumps(row),flush=True)
  import numpy as np
- for n in [1,7,8,32,64,88]:
+ for n in boundary_tokens:
   label=f'boundary-{n}';rows=8192
   x=np.resize(np.array([-127.,127.,0.,-0.,-1.,1.,0.5,-0.5,2**-126,-2**-126],dtype='<f4'),n*2560)
   ip=d/f'{label}.input.bin';ip.write_bytes(x.tobytes());wp=d/f'weights-{rows}-native.bin';wp.write_bytes(weights[:rows*2560]+weights[8192*2560:8192*2560+rows*4])

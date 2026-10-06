@@ -1,3 +1,5 @@
+2026-10-05残余調査: 主50queryすべてを再profileして返信bit一致。INT8基底＋継続66.32%、F32 LoRA11.51%、wire1.72%。一時locals1,984削減は命令不変で不採用。奇数末尾の3積省略を独立Wasmで試作し、主Q0.8397%減、5実入力＋11境界でnative digest一致。全モデル未接続、現行50query/234,521,052,335命令は不変、32には名目31.78%減が必要。[調査結果](docs/REMAINING_EFFICIENCY.md)。
+
 2026-10-05継続: 最後の1 token用INT8基底投影を4平面から直接SIMD計算し、入力変換・ゼロ側演算・内側ループ管理を省略。主50queryは234,521,052,335命令、直前比87,954,874命令（0.03749%）減。通信149,353,220 bytesとquery数は不変。標準6条件と連結3条件が採用INT8基準bit一致。32query未達。小ループ版は増加して不採用。[実装と測定](docs/SINGLE_TOKEN_QUAD.md)。
 
 2026-10-05レビュー修正: 50query経路の通信/命令上限超過で別journalの標準経路へ切替。判断結果の共通validatorを新規返信/再開/単独readoutへ適用。不正確率・logits・型・calibrationを拒否。通常3条件は50/50/62queryでbit一致、標準6条件回帰も通過。実上限試験は45成功+1失敗+62標準=108queryでbit一致、再開は新規推論0件。失敗queryの未計測値をnullとして明示。[修正と検証](docs/LIMIT_FALLBACK_REVIEW.md)。

@@ -7,7 +7,7 @@ thread_local!{static OWNER:RefCell<Principal>=const{RefCell::new(Principal::anon
 #[ic_cdk::query]fn restore(input:Vec<u8>,hybrid:bool)->Measurement {
  OWNER.with(|o|assert_eq!(*o.borrow(),ic_cdk::api::msg_caller()));assert!(input.len()<=1_990_000);
  let begin=ic_cdk::api::performance_counter(0);
- let state=if hybrid {codec::decode(&input).unwrap()}else{assert_eq!(input.len(),45*6176*4);let log:Vec<f32>=input.chunks_exact(4).map(|b|f32::from_le_bytes(b.try_into().unwrap())).collect();imajev_runtime::delta_log::restore(45,32,&log).unwrap()};
+ let state=if hybrid {codec::decode(&input).unwrap()}else{assert!(!input.is_empty() && input.len()<=132*6176*4 && input.len()%(6176*4)==0);let n=input.len()/(6176*4);let log:Vec<f32>=input.chunks_exact(4).map(|b|f32::from_le_bytes(b.try_into().unwrap())).collect();imajev_runtime::delta_log::restore(n,32,&log).unwrap()};
  let end=ic_cdk::api::performance_counter(0);let mut hash=Sha256::new();for v in &state {hash.update(v.to_le_bytes());}
  #[cfg(target_arch="wasm32")]let heap_pages=core::arch::wasm32::memory_size(0)as u64;
  #[cfg(not(target_arch="wasm32"))]let heap_pages=0;
@@ -17,10 +17,10 @@ thread_local!{static OWNER:RefCell<Principal>=const{RefCell::new(Principal::anon
 #[derive(CandidType,Serialize,Deserialize)]pub struct Preparation{pub state:Vec<u8>,pub digest:Vec<u8>,pub instructions:u64,pub heap_pages:u64}
 /// Ordinary query: reconstruct and encode once, then return all reusable state.
 #[ic_cdk::query]fn prepare_prefix(input:Vec<u8>)->Preparation {
- OWNER.with(|o|assert_eq!(*o.borrow(),ic_cdk::api::msg_caller()));assert_eq!(input.len(),45*6176*4);
+ OWNER.with(|o|assert_eq!(*o.borrow(),ic_cdk::api::msg_caller()));assert!(!input.is_empty() && input.len()<=132*6176*4 && input.len()%(6176*4)==0);let n=input.len()/(6176*4);
  let begin=ic_cdk::api::performance_counter(0);
  let log:Vec<f32>=input.chunks_exact(4).map(|b|f32::from_le_bytes(b.try_into().unwrap())).collect();
- let(packet,state)=codec::prepare(&log,45).unwrap();let end=ic_cdk::api::performance_counter(0);
+ let(packet,state)=codec::prepare(&log,n).unwrap();let end=ic_cdk::api::performance_counter(0);
  let mut hash=Sha256::new();for v in &state{hash.update(v.to_le_bytes());}
  #[cfg(target_arch="wasm32")]let heap_pages=core::arch::wasm32::memory_size(0)as u64;
  #[cfg(not(target_arch="wasm32"))]let heap_pages=0;

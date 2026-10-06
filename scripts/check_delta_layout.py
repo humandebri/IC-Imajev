@@ -9,7 +9,7 @@ d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=True)
 helper=ROOT/'artifacts/delta-writeback-target/debug/writeback_args'
 wasm=ROOT/'artifacts/delta-writeback-target/wasm32-unknown-unknown/release/imajev_delta_writeback_bench.wasm'
 sha=lambda b:hashlib.sha256(b).hexdigest()
-sources=list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'scripts/delta_writeback_bench/src').rglob('*.rs'))+[ROOT/'crates/imajev-runtime/Cargo.toml',ROOT/'scripts/delta_writeback_bench/Cargo.toml',ROOT/'scripts/delta_writeback_bench/Cargo.lock',ROOT/'Cargo.toml',ROOT/'Cargo.lock',pathlib.Path(__file__)]
+sources=list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml']+list((ROOT/'scripts/delta_writeback_bench/src').rglob('*.rs'))+[ROOT/'crates/imajev-runtime/Cargo.toml',ROOT/'scripts/delta_writeback_bench/Cargo.toml',ROOT/'scripts/delta_writeback_bench/Cargo.lock',ROOT/'Cargo.toml',ROOT/'Cargo.lock',pathlib.Path(__file__)]
 hashes={str(p.relative_to(ROOT)):sha(p.read_bytes()) for p in sources}
 def status():return json.loads(subprocess.check_output(['icp','canister','status',a.canister,'--network','local','--identity','imajev-local','--json'],text=True,cwd=ROOT))['module_hash'].removeprefix('0x')
 expected=sha(wasm.read_bytes());assert status()==expected

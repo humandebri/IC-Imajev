@@ -106,7 +106,7 @@ def main():
   executed=[q for q in t.measurements if not q.get('replayed')]
   report['executed_query_count']=len(executed)+(args.layers==32 and not t.fuse_terminal_decision);report['executed_instructions']=sum(q['ok']['instructions'] for q in executed)+(0 if t.fuse_terminal_decision else report.get('decision_query',{}).get('ok',{}).get('decision',{}).get('instructions',0));report['executed_candid_bytes']=sum(q['ok']['request_bytes']+q['ok']['reply_bytes'] for q in executed)+sum(report.get('decision_query',{}).get('ok',{}).get(k,0) for k in ['request_bytes','reply_bytes'])
   report['wasm_sha256']=hashlib.sha256((ROOT/args.wasm).read_bytes()).hexdigest();report['implementation_hashes']={p:hashlib.sha256((ROOT/p).read_bytes()).hexdigest() for p in ['client/full_inference.py','client/transport.py','crates/imajev-runtime/src/lib.rs','crates/imajev-runtime/src/delta_stage.rs','crates/imajev-runtime/src/delta_simd.rs','crates/imajev-runtime/src/int8_kernel.rs','crates/imajev-runtime/src/terminal.rs','canisters/inference/src/lib.rs']}
-  report['implementation_hashes'].update({str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((ROOT/'crates/imajev-runtime/src').glob('*.rs'))})
+  report['implementation_hashes'].update({str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((ROOT/'crates/imajev-runtime/src').glob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml']})
   report['deployed_wasm_sha256']=verify_module(t,wasm_hash)
   atomic(directory/'report.json',(json.dumps(report,indent=2)+'\n').encode());print('saved',directory/'report.json',flush=True)
  finally:t.close()

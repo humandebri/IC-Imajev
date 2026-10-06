@@ -1371,11 +1371,16 @@ name = "imajev-runtime"
 version = "0.1.0"
 dependencies = [
  "blake3",
+ "inference-core",
  "miniz_oxide",
  "serde",
  "serde_json",
  "sha2 0.10.9",
 ]
+
+[[package]]
+name = "inference-core"
+version = "0.1.0"
 
 [[package]]
 name = "ipnet"

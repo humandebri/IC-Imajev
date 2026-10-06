@@ -10,7 +10,7 @@ for name in ['canister','wasm','directory']:ap.add_argument('--'+name,required=T
 ap.add_argument('--host-checksum',action='store_true')
 ap.add_argument('--source',default='artifacts/prefix_codec/full-address-reuse-proof');a=ap.parse_args();dest=ROOT/a.directory;dest.mkdir(parents=True,exist_ok=True);sha=lambda b:hashlib.sha256(b).hexdigest()
 m=json.loads((ROOT/'checkpoints/full-int8.manifest.json').read_text());module=sha((ROOT/a.wasm).read_bytes())
-paths=list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'canisters/inference/src').rglob('*.rs'))+list((ROOT/'client').glob('*.py'))+[pathlib.Path(__file__),ROOT/'crates/imajev-runtime/Cargo.toml',ROOT/'canisters/inference/Cargo.toml',ROOT/'Cargo.lock',ROOT/'crates/imajev-client/src/main.rs'];hashes={str(p.relative_to(ROOT)):sha(p.read_bytes()) for p in paths}
+paths=list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml']+list((ROOT/'canisters/inference/src').rglob('*.rs'))+list((ROOT/'client').glob('*.py'))+[pathlib.Path(__file__),ROOT/'crates/imajev-runtime/Cargo.toml',ROOT/'canisters/inference/Cargo.toml',ROOT/'Cargo.lock',ROOT/'crates/imajev-client/src/main.rs'];hashes={str(p.relative_to(ROOT)):sha(p.read_bytes()) for p in paths}
 keys=['value','abstained','raw_logits','probabilities','unknown_probability','calibration_version'];cases=[]
 for label in ['617','insufficient','maximum']:
  source=ROOT/a.source/label;raw=(source/'report.json').read_bytes();r=json.loads(raw);assert r['model']==m['model'] and r['pack_hash']==m['pack_hash'];mq,tq=r['queries'][-2:];assert mq['op']=='mlp_full_integer' and tq['op']=='terminal_attention_mlp_integer'

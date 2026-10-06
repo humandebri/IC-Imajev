@@ -8,7 +8,7 @@ from transport import encode,decode
 def main():
  ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--canister',required=True);ap.add_argument('--directory',required=True);a=ap.parse_args();d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=True)
  helper=ROOT/'artifacts/codec_scan/native-target/release/args';wasm=ROOT/'artifacts/codec_scan/target/wasm32-unknown-unknown/release/imajev_codec_scan_bench.wasm';sha=lambda b:hashlib.sha256(b).hexdigest()
- paths=list((ROOT/'scripts/codec_scan_bench/src').rglob('*.rs'))+[ROOT/p for p in ['scripts/codec_scan_bench/Cargo.toml','scripts/codec_scan_bench/Cargo.lock','crates/imajev-runtime/src/bf16_codec.rs','crates/imajev-runtime/src/block_codec.rs','crates/imajev-runtime/src/lib.rs','client/transport.py']]+[pathlib.Path(__file__)];hashes={str(p.relative_to(ROOT)):sha(p.read_bytes())for p in paths}
+ paths=list((ROOT/'scripts/codec_scan_bench/src').rglob('*.rs'))+[ROOT/p for p in ['scripts/codec_scan_bench/Cargo.toml','scripts/codec_scan_bench/Cargo.lock','crates/imajev-runtime/src/bf16_codec.rs','crates/imajev-runtime/src/block_codec.rs','crates/imajev-runtime/src/lib.rs','client/transport.py']]+[pathlib.Path(__file__)];paths+=list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml'];hashes={str(p.relative_to(ROOT)):sha(p.read_bytes())for p in paths}
  def status():return json.loads(subprocess.check_output(['icp','canister','status',a.canister,'--network','local','--identity','imajev-local','--json'],text=True,cwd=ROOT))['module_hash'].removeprefix('0x')
  module=sha(wasm.read_bytes());assert status()==module;cases=[]
  m=json.loads((ROOT/'checkpoints/full-int8.manifest.json').read_text())

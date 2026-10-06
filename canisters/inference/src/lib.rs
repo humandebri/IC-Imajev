@@ -12,6 +12,14 @@ use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::cell::RefCell;
 mod weight_cache;
+#[cfg(feature="experimental-mlp-delta-query")]
+mod query_mlp_delta;
+#[cfg(feature="experimental-mlp-delta-query")]
+use query_mlp_delta::MlpDeltaMeasurement;
+#[cfg(feature="experimental-update-inference")]
+mod update_inference;
+#[cfg(feature="experimental-update-inference")]
+use update_inference::UpdateProgress;
 #[derive(Default)]
 struct Store {
     owner: Option<Principal>,
@@ -492,7 +500,7 @@ fn decision_fast(
         calibration_version: "p3-r2-s000291-authored".into(),
     })
 }
-#[derive(CandidType, Deserialize)]
+#[derive(CandidType, Deserialize, Clone)]
 struct ChoiceResult {
     value: Option<String>,
     probabilities: Vec<f32>,

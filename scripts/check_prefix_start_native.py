@@ -25,7 +25,7 @@ def main():
     helper=ROOT/'artifacts/prefix_codec/native-target/release/primitive'
     source_root=ROOT/'artifacts/prefix_codec/full-owned-state-proof'
     sha=lambda b:hashlib.sha256(b).hexdigest()
-    paths=list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'client').glob('*.py'))+[pathlib.Path(__file__)]
+    paths=list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml']+list((ROOT/'client').glob('*.py'))+[pathlib.Path(__file__)]
     hashes={str(p.relative_to(ROOT)):sha(p.read_bytes()) for p in paths}
     cases=[]
     for label in ['617','insufficient','maximum']:

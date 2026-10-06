@@ -67,7 +67,7 @@ def main():
     if args.require_output_pairs:
         paths += [ROOT/'scripts/generate_output_pairs.py',ROOT/'scripts/generate_lane_pair.py',ROOT/'scripts/lane_pair_bench/src/kernel.rs']
     paths += list((ROOT / 'canisters/inference/src').glob('*.rs'))
-    paths += list((ROOT / 'crates/imajev-runtime/src').glob('*.rs'))
+    paths += list((ROOT / 'crates/imajev-runtime/src').glob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml']
     source_hashes = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
     before = snapshot('before')
     subprocess.run([sys.executable, str(ROOT / 'scripts/validate_terminal_readout.py'),

@@ -28,7 +28,7 @@ def main():
     directory.mkdir(parents=True, exist_ok=True)
     helper = ROOT / 'artifacts/prefix_codec/native-target/release/primitive'
     sha = lambda b: hashlib.sha256(b).hexdigest()
-    sources = list((ROOT/'crates/imajev-runtime/src').rglob('*.rs')) + [ROOT/'crates/imajev-runtime/Cargo.toml', ROOT/'Cargo.lock', ROOT/'client/prefix_hybrid.py', pathlib.Path(__file__)]
+    sources = list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml'] + [ROOT/'crates/imajev-runtime/Cargo.toml', ROOT/'Cargo.lock', ROOT/'client/prefix_hybrid.py', pathlib.Path(__file__)]
     hashes = {str(p.relative_to(ROOT)): sha(p.read_bytes()) for p in sources}
     measurements = []
     for case in args.cases.split(','):

@@ -13,7 +13,7 @@ def main():
     sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
     source=ROOT/'artifacts/prefix_codec/full-f32-k-continue-proof/normal'
     report=json.loads((source/'report.json').read_bytes())
-    paths=list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'canisters/inference/src').rglob('*.rs'))+list((ROOT/'client').glob('*.py'))
+    paths=list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml']+list((ROOT/'canisters/inference/src').rglob('*.rs'))+list((ROOT/'client').glob('*.py'))
     paths += [pathlib.Path(__file__),ROOT/'MODEL_LOCK.json',ROOT/'Cargo.lock',ROOT/'checkpoints/full-int8.manifest.json']
     hashes={str(p.relative_to(ROOT)):sha(p) for p in paths};wasm=sha(ROOT/a.wasm)
     m=json.loads((ROOT/'checkpoints/full-int8.manifest.json').read_bytes())

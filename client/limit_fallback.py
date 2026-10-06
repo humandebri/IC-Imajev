@@ -7,7 +7,7 @@ def eligible(error):
     return (type(error)is ValueError and str(error)in FRAME_ERRORS) or (type(error)is RuntimeError and is_instruction_limit(error))
 
 def standard_command(argv,directory):
-    flags={'--tail-start','--join-start','--roll-start'}
+    flags={'--adaptive-start','--packed-start','--tail-start','--join-start','--roll-start'}
     values={'--directory','--tail-heads28','--tail-front28','--tail-heads29','--tail-front30','--tail-down29','--roll-begin','--roll-heads','--roll-down'}
     result=[];i=0
     while i<len(argv):
