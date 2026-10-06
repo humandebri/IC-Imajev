@@ -9,14 +9,23 @@ and summing blocks are explicitly evaluated as separate F32 operations.
 import argparse,hashlib,json,pathlib,sys
 import numpy as np
 ROOT=pathlib.Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scripts'))
-ap=argparse.ArgumentParser(add_help=False);ap.add_argument('--arithmetic',choices=['f32','int8'],required=True);ap.add_argument('--activation-scale',choices=['block256','token'],default='block256');ap.add_argument('--merge-adapter',action='store_true',help='Experimental one-time FP32 adapter merge followed by per-row INT8 weight quantization; not adopted Wasm arithmetic');args,rest=ap.parse_known_args();sys.argv=[sys.argv[0],*rest]
+ap=argparse.ArgumentParser(add_help=False);ap.add_argument('--arithmetic',choices=['f32','int8'],required=True);ap.add_argument('--activation-scale',choices=['block256','token'],default='block256');ap.add_argument('--merge-adapter',action='store_true',help='Experimental one-time FP32 adapter merge followed by per-row INT8 weight quantization; not adopted Wasm arithmetic')
+ap.add_argument('--merged-pack',type=pathlib.Path,help='Prefix of a saved experimental merged pack, without suffix')
+args,rest=ap.parse_known_args();sys.argv=[sys.argv[0],*rest]
+if args.merge_adapter and args.merged_pack:raise ValueError('Choose in-memory merge or saved merged pack')
 import mlx.core as mx
 import mlx.nn as nn
 import reference
-manifest=json.loads((ROOT/'checkpoints/full-int8.manifest.json').read_text());tensors={t['name']:t for t in manifest['tensors']};pack=np.memmap(ROOT/'checkpoints/full-int8.pack',mode='r',dtype=np.uint8)
+prefix=ROOT/args.merged_pack if args.merged_pack else ROOT/'checkpoints/full-int8'
+manifest=json.loads(prefix.with_suffix('.manifest.json').read_text());tensors={t['name']:t for t in manifest['tensors']};pack=np.memmap(prefix.with_suffix('.pack'),mode='r',dtype=np.uint8)
+if args.merged_pack:
+ if any('.lora_' in name for name in tensors):raise ValueError('Saved merged pack still contains adapters')
+ with prefix.with_suffix('.pack').open('rb') as f:
+  if hashlib.file_digest(f,'sha256').hexdigest()!=manifest['pack_hash']:raise ValueError('Saved merged pack hash')
+ if pack.size!=manifest['bytes'] or manifest['model']!=hashlib.sha256((ROOT/'MODEL_LOCK.json').read_bytes()).hexdigest():raise ValueError('Saved merged pack identity')
 original_factory=reference.MLXDirect;original_linear=nn.Linear.__call__;original_embedding=nn.Embedding.__call__;mapped={};embeddings={}
 merged_weights={};merged_modules=set();merged_digest=hashlib.sha256()
-if args.merge_adapter:
+if args.merge_adapter or args.merged_pack:
  from mlx_vlm.trainer.lora_layers import LoRALinear
  original_lora=LoRALinear.__call__
  def patched_lora(self,x):
@@ -55,6 +64,15 @@ def patched_embedding(self,x):
  return (qw[x].astype(mx.float32)*sw[x][...,None]).astype(dtype)
 def factory(*a,**kw):
  engine=original_factory(*a,**kw)
+ if args.merged_pack:
+  for name,module in engine.model.named_modules():
+   if not isinstance(module,LoRALinear):continue
+   key='model.'+name.replace('language_model.model.','language_model.')
+   t=tensors.get(key+'.weight')
+   if t is None or t['dtype']!='int8' or module.linear.weight.shape!=(t['rows'],t['cols']):raise ValueError('Saved merged adapter shape')
+   merged_modules.add(id(module))
+  if len(merged_modules)!=200:raise ValueError('Expected 200 bypassed LoRA projections')
+  LoRALinear.__call__=patched_lora
  if args.merge_adapter:
   for name,module in engine.model.named_modules():
    if not isinstance(module,LoRALinear):continue
@@ -107,4 +125,6 @@ if not output.is_absolute():output=ROOT/output
 r=json.loads(output.read_text());r.update(arithmetic=args.arithmetic,activation_scale=args.activation_scale,weight_pack_hash=manifest['pack_hash'],embedding_pack_hash=manifest['pack_hash'],embedding_precision='Per-row INT8 pinned pack, F32 dequantization, BF16 output',dense_base_projections=len(mapped),scope='Host official nonlinear graph with pinned INT8 base and separate original F32 LoRA/readout; arithmetic A/B; host/Wasm nonlinear parity not guaranteed',implementation_sha256=hashlib.sha256(pathlib.Path(__file__).read_bytes()).hexdigest())
 if args.merge_adapter:
  r.update(weight_pack_hash=None,source_weight_pack_hash=manifest['pack_hash'],merged_adapter=True,merged_projection_count=len(merged_modules),merged_projection_digest=merged_digest.hexdigest(),scope='Host-only candidate: original BF16 base + original F32 adapter merged once in F32, then per-row INT8; pinned embedding/norm/readout/calibration; no adopted canister or full-pack speed claim')
+if args.merged_pack:
+ r.update(merged_adapter=True,merged_projection_count=len(merged_modules),merged_pack=str(prefix),scope='Host full-forward from saved merged INT8 pack; 200 LoRA paths bypassed; pinned embedding/norm/readout/calibration; not a Wasm instruction measurement')
 output.write_text(json.dumps(r,indent=2)+'\n')
