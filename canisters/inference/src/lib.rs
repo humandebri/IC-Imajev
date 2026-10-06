@@ -33,6 +33,10 @@ struct Store {
 }
 thread_local! {static STORE:RefCell<Store>=RefCell::new(Store::default());}
 fn owner() {
+    #[cfg(feature="paid-update-inference")] paid_inference::admin_guard();
+    owner_auth();
+}
+fn owner_auth() {
     STORE.with(|s| {
         assert_eq!(
             s.borrow().owner,
@@ -500,7 +504,7 @@ fn decision_fast(
         calibration_version: "p3-r2-s000291-authored".into(),
     })
 }
-#[derive(CandidType, Deserialize, Clone)]
+#[derive(CandidType, Deserialize, serde::Serialize, Clone)]
 struct ChoiceResult {
     value: Option<String>,
     probabilities: Vec<f32>,
@@ -621,6 +625,7 @@ fn status() -> (u64, bool) {
 // Metadata survives upgrades separately from weight bytes. Restore only after compatible upgrade.
 #[ic_cdk::pre_upgrade]
 fn pre_upgrade() {
+    #[cfg(feature="paid-update-inference")] paid_inference::before_upgrade();
     owner_guardless_persist();
 }
 fn owner_guardless_persist() {
@@ -628,7 +633,7 @@ fn owner_guardless_persist() {
         let s = s.borrow();
         if let Some(m) = &s.manifest {
             let metadata =
-                serde_json::to_vec(&(s.owner.unwrap().to_text(), m, s.received, s.ready)).unwrap();
+                serde_json::to_vec(&(s.owner.unwrap().to_text(), m, s.received, s.ready, paid_metadata())).unwrap();
             let end = (m.bytes + 65535) / 65536 * 65536;
             let needed = (metadata.len() as u64 + 16 + 65535) / 65536;
             let total = end / 65536 + needed;
@@ -658,8 +663,11 @@ fn post_upgrade() {
     assert!(n < 2_000_000 && end + 8 + n <= size - 8);
     let mut bytes = vec![0; n as usize];
     ic_cdk::api::stable_read(end + 8, &mut bytes);
-    let (owner, manifest, received, ready): (String, Manifest, u64, bool) =
-        serde_json::from_slice(&bytes).unwrap();
+    let (owner, manifest, received, ready, extra): (String, Manifest, u64, bool, Vec<u8>) =
+        serde_json::from_slice(&bytes).unwrap_or_else(|_| {
+            let (o,m,r,v):(String,Manifest,u64,bool)=serde_json::from_slice(&bytes).unwrap();(o,m,r,v,vec![])
+        });
+    restore_paid_metadata(&extra);
     STORE.with(|s| {
         *s.borrow_mut() = Store {
             owner: Some(Principal::from_text(owner).unwrap()),
@@ -673,6 +681,9 @@ fn post_upgrade() {
         }
     });
 }
+#[cfg(feature="paid-update-inference")]mod paid_types;
+#[cfg(feature="paid-update-inference")]mod paid_inference;
+#[cfg(feature="paid-update-inference")]use paid_types::*;
 ic_cdk::export_candid!();
 pub fn get_candid_pointer_for_tests() -> String {
     __export_service()
@@ -756,5 +767,21 @@ mod terminal_decision_tests {
             assert!(validate_terminal_decision(&r,&options).is_err());
         }
         assert!(__export_service().contains("terminal_step_decision"));
+    }
+}
+
+fn paid_metadata()->Vec<u8>{#[cfg(feature="paid-update-inference")] {return paid_inference::metadata();}#[cfg(not(feature="paid-update-inference"))]{vec![]}}
+fn restore_paid_metadata(bytes:&[u8]){#[cfg(feature="paid-update-inference")]paid_inference::restore_metadata(bytes);#[cfg(not(feature="paid-update-inference"))]let _=bytes;}
+
+#[cfg(all(test, feature = "paid-update-inference"))]
+mod paid_interface_tests {
+    #[test]
+    fn exported_interface_contains_paid_entrypoints() {
+        let service = super::__export_service();
+        for method in ["infer :", "quote :", "configure_paid :", "inference_step :", "inference_status :", "retry_inference_refund :"] {
+            assert!(service.contains(method), "missing {method}");
+        }
+        #[cfg(not(feature = "paid-update-diagnostics"))]
+        assert!(!service.contains("paid_fault :") && !service.contains("paid_probe_step :") && !service.contains("paid_upgrade_probe :"));
     }
 }
