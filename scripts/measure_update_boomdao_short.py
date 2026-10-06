@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+"""Measure shortened BOOM DAO inputs using server-held update inference."""
+import argparse,hashlib,json,pathlib,subprocess,time
+import numpy as np
+ROOT=pathlib.Path(__file__).resolve().parents[1]
+def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def bits(v):return hashlib.sha256(np.asarray(v,dtype='<f4').tobytes()).hexdigest()
+def main():
+ ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--directory',required=True);ap.add_argument('--wasm',required=True);ap.add_argument('--prepare-prefix',action='store_true');ap.add_argument('--repeats',type=int,default=3);a=ap.parse_args()
+ d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=False);m=sha(ROOT/a.wasm);base=ROOT/'artifacts/query-packing-v3/prefix-v2/queries';packets=ROOT/'artifacts/query-packing-v3/packets-v2';metadata=json.loads((base/'cache.json').read_text());fixture=json.loads((ROOT/'artifacts/text-short-v2/inputs.json').read_text());report=dict(module_sha256=m,canister='6eydd-o3777-77775-aaama-cai',prefix_preparation=[],cases=[],reference_hashes={})
+ bridge=ROOT/'artifacts/query-packing-v3/build/imajev-client';report['bridge_sha256']=sha(bridge);report['script_sha256']=sha(pathlib.Path(__file__))
+ p=subprocess.Popen([str(bridge),'http://localhost:8001/',report['canister'],str(ROOT/'artifacts/imajev-local.pem')],stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
+ def call(cmd):
+  p.stdin.write(json.dumps(cmd)+'\n');p.stdin.flush();line=p.stdout.readline()
+  if not line:raise RuntimeError('bridge exited')
+  r=json.loads(line)
+  if 'error'in r:raise RuntimeError(r['error'])
+  return r
+ def ref(path):report['reference_hashes'][str(path.relative_to(ROOT))]=sha(path);return path
+ try:
+  assert a.repeats>0 and len(metadata['token_ids'])==27
+  ref(ROOT/'artifacts/text-short-v2/inputs.json');ref(base/'cache.json');ref(packets/'cache.json');ref(pathlib.Path(__file__))
+  assert call(dict(op='module_hash'))['ok']['module_hash']==m
+  if a.prepare_prefix:
+   pd=d/'prefix';pd.mkdir()
+   for i in range(32):
+    source=ref(base/'states'/f'layer-{i:02d}.npz')
+    with np.load(source,allow_pickle=False)as z:
+     if i%4==3:v=np.concatenate([z['keys'].transpose(1,0,2).ravel(),z['values'].transpose(1,0,2).ravel()]);packet=None
+     else:v=z['conv'].ravel();packet=ref(packets/f'layer-{i:02d}.npf1')
+    path=pd/f'{i:02d}.f32';np.asarray(v,dtype='<f4').tofile(path);cmd=dict(op='update_prefix',layer=i,values=str(path))
+    if packet:cmd['packet']=str(packet)
+    r=call(cmd);report['prefix_preparation'].append(dict(layer=i,**r));print(json.dumps(dict(prefix_layer=i,seconds=r['wall_seconds'])),flush=True)
+  malformed=[]
+  for length,expected in [(0,'prefix token bounds'),(45,'prefix length mismatch'),(27,'prefix already installed')]:
+   path=d/f'reject-kv-{length}.f32';np.zeros(length*2048,dtype='<f4').tofile(path)
+   try:call(dict(op='update_prefix',layer=3,values=str(path)))
+   except RuntimeError as error:
+    assert str(error)==expected,(str(error),expected)
+    malformed.append(dict(length=length,rejected=str(error)))
+   else:raise AssertionError('invalid prefix accepted')
+  report['prefix_validation_updates']=malformed
+  for run_index in range(a.repeats*3):
+   name=['617','620','653'][run_index%3];repeat=run_index//3+1
+   index={'617':0,'620':1,'653':2}[name];record=fixture['records'][index];ids=record['token_ids'];assert ids[:27]==metadata['token_ids'];directory=d/f'{name}-r{repeat}';directory.mkdir();old=ROOT/f'artifacts/boomdao-current-v1/{name}-r1';reference=json.loads(ref(old/'report.json').read_text());options=record['options'];rows=[];before=call(dict(op='balance_status'));started=time.perf_counter();cmd=dict(op='update_infer_start',ids=ids[27:],options=options)
+   while True:
+    r=call(cmd);progress=r['ok']['progress'];rows.append(r);(directory/f'{len(rows):02d}.json').write_text(json.dumps(r,indent=2)+'\n');print(json.dumps(dict(case=name,call=len(rows),stage=progress['stage'],instructions=progress['instructions'],seconds=r['wall_seconds'])),flush=True)
+    if progress['done']:break
+    cmd=dict(op='update_infer_continue',id=progress['id'],stage=progress['stage'])
+   elapsed=time.perf_counter()-started;after=call(dict(op='balance_status'))
+   for i in range(32):
+    path=old/'queries'/f'layer-{i:02d}.npy';v=np.load(ref(path),allow_pickle=False) if path.exists() else None
+    # The legacy reference preserves prefix rows at ordinary layers; terminal
+    # readout exports only the final token of layer31.
+    if v is not None:
+     if i<31:v=v[27:]
+     assert bits(v)==progress['hidden_hashes'][i],('hidden',name,i,v.shape)
+    else:assert i==30,'unexpected missing hidden'
+    with np.load(ref(old/'queries/states'/f'layer-{i:02d}.npz'),allow_pickle=False)as z:
+     if i%4==3:v=np.concatenate([z['keys'][27:].ravel(),z['values'][27:].ravel()])
+     else:v=z['conv'].ravel()
+    assert bits(v)==progress['state_hashes'][i],('state',name,i)
+   expected=reference['decision_query']['ok']['decision'];actual=progress['decision'];assert {k:v for k,v in expected.items()if k!='instructions'}=={k:v for k,v in actual.items()if k!='instructions'},'decision'
+   assert bits(np.asarray(progress['final_hidden'],dtype=np.float32))==bits(np.load(ref(old/'final-hidden.npy'),allow_pickle=False)),'final norm'
+   row=dict(case=name,repeat=repeat,decision=actual,hidden_layers_checked=[i for i in range(32) if i!=30],state_layers_checked=list(range(32)),tokens=len(ids),suffix_tokens=len(ids)-27,update_calls=len(rows),total_handler_instructions=sum(r['ok']['progress']['instructions']for r in rows),max_handler_instructions=max(r['ok']['progress']['instructions']for r in rows),total_candid_bytes=sum(r['ok']['request_bytes']+r['ok']['reply_bytes']for r in rows),call_wall_seconds=sum(r['wall_seconds']for r in rows),loop_seconds=elapsed,observed_balance_decrease=int(before['ok']['cycles'])-int(after['ok']['cycles']),all_exported_hidden_and_32_state_hashes_equal=True,decision_equal=True,final_norm_equal=True,balance_before=before,balance_after=after,max_observed_heap_bytes=max(r['ok']['progress']['heap_pages']*65536 for r in rows))
+   report['cases'].append(row);(d/'report.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(row),flush=True)
+  # Rejected continuation/start must leave the completed session intact.
+  boundary=[]
+  for cmd in [dict(op='update_infer_continue',id=progress['id'],stage=progress['stage']),dict(op='update_infer_start',ids=[],options=options)]:
+   try:call(cmd)
+   except RuntimeError as error:
+    assert str(error) in ('session progress mismatch','suffix token bounds'),str(error)
+    boundary.append(dict(command=cmd['op'],rejected=str(error)))
+   else:raise AssertionError('invalid update accepted')
+  report['boundary_verification_updates']=boundary
+  report['complete']=True
+  assert call(dict(op='module_hash'))['ok']['module_hash']==m
+  assert all(sha(ROOT/p)==h for p,h in report['reference_hashes'].items())
+  (d/'report.json').write_text(json.dumps(report,indent=2)+'\n')
+ except Exception as e:
+  (d/'failure.json').write_text(json.dumps(dict(error=str(e),partial=report),indent=2)+'\n');raise
+ finally:p.stdin.close();p.wait(timeout=15)
+if __name__=='__main__':main()

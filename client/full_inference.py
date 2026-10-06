@@ -3,6 +3,7 @@
 NumPy is used only for routing, reshape, concatenation, zero states and reporting.
 An official token-ID fixture is input; no reference hidden state enters inference.
 """
+from decision_validation import validate_decision
 import hashlib,json,pathlib,time
 import numpy as np
 from transport import Transport,encode,decode,atomic
@@ -49,7 +50,6 @@ class JournalTransport(Transport):
         h=dict(version=getattr(self,'frame_version',1),model=self.model,pack_hash=self.pack_hash,input_hash=input_hash,step=self.index,op=op,tensor=tensor,dims=list(dims),scalars=list(scalars))
         if aux:h['aux']=list(aux)
         if getattr(self,'wire_codec',''):h['encoding']=self.wire_codec
-        request=self.directory/f'{self.index:06d}.request.bin';response=self.directory/f'{self.index:06d}.response.bin';metric=self.directory/f'{self.index:06d}.metric.json'
         if prefix_packet is None:payload=encode(h,values)
         else:
             if op=='prefix_start_integer':
@@ -58,15 +58,22 @@ class JournalTransport(Transport):
                 from prefix_hybrid import NAME,encode_request
             h['encoding']=NAME
             payload=encode_request(h,values,prefix_packet)
+        return self.run_encoded(h,payload)
+    def run_encoded(self,h,payload):
+        if h['step']!=self.index or h['model']!=self.model or h['pack_hash']!=self.pack_hash:raise ValueError('encoded journal identity')
+        op=h['op'];tensor=h.get('tensor','');dims=h.get('dims',[])
+        request=self.directory/f'{self.index:06d}.request.bin';response=self.directory/f'{self.index:06d}.response.bin';metric=self.directory/f'{self.index:06d}.metric.json'
         if request.exists() and request.read_bytes()!=payload:raise ValueError(f'checkpoint input mismatch at query {self.index}; use a fresh directory after changing the graph')
         if response.exists() and metric.exists():
+            if not request.exists():raise ValueError('checkpoint reply has no matching request')
             rh,v=decode(response.read_bytes())
             if rh['step']!=self.index+1 or any(rh[k]!=value for k,value in h.items() if k not in ('step','scalars')) or not np.array_equal(np.asarray(rh['scalars'],dtype=np.float32),np.asarray(h['scalars'],dtype=np.float32)):raise ValueError('checkpoint reply identity')
             saved=json.loads(metric.read_text())
-            fused=op in ('terminal_attention_mlp_integer','terminal_tail_integer') and bool(getattr(self,'fuse_terminal_decision',False))
+            if saved.get('index')!=self.index or saved.get('op')!=op or saved.get('tensor')!=tensor:raise ValueError('checkpoint metric identity mismatch')
+            fused=op in ('terminal_attention_mlp_integer','terminal_tail_integer','mlp_stream_complete_terminal') and bool(getattr(self,'fuse_terminal_decision',False))
             if fused:
                 if saved.get('decision_options')!=self.decision_options or 'decision' not in saved['ok']:raise ValueError('terminal decision checkpoint options/result mismatch')
-                self.terminal_decision=saved['ok']['decision']
+                self.terminal_decision=validate_decision(saved['ok']['decision'],self.decision_options)
             elif 'decision_options' in saved:raise ValueError('terminal decision checkpoint mode mismatch')
             saved['replayed']=True;self.measurements.append(saved);self.index+=1;self.replayed+=1;return v
         start=time.perf_counter()
@@ -351,17 +358,17 @@ class TextGraph:
         return self.linear(result.reshape(n,4096),name+'.out_proj')
     def terminal_tail(self,hidden,attention):
         n=len(hidden)
-        if not 1<=n<=87 or hidden.shape!=(n,2560) or attention.shape!=hidden.shape:raise ValueError('terminal tail shape')
+        if not 1<=n<=89 or hidden.shape!=(n,2560) or attention.shape!=hidden.shape:raise ValueError('terminal tail shape')
         empty=np.empty((0,4,256),np.float32);prior_k,prior_v=self.attention_history(empty,empty,31)
         if prior_k.shape!=prior_v.shape or prior_k.shape!=(self.position_offset,4,256):raise ValueError('terminal tail prefix shape')
         payload=np.concatenate([hidden.ravel(),attention.ravel(),prior_k.transpose(1,0,2).ravel(),prior_v.transpose(1,0,2).ravel()])
-        out=self.t.run('terminal_tail_integer',payload,[n,self.position_offset],tensor=PREFIX+'layers.30.post_attention_layernorm.weight')
-        count=n*2560;offset=count+5120
+        out=self.t.run('terminal_tail_integer',payload,[n,self.position_offset,0],tensor=PREFIX+'layers.30.post_attention_layernorm.weight')
+        count=0;offset=5120
         if len(out)!=offset+n*2048:raise ValueError('terminal tail reply shape')
         k=out[offset:offset+n*1024].reshape(n,4,256);v=out[offset+n*1024:].reshape(n,4,256)
         all_k=np.concatenate([prior_k,k]);all_v=np.concatenate([prior_v,v]);path=self.t.directory/'states';path.mkdir(exist_ok=True)
         np.savez(path/'layer-31.npz',keys=all_k,values=all_v,positions=np.arange(len(all_k),dtype=np.int32))
-        return out[:count].reshape(n,2560),out[count:count+2560].reshape(1,2560),out[count+2560:offset].reshape(1,2560)
+        return None,out[count:count+2560].reshape(1,2560),out[count+2560:offset].reshape(1,2560)
     def terminal_attention_mlp(self,x,residual,name,layer):
         if layer!=31 or residual.shape!=(1,2560):raise ValueError('terminal attention residual/layer')
         n=len(x);empty=np.empty((0,4,256),np.float32)
@@ -454,10 +461,17 @@ class TextGraph:
             for head in range(16):out[:,head]=self.t.run('attention_bf16',np.concatenate([all_q[:,head].ravel(),all_k[:,head//4].ravel(),all_v[:,head//4].ravel()]),[total,256]).reshape(total,256)[-n:]
         path=self.t.directory/'states';path.mkdir(exist_ok=True);np.savez(path/f'layer-{layer:02d}.npz',keys=all_k,values=all_v,positions=np.arange(total,dtype=np.int32))
         return self.linear(self.pair('attention_gate',out.reshape(qn,4096),gate),name+'.o_proj')
-    def forward(self,token_ids,layers=32):
+    def forward(self,token_ids,layers=32,*,initial_hidden=None,start_layer=0,first_attention=None):
         if not 1<=len(token_ids)<=512:raise ValueError('text prefill needs 1..512 tokens')
-        prefix_started=getattr(self,'fuse_prefix_start',False)
-        if prefix_started:
+        prefix_started=getattr(self,'fuse_prefix_start',False) and initial_hidden is None
+        if initial_hidden is not None:
+            hidden=np.asarray(initial_hidden)
+            if not 0<start_layer<layers or hidden.dtype!=np.float32 or hidden.shape!=(len(token_ids),2560) or not np.isfinite(hidden).all() or np.any(hidden.view('<u4')&65535):raise ValueError('continued graph hidden shape/precision')
+            if first_attention is not None:
+                first_attention=np.asarray(first_attention)
+                if first_attention.dtype!=np.float32 or first_attention.shape!=hidden.shape or not np.isfinite(first_attention).all() or np.any(first_attention.view('<u4')&65535):raise ValueError('continued graph attention shape/precision')
+        elif start_layer!=0 or first_attention is not None:raise ValueError('continued graph requires hidden')
+        elif prefix_started:
             start_clock=time.perf_counter()
             hidden,first_attention=self.prefix_start(token_ids)
         else:
@@ -465,8 +479,13 @@ class TextGraph:
             for start in range(0,len(token_ids),128):
                 ids=token_ids[start:start+128];parts.append(self.t.run('embed',ids,[len(ids),2560],tensor=embedding).reshape(len(ids),2560))
             hidden=np.concatenate(parts,axis=0)
-        pre_normalized=None;tail_done=False
-        for layer in range(layers):
+        pre_normalized=None;tail_done=False;attention_layer=start_layer;skip_until=start_layer
+        for layer in range(start_layer,layers):
+            if layer<skip_until:continue
+            if getattr(self,'roll_blocks',False) and layer>0 and layer%4==0:
+                hidden,first_attention=self.roll_block(layer,hidden,pre_normalized)
+                pre_normalized=None;attention_layer=layer+2;skip_until=layer+2
+                continue
             self.current_layer=layer
             if layer==31 and tail_done:
                 np.save(self.t.directory/'layer-31.npy',hidden)
@@ -476,15 +495,15 @@ class TextGraph:
             layer_hidden=None
             prefix=PREFIX+f'layers.{layer}';start=len(self.t.measurements);clock=time.perf_counter()
             if prefix_started and layer==0:start=0;clock=start_clock
-            normalized=None if prefix_started and layer==0 else (pre_normalized if pre_normalized is not None else self.norm(hidden,prefix+'.input_layernorm'))
-            terminal_fused=self.fuse_terminal_attention and self.terminal_readout and layer==31
-            if prefix_started and layer==0:attention=first_attention
+            normalized=None if (prefix_started and layer==0 or first_attention is not None and layer==attention_layer) else (pre_normalized if pre_normalized is not None else self.norm(hidden,prefix+'.input_layernorm'))
+            terminal_fused=self.fuse_terminal_attention and self.terminal_readout and layer==31 and not (first_attention is not None and layer==attention_layer)
+            if first_attention is not None and layer==attention_layer:attention=first_attention
             elif terminal_fused:
                 hidden,pre_normalized=self.terminal_attention_mlp(normalized,hidden[-1:],prefix+'.self_attn',layer)
             else:
                 attention=self.attention(normalized,prefix+'.self_attn',layer) if (layer+1)%4==0 else self.delta(normalized,prefix+'.linear_attn',layer)
             if self.terminal_readout and layer==31:hidden=hidden[-1:]
-            tail_active=self.fuse_terminal_tail and layers==32 and layer==30 and len(hidden)<=87
+            tail_active=self.fuse_terminal_tail and layers==32 and layer==30 and len(hidden)<=89
             if tail_active:
                 layer_hidden,hidden,pre_normalized=self.terminal_tail(hidden,attention);tail_done=True
             elif terminal_fused:pass
@@ -514,7 +533,10 @@ class TextGraph:
                     else:hidden,pre_normalized=self.add_norm(hidden,mlp,norm_name)
                 else:hidden=self.pair('add_bf16',hidden,mlp)
             recorded=layer_hidden if tail_active else hidden
-            np.save(self.t.directory/f'layer-{layer:02d}.npy',recorded if self.terminal_readout and layer==31 else self.recorded_hidden(recorded,layer))
+            hidden_path=self.t.directory/f'layer-{layer:02d}.npy'
+            if recorded is not None:np.save(hidden_path,recorded if self.terminal_readout and layer==31 else self.recorded_hidden(recorded,layer))
+            else:hidden_path.unlink(missing_ok=True)
             queries=self.t.measurements[start:];record=dict(layer=layer,kind='full_attention' if (layer+1)%4==0 else 'delta',queries=len(queries),instructions=sum(q['ok']['instructions'] for q in queries),candid_bytes=sum(q['ok']['request_bytes']+q['ok']['reply_bytes'] for q in queries),wall_seconds=time.perf_counter()-clock,replayed=sum(bool(q.get('replayed')) for q in queries))
+            if tail_active:record['hidden_exported']=False
             self.layers.append(record);atomic(self.t.directory/'layers.json',(json.dumps(self.layers,indent=2)+'\n').encode());print(json.dumps(record),flush=True)
         return (pre_normalized if self.fuse_add_norm else self.norm(hidden,PREFIX+'norm')) if layers==32 else hidden

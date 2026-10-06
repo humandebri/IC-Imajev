@@ -1,0 +1,75 @@
+{
+  "repository": "onicai/llama_cpp_onicai_fork",
+  "commit": "91c63a2284ff99c5761a27c3865b312fb8eca148",
+  "review_date": "2026-10-05",
+  "files": {
+    "ggml/src/ggml-cpu/quants.c": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_onicai_fork/91c63a2284ff99c5761a27c3865b312fb8eca148/ggml/src/ggml-cpu/quants.c",
+      "sha256": "a61f1011e49d05b5f99d352b158d5b8e36cf008294bb0db309f72bdd7f1d4e35"
+    },
+    "ggml/src/ggml-cpu/quants.h": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_onicai_fork/91c63a2284ff99c5761a27c3865b312fb8eca148/ggml/src/ggml-cpu/quants.h",
+      "sha256": "918d6755b3e601ec7bb83c7dbf1d73304490651ccbb4072b0d31a2b45df751da"
+    },
+    "ggml/src/ggml-cpu/vec.cpp": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_onicai_fork/91c63a2284ff99c5761a27c3865b312fb8eca148/ggml/src/ggml-cpu/vec.cpp",
+      "sha256": "cda0babb53f9c8ff1faa7459b2c49019d15e5970dfe0c613d58e2659e919f524"
+    },
+    "ggml/src/ggml-cpu/ggml-cpu.c": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_onicai_fork/91c63a2284ff99c5761a27c3865b312fb8eca148/ggml/src/ggml-cpu/ggml-cpu.c",
+      "sha256": "f2abcaf7f627a2d8a4b7744a7128b210dad0d147fc92cb94ce9cbaed2945e84a"
+    },
+    "ggml/src/ggml-cpu/ggml-cpu.cpp": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_onicai_fork/91c63a2284ff99c5761a27c3865b312fb8eca148/ggml/src/ggml-cpu/ggml-cpu.cpp",
+      "sha256": "64106fce17e76e5bfa121c12215ba06bb33bf15051b382edd749e5c909c4d710"
+    },
+    "ggml/src/ggml-common.h": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_onicai_fork/91c63a2284ff99c5761a27c3865b312fb8eca148/ggml/src/ggml-common.h",
+      "sha256": "af255601767325f087313fa84b9435cb77aeec37df6b61b98d9ecc65f29fb4a0"
+    },
+    "ggml/src/ggml-impl.h": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_onicai_fork/91c63a2284ff99c5761a27c3865b312fb8eca148/ggml/src/ggml-impl.h",
+      "sha256": "2ed56e264202906d107e26d08eabb242d3107b026ebfb78096fa1e5f94bdbbb8"
+    },
+    "ggml/include/ggml.h": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_onicai_fork/91c63a2284ff99c5761a27c3865b312fb8eca148/ggml/include/ggml.h",
+      "sha256": "c65c30fdb4dce95eac71c26bb38ae8423fbc80d79db91d2b2ffaea8c4e46276a"
+    },
+    "ggml/src/ggml-quants.h": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_onicai_fork/91c63a2284ff99c5761a27c3865b312fb8eca148/ggml/src/ggml-quants.h",
+      "sha256": "28ae5fca1f3be636b36cd6c4fa2ca74fd42d229bfbd5352eaf66f3727bb8a6da"
+    },
+    "src/llama-context.cpp": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_onicai_fork/91c63a2284ff99c5761a27c3865b312fb8eca148/src/llama-context.cpp",
+      "sha256": "fbc37d6db0f226f0c79d5247cbb699a2f405955b47988d457958b8c8ab0f771a"
+    },
+    "src/llama-graph.cpp": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_onicai_fork/91c63a2284ff99c5761a27c3865b312fb8eca148/src/llama-graph.cpp",
+      "sha256": "fc5037613eee32a4912ebbaef0489dc1936eed6eccf01c192e922f8b6a77a5e5"
+    },
+    "ggml/src/ggml-backend.cpp": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_onicai_fork/91c63a2284ff99c5761a27c3865b312fb8eca148/ggml/src/ggml-backend.cpp",
+      "sha256": "6c72d9edb09f14c22c3b3a9948193b4884d64922cd8b7dbc2578dfa35cb39c89"
+    },
+    "ggml/src/ggml-cpu/arch/wasm/quants.c": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_onicai_fork/91c63a2284ff99c5761a27c3865b312fb8eca148/ggml/src/ggml-cpu/arch/wasm/quants.c",
+      "sha256": "e601d1da188e63bfea901dca212ed87098cc505361c806e3c63619c19e179e2a"
+    },
+    "ggml/src/ggml-cpu/CMakeLists.txt": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_onicai_fork/91c63a2284ff99c5761a27c3865b312fb8eca148/ggml/src/ggml-cpu/CMakeLists.txt",
+      "sha256": "8f540fdf899f1de3e9b08b2768c8546a9416794a9b290615d50bbec80f5fc84c"
+    },
+    "ggml/src/ggml-cpu/ggml-cpu-impl.h": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_onicai_fork/91c63a2284ff99c5761a27c3865b312fb8eca148/ggml/src/ggml-cpu/ggml-cpu-impl.h",
+      "sha256": "e7008069e3e46f1db5e3d2eaafb4ddec3c7d0ece5c0454f99c5a8e33a50f20ba"
+    },
+    "LICENSE": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_onicai_fork/91c63a2284ff99c5761a27c3865b312fb8eca148/LICENSE",
+      "sha256": "94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d"
+    },
+    "ggml/src/ggml-cpu/simd-mappings.h": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_onicai_fork/91c63a2284ff99c5761a27c3865b312fb8eca148/ggml/src/ggml-cpu/simd-mappings.h",
+      "sha256": "c8371bfb028ccee0e5af76bf47a9ae1d029b38cfda35fa6f0ee1358d63428737"
+    }
+  }
+}

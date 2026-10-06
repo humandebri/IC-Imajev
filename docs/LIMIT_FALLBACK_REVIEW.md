@@ -1,0 +1,23 @@
+# 通信上限と判断出力のレビュー修正
+
+2026-10-05。50query経路の通信量はcarryの圧縮率に依存する。トークン数だけで上限内を保証できないため、送信前frame上限超過または通常queryの命令上限超過で、別の`standard-fallback/` journalへ標準経路を再実行する。元のcheckpoint、失敗要求、失敗ログは保存する。timeout、型違い、checkpoint不一致などは切替対象にしない。
+
+`fallback.json`を原子的に保存する。再開時はsessionと起動コマンドの一致を確認し、失敗した実験要求を繰り返さず標準経路のcheckpointから再開する。標準経路も失敗した場合はエラーとして停止し、成功とは報告しない。成功成果物の場所は親reportの`successful_run_directory`に明記する。親の`queries/`は失敗した実験経路であり、完成した標準経路のexportと混ぜない。
+
+親reportのquery件数には、実験経路の成功要求・命令上限で失敗した要求・標準経路を含む。送信前frame超過はqueryに数えない。canisterが失敗した要求の命令counter/Candid通信量を返さない場合、`total_instructions`と`total_candid_bytes`はnullにする。計測できた成功分は`successful_query_instructions`と`successful_query_candid_bytes`、未計測件数は`unmeasured_failed_queries`として別に記録する。失敗要求のframe bytesはCandid通信量と区別する。
+
+これは入力から再実行する復旧方式なので、切替時は50queryを超え、既に完了した計算も再実行する。carryから追加分割して継続する方式は後続の最適化で、この修正には含まない。通常queryとクライアント保持の構成は維持する。標準経路も任意の入力に対する完走保証を得たものではない。
+
+判断出力は`client/decision_validation.py`で、新規の融合返信・checkpoint再利用・単独readoutのすべてを検査する。選択肢と確率の件数、有限性、0〜1範囲、確率和、logits件数と有限性、value/abstainedの型と整合性、calibration識別子、命令counterの型を検査する。違反すると成功reportを生成しない。checksumはローカルcheckpointの真正性を保証するものではなく、このvalidatorも判断精度の正しさを証明するものではない。
+
+テストは不正な確率・NaN・欠損logits・型違い・calibration違いと、不正なcheckpoint判断の再利用拒否を含む。切替テストは送信前超過/命令上限超過の集計、証拠保存、resume、session不一致、通常エラーの非切替を検証する。
+
+標準回帰`artifacts/review-fallback/full-proof-v1`はprefix準備、codec、通常prefix続行、hybrid続行の主・情報不足・最大変更、prefix未使用の通常推論を比較し、すべて採用INT8のhidden/state/専用判断とbit一致した。検証時のソース92ファイルをarchiveした。Wasmは既存`ce7b024c…`のままでupgrade/updateは行わない（prefix準備も通常query）。
+
+validatorの追加テストには、abstain出力のvalue欠落と巨大整数の拒否も含む。CLIは引数名の省略を受け付けず、切替時に実験flagの省略形が残らないようにする。
+
+通常経路の最終3条件回帰`artifacts/review-fallback/tail-proof-v1`は50 / 50 / 62queryでbit一致し、命令数・通信量も修正前と同一。validatorはモデル演算や量子化を変更しない。
+
+実上限試験はMLP28 frontを8192行にして、主問題のquery45でIC0522を起こす。`scripts/check_limit_fallback.py`は別journalへの標準推論の完走、全返却hidden/state/最終判断のbit一致、failed requestの保存、失敗を含む件数集計と再開を確認する。初回は45成功＋1失敗＋62標準＝108query。再開は標準62checkpointの再利用で、新規推論0件だった。上限試験の大きな分割は検証用で、通常の配分は変更しない。
+
+切替前後でmodel・pack・入力hash・Wasm・prefix identity・選択肢順序も照合する。標準経路自身が分割調整で記録した失敗要求も親reportへ集計する。未計測の失敗がある場合、最大query命令数もnullにし、`max_successful_query_instructions`へ計測済み成功分の最大を示す。wall_seconds_this_runには当該起動の実験処理と切替先起動を含む（親のprefix cache初期ロードは除く）。単発の時間を性能向上の根拠にはしない。

@@ -13,7 +13,7 @@ from transport import decode
 def main():
  ap=argparse.ArgumentParser();ap.add_argument('--canister',required=True);ap.add_argument('--directory',default='artifacts/lane-pair/check');a=ap.parse_args()
  d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=True);helper=ROOT/'artifacts/lane-pair/native/release/lane_args';wasm=ROOT/'artifacts/lane-pair/wasm/wasm32-unknown-unknown/release/imajev_lane_pair_bench.wasm';sha=lambda b:hashlib.sha256(b).hexdigest()
- sources=list((ROOT/'scripts/lane_pair_bench/src').rglob('*.rs'))+[ROOT/'scripts/lane_pair_bench/Cargo.toml',ROOT/'scripts/lane_pair_bench/Cargo.lock',ROOT/'scripts/generate_lane_pair.py',pathlib.Path(__file__),ROOT/'crates/imajev-runtime/Cargo.toml',ROOT/'Cargo.toml',ROOT/'Cargo.lock',ROOT/'MODEL_LOCK.json',ROOT/'checkpoints/full-int8.manifest.json',ROOT/'client/transport.py']+list((ROOT/'crates/imajev-runtime/src').glob('*.rs'))
+ sources=list((ROOT/'scripts/lane_pair_bench/src').rglob('*.rs'))+[ROOT/'scripts/lane_pair_bench/Cargo.toml',ROOT/'scripts/lane_pair_bench/Cargo.lock',ROOT/'scripts/generate_lane_pair.py',pathlib.Path(__file__),ROOT/'crates/imajev-runtime/Cargo.toml',ROOT/'Cargo.toml',ROOT/'Cargo.lock',ROOT/'MODEL_LOCK.json',ROOT/'checkpoints/full-int8.manifest.json',ROOT/'client/transport.py']+list((ROOT/'crates/imajev-runtime/src').glob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml']
  hashes={str(p.relative_to(ROOT)):sha(p.read_bytes()) for p in sources}
  def status():return json.loads(subprocess.check_output(['icp','canister','status',a.canister,'--network','local','--identity','imajev-local','--json'],text=True,cwd=ROOT))['module_hash'].removeprefix('0x')
  expected=sha(wasm.read_bytes());assert status()==expected

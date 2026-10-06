@@ -23,6 +23,24 @@ pub struct QuantizedRows {
 // Checked constructors and immutable accessors preserve the
 // validated shape, finite positive scales, and signed [-127,127] lane bounds.
 impl QuantizedRows {
+    /// Put only the newly quantized block-aligned columns in their original
+    /// positions. Other blocks are initialized but never projected again.
+    #[cfg(feature="experimental-int8-k-continue")]
+    pub(crate) fn place_columns(&self,cols:usize,begin:usize)->Result<Self> {
+        if cols==0 || cols>262144 || cols%256!=0 || begin%256!=0
+            || begin.checked_add(self.cols).is_none_or(|end|end>cols)
+            || self.rows.checked_mul(cols).is_none_or(|size|size>crate::MAX_FLOATS) {
+            return Err("continued integer column placement".into());
+        }
+        let padded=self.rows.div_ceil(8)*8;
+        let mut values=vec![0;padded*cols];let mut scales=vec![1.;padded*(cols/256)];
+        for token in 0..self.rows {
+            values[token*cols+begin..token*cols+begin+self.cols].copy_from_slice(&self.values[token*self.cols..(token+1)*self.cols]);
+            scales[token*(cols/256)+begin/256..token*(cols/256)+(begin+self.cols)/256].copy_from_slice(&self.scales[token*(self.cols/256)..(token+1)*(self.cols/256)]);
+        }
+        Ok(Self {strassen:std::cell::OnceCell::new(),values,scales,rows:self.rows,cols,
+            #[cfg(feature="experimental-prepared-output-pairs")] output_pairs:std::cell::OnceCell::new()})
+    }
     #[cfg(feature="experimental-strassen-raw")]
     pub(crate) fn strassen_operands(&self)->&crate::output_pairs::strassen_raw::Operands{self.strassen.get_or_init(||crate::output_pairs::strassen_raw::Operands::new(self))}
     #[cfg(feature = "experimental-projection-reuse")]
@@ -181,7 +199,6 @@ pub fn quantize_rows(x: &[f32], rows: usize, cols: usize) -> Result<QuantizedRow
         || cols == 0
         || cols % 256 != 0
         || rows.checked_mul(cols) != Some(x.len())
-        || !x.iter().all(|v| v.is_finite())
     {
         return Err("integer projection input".into());
     }
@@ -199,12 +216,14 @@ pub fn quantize_rows(x: &[f32], rows: usize, cols: usize) -> Result<QuantizedRow
                 // no initialized destination reference exists before completion.
                 scales[r * (cols / 256) + block] = unsafe {
                     crate::quantize_simd::block(x.as_ptr().add(start), q.as_mut_ptr().add(start))
-                };
+                }?;
             }
             #[cfg(not(target_arch = "wasm32"))]
             {
                 let v = &x[start..start + 256];
-                let max = v.iter().map(|v| v.abs()).fold(0f32, f32::max);
+                let bits = v.iter().map(|v|v.to_bits() & 0x7fffffff).max().unwrap();
+                if bits >= 0x7f800000 {return Err("integer projection input".into());}
+                let max = f32::from_bits(bits);
                 let scale = if max == 0. {
                     1.
                 } else {
@@ -983,6 +1002,23 @@ mod tests {
 #[cfg(test)]
 mod invariant_tests {
     use super::*;
+    #[test]
+    fn peak_scan_matches_old_rounding_and_rejects_late_nonfinite() {
+        for rows in [1,7,8,45,87,89,132] {
+            let cols=512;let mut seed=0x8317a5u32;
+            let x:Vec<f32>=(0..rows*cols).map(|_| {seed=seed.wrapping_mul(1664525).wrapping_add(1013904223);f32::from_bits(seed % 0x7f800000 | (seed&0x80000000))}).collect();
+            let q=quantize_rows(&x,rows,cols).unwrap();
+            for (block,v) in x.chunks_exact(256).enumerate() {
+                let peak=v.iter().map(|v|v.abs()).fold(0f32,f32::max);
+                let scale=if peak==0.{1.}else{(peak/127.).max(f32::from_bits(1))};
+                assert_eq!(q.scales()[block].to_bits(),scale.to_bits());
+                for (i,&value) in v.iter().enumerate(){assert_eq!(q.values()[block*256+i],(value/scale).round_ties_even().clamp(-127.,127.)as i16);}
+            }
+        }
+        for bits in [0x7f800000,0xff800000,0x7f800001,0x7fc00000,0xff800001,0xffffffff] {
+            for at in [0,255,256,511,1535] {let mut x=vec![1.;1536];x[at]=f32::from_bits(bits);assert!(quantize_rows(&x,3,512).is_err());}
+        }
+    }
     #[test]
     fn constructor_preserves_extreme_and_padded_activation_invariants() {
         for rows in [1, 7, 8, 9] {

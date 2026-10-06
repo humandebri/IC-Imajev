@@ -14,7 +14,7 @@ def main():
  d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=True);helper=ROOT/a.helper;wasm=ROOT/a.wasm;sha=lambda b:hashlib.sha256(b).hexdigest()
  source=ROOT/'artifacts/blake3-v1-prefix';raw=(source/'report.json').read_bytes();r=json.loads(raw)
  paths=list((ROOT/'scripts/delta_log_bench/src').rglob('*.rs'))+[ROOT/'scripts/delta_log_bench/Cargo.toml',ROOT/'scripts/delta_log_bench/Cargo.lock',pathlib.Path(__file__),ROOT/'crates/imajev-runtime/src/lib.rs',ROOT/'crates/imajev-runtime/src/delta_simd.rs',ROOT/'Cargo.lock']
- paths += list((ROOT/'crates/imajev-runtime/src').glob('*.rs'))+[ROOT/'Cargo.toml',ROOT/'crates/imajev-runtime/Cargo.toml',ROOT/'client/transport.py',ROOT/'checkpoints/full-int8.manifest.json']
+ paths += list((ROOT/'crates/imajev-runtime/src').glob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml']+[ROOT/'Cargo.toml',ROOT/'crates/imajev-runtime/Cargo.toml',ROOT/'client/transport.py',ROOT/'checkpoints/full-int8.manifest.json']
  hashes={str(p.relative_to(ROOT)):sha(p.read_bytes()) for p in paths}
  def status():return json.loads(subprocess.check_output(['icp','canister','status',a.canister,'--network','local','--identity','imajev-local','--json'],text=True,cwd=ROOT))['module_hash'].removeprefix('0x')
  if a.canister:assert status()==sha(wasm.read_bytes())

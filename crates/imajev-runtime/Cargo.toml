@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 [dependencies]
+inference-core = { path = "../inference-core" }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
@@ -12,6 +13,19 @@ blake3 = { version = "=1.8.2", optional = true, features = ["wasm32_simd"] }
 miniz_oxide = { version = "=0.8.9", optional = true }
 
 [features]
+experimental-single-quad = ["experimental-strassen-raw"]
+experimental-terminal-stream = ["experimental-mlp-attention-finish", "experimental-terminal-attention"]
+experimental-attention-views = []
+experimental-mlp-attention-finish = ["experimental-mlp-delta-fusion", "experimental-attention-full", "experimental-mlp-stream"]
+experimental-prefix-update-hoist = []
+experimental-attention-mlp-stream = ["experimental-mlp-stream", "experimental-attention-full"]
+experimental-mlp-delta-stream = ["experimental-mlp-delta-fusion", "experimental-mlp-stream", "experimental-int8-k-continue", "experimental-delta-state-layout", "experimental-mlp-full89"]
+experimental-int8-k-continue = ["experimental-strassen-raw", "experimental-projection-reuse", "experimental-f32-output-generic"]
+experimental-direct-mlp-reply = ["experimental-mlp-stream"]
+experimental-mlp-half = ["experimental-mlp-stream"]
+experimental-mlp-stream = ["experimental-f32-k-continue", "experimental-mlp-pipeline"]
+experimental-f32-k-continue = ["experimental-f32-output-generic", "experimental-projection-reuse"]
+experimental-host-checksum = []
 experimental-terminal-tail = ["experimental-terminal-attention", "experimental-mlp-full89"]
 experimental-f32-output-generic = ["experimental-f32-output-reuse"]
 experimental-f32-output-reuse = []
@@ -21,6 +35,7 @@ experimental-delta-no-writeback = []
 experimental-prefix-start = ["experimental-prefix-hybrid"]
 experimental-terminal-attention = ["experimental-attention-full"]
 experimental-strassen-raw = ["experimental-pair-wat"]
+experimental-strassen-output128 = ["experimental-strassen-raw"]
 experimental-pair-direct-input = ["experimental-pair-wat"]
 experimental-paired-only = ["experimental-prepared-output-pairs"]
 experimental-pair-wat = ["experimental-prepared-output-pairs"]

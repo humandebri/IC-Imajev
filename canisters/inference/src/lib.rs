@@ -1,9 +1,25 @@
 use candid::{CandidType, Principal};
-use imajev_runtime::{decode, encode, Manifest};
+use imajev_runtime::Manifest;
+#[cfg(feature="experimental-host-checksum")]
+use imajev_runtime::{decode_signed_input as decode,encode_signed_reply as encode};
+#[cfg(not(feature="experimental-host-checksum"))]
+use imajev_runtime::{decode,encode};
+#[cfg(all(feature="experimental-projection-reuse",feature="experimental-host-checksum"))]
+use imajev_runtime::decode_signed_query as decode_query;
+#[cfg(all(feature="experimental-projection-reuse",not(feature="experimental-host-checksum")))]
+use imajev_runtime::decode_query;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::cell::RefCell;
 mod weight_cache;
+#[cfg(feature="experimental-mlp-delta-query")]
+mod query_mlp_delta;
+#[cfg(feature="experimental-mlp-delta-query")]
+use query_mlp_delta::MlpDeltaMeasurement;
+#[cfg(feature="experimental-update-inference")]
+mod update_inference;
+#[cfg(feature="experimental-update-inference")]
+use update_inference::UpdateProgress;
 #[derive(Default)]
 struct Store {
     owner: Option<Principal>,
@@ -260,7 +276,7 @@ fn step(state: StateBytes) -> std::result::Result<Measurement, String> {
     owner();
     let start = ic_cdk::api::performance_counter(0u32);
     #[cfg(feature = "experimental-projection-reuse")]
-    let (mut r, input) = imajev_runtime::decode_query(&state)?;
+    let (mut r, input) = decode_query(&state)?;
     #[cfg(feature = "experimental-projection-reuse")]
     let (y, read) = evaluate_decoded(&r, input)?;
     #[cfg(not(feature = "experimental-projection-reuse"))]
@@ -268,6 +284,9 @@ fn step(state: StateBytes) -> std::result::Result<Measurement, String> {
     #[cfg(not(feature = "experimental-projection-reuse"))]
     let (y, read) = evaluate(&r, &x)?;
     r.step = r.step.checked_add(1).ok_or("progress overflow")?;
+    #[cfg(feature="experimental-projection-reuse")]
+    let state = y.encode(&r,cfg!(feature="experimental-host-checksum"))?;
+    #[cfg(not(feature="experimental-projection-reuse"))]
     let state = encode(&r, &y)?;
     #[cfg(target_arch = "wasm32")]
     let heap_pages = core::arch::wasm32::memory_size(0) as u64;
@@ -296,7 +315,7 @@ fn profile_step(state: StateBytes) -> std::result::Result<ProfileMeasurement, St
     let result = (|| {
         let start = ic_cdk::api::performance_counter(0);
         #[cfg(feature = "experimental-projection-reuse")]
-        let (mut r, input) = imajev_runtime::profile::measure("wire_decode", || imajev_runtime::decode_query(&state))?;
+        let (mut r, input) = imajev_runtime::profile::measure("wire_decode", || decode_query(&state))?;
         #[cfg(feature = "experimental-projection-reuse")]
         let (y, read) = imajev_runtime::profile::measure("evaluate_inclusive", || evaluate_decoded(&r, input))?;
         #[cfg(not(feature = "experimental-projection-reuse"))]
@@ -305,6 +324,9 @@ fn profile_step(state: StateBytes) -> std::result::Result<ProfileMeasurement, St
         let (y, read) =
             imajev_runtime::profile::measure("evaluate_inclusive", || evaluate(&r, &x))?;
         r.step = r.step.checked_add(1).ok_or("progress overflow")?;
+        #[cfg(feature="experimental-projection-reuse")]
+        let state = imajev_runtime::profile::measure("wire_encode", || y.encode(&r,cfg!(feature="experimental-host-checksum")))?;
+        #[cfg(not(feature="experimental-projection-reuse"))]
         let state = imajev_runtime::profile::measure("wire_encode", || encode(&r, &y))?;
         #[cfg(target_arch = "wasm32")]
         let heap_pages = core::arch::wasm32::memory_size(0) as u64;
@@ -322,14 +344,14 @@ fn profile_step(state: StateBytes) -> std::result::Result<ProfileMeasurement, St
     result.map(|measurement| ProfileMeasurement { measurement, spans })
 }
 #[cfg(feature = "experimental-projection-reuse")]
-fn evaluate_decoded(r:&imajev_runtime::Request,input:imajev_runtime::DecodedQueryInput)->std::result::Result<(Vec<f32>,u64),String> {
-    if let imajev_runtime::DecodedQueryInput::Values(x)=input {return evaluate(r,&x);}
+fn evaluate_decoded(r:&imajev_runtime::Request,input:imajev_runtime::DecodedQueryInput)->std::result::Result<(imajev_runtime::EvaluatedReply,u64),String> {
+    if let imajev_runtime::DecodedQueryInput::Values(x)=input {return evaluate(r,&x).map(|(v,b)|(imajev_runtime::EvaluatedReply::Values(v),b));}
     STORE.with(|s| {
         let s=s.borrow();
         if !s.ready {return Err("not ready".into());}
         let m=s.manifest.as_ref().ok_or("missing manifest")?;
         let mut physical_read_bytes=0u64;
-        let (output,_)=imajev_runtime::evaluate_owned_decoded_with_prepared_buffer(r,input,m,|offset,len| {
+        let (output,_)=imajev_runtime::evaluate_owned_reply_with_prepared_buffer(r,input,m,|offset,len| {
             if offset.checked_add(len as u64).is_none_or(|end| end>m.bytes) {return Err("weight read range".into());}
             if let Some(bytes)=s.weight_cache.read(offset,len) {return Ok(bytes);}
             let mut bytes=vec![0;len];
@@ -381,10 +403,25 @@ struct TerminalDecisionMeasurement {
     decision: ChoiceResult,
 }
 fn validate_terminal_decision(r: &imajev_runtime::Request, options: &[String]) -> Result<(), String> {
+    if r.op == "mlp_stream_complete_terminal" {
+        let step = if cfg!(feature="experimental-mlp-half") {128} else {256};
+        if !cfg!(feature="experimental-terminal-stream")
+            || r.tensor != "model.language_model.layers.30.post_attention_layernorm.weight"
+            || r.encoding != "mlp-attention-finish-exact-v1"
+            || r.dims.len() != 3 || !(1..=89).contains(&r.dims[0])
+            || r.dims[1] > 132 || r.dims[2] == 0 || r.dims[2] >= 9216 || r.dims[2] % step != 0
+            || r.aux != ["model.language_model.layers.31.input_layernorm.weight"]
+            || r.scalars.len() != 2 || r.scalars[0].to_bits() != 2f32.to_bits()
+            || r.scalars[1].to_bits() != 1e-6f32.to_bits() || r.step == u64::MAX {
+            return Err("terminal stream decision metadata".into());
+        }
+        imajev_runtime::decide_candidates(options,&vec![0.;options.len().min(7)+1],1.3051569717552742)?;
+        return Ok(());
+    }
     let tail=r.op=="terminal_tail_integer" && cfg!(feature="experimental-terminal-tail");
     if !(r.op=="terminal_attention_mlp_integer" || tail)
         || r.tensor != if tail {"model.language_model.layers.30.post_attention_layernorm.weight"}else{"model.language_model.layers.31.self_attn.q_proj.weight"}
-        || r.dims.len() != 2 || !(1..=if tail{89}else{132}).contains(&r.dims[0])
+        || !(r.dims.len()==2 || (tail && r.dims.len()==3 && r.dims[2]==0)) || !(1..=if tail{89}else{132}).contains(&r.dims[0])
         || r.dims[1] > 512 || r.dims[0] + r.dims[1] > 512
         || !r.aux.is_empty() || !r.scalars.is_empty()
         || !matches!(r.encoding.as_str(), "bf16-exact" | "bf16-block256-exact-v1")
@@ -401,15 +438,17 @@ fn terminal_step_decision(state: StateBytes, options: Vec<String>) -> Result<Ter
     let start = ic_cdk::api::performance_counter(0);
     if !cfg!(feature="experimental-terminal-attention") {return Err("terminal attention feature is disabled".into());}
     #[cfg(feature="experimental-projection-reuse")]
-    let(mut r,input)=imajev_runtime::decode_query(&state)?;
+    let(mut r,input)=decode_query(&state)?;
     #[cfg(not(feature="experimental-projection-reuse"))]
     let(mut r,x)=decode(&state)?;
     validate_terminal_decision(&r, &options)?;
     #[cfg(feature="experimental-projection-reuse")]
     let(y,mut read)=evaluate_decoded(&r,input)?;
+    #[cfg(feature="experimental-projection-reuse")]
+    let y=y.into_values()?;
     #[cfg(not(feature="experimental-projection-reuse"))]
     let(y,mut read)=evaluate(&r,&x)?;
-    let offset=if r.op=="terminal_tail_integer" {r.dims[0]*2560}else{0};
+    let offset=if r.op=="terminal_tail_integer" && r.dims.len()==2 {r.dims[0]*2560}else{0};
     if y.len() != offset + 5120 + r.dims[0]*2048 {return Err("terminal decision output shape".into());}
     let decision_start = ic_cdk::api::performance_counter(0);
     let mut dr = r.clone();
@@ -461,7 +500,7 @@ fn decision_fast(
         calibration_version: "p3-r2-s000291-authored".into(),
     })
 }
-#[derive(CandidType, Deserialize)]
+#[derive(CandidType, Deserialize, Clone)]
 struct ChoiceResult {
     value: Option<String>,
     probabilities: Vec<f32>,
@@ -473,6 +512,7 @@ struct ChoiceResult {
 }
 #[ic_cdk::query]
 fn decision(state: StateBytes, options: Vec<String>) -> std::result::Result<ChoiceResult, String> {
+    owner();
     let (r, x) = decode(&state)?;
     if r.op != "matmul"
         || !matches!(r.tensor.as_str(), "readout-f32" | "readout-int8")
@@ -669,6 +709,32 @@ mod terminal_decision_tests {
         assert_eq!(validate_terminal_decision(&r,&options).is_ok(),cfg!(feature="experimental-terminal-tail"));
         r.dims[0]=90;assert!(validate_terminal_decision(&r,&options).is_err());
         r.dims[0]=87;r.tensor="model.language_model.layers.31.self_attn.q_proj.weight".into();assert!(validate_terminal_decision(&r,&options).is_err());
+    }
+    #[test]
+    fn stream_decision_checks_progress_scope_and_options() {
+        if cfg!(feature="experimental-mlp-attention-finish") {
+            assert!(cfg!(feature="experimental-projection-reuse"), "bridge requests require the typed query decoder");
+        }
+        let mut r=request();r.op="mlp_stream_complete_terminal".into();
+        r.tensor="model.language_model.layers.30.post_attention_layernorm.weight".into();
+        r.encoding="mlp-attention-finish-exact-v1".into();r.dims=vec![87,45,2560];
+        r.scalars=vec![2.,1e-6];r.aux=vec!["model.language_model.layers.31.input_layernorm.weight".into()];
+        let options=vec!["yes".into(),"no".into()];
+        assert_eq!(validate_terminal_decision(&r,&options).is_ok(),cfg!(feature="experimental-terminal-stream"));
+        for dims in [vec![],vec![87,45],vec![0,45,2560],vec![90,45,2560],vec![87,133,2560],vec![87,45,0],vec![87,45,9216],vec![87,45,1]] {
+            let mut invalid=r.clone();invalid.dims=dims;assert!(validate_terminal_decision(&invalid,&options).is_err());
+        }
+        for field in ["tensor","encoding","aux","scalars","step"] {
+            let mut invalid=r.clone();match field {
+                "tensor"=>invalid.tensor="model.language_model.layers.26.post_attention_layernorm.weight".into(),
+                "encoding"=>invalid.encoding="bf16-block256-exact-v1".into(),
+                "aux"=>invalid.aux.clear(),"scalars"=>invalid.scalars[1]=f32::NAN,
+                _=>invalid.step=u64::MAX,
+            };assert!(validate_terminal_decision(&invalid,&options).is_err());
+        }
+        for options in [vec![],vec!["yes".into()],vec!["yes".into(),"yes".into()],vec!["__unknown__".into(),"no".into()]] {
+            assert!(validate_terminal_decision(&r,&options).is_err());
+        }
     }
     #[test]
     fn fused_decision_contract_rejects_wrong_stage_and_options_before_inference() {

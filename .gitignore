@@ -15,6 +15,7 @@ __pycache__/
 
 # Generated measurements and exported interfaces (keep Markdown reports and input fixtures).
 /docs/*.json
+/docs/**/*-results.json
 /benchmarks/laya_baseline.json
 /canisters/inference/inference.did
 
@@ -23,10 +24,14 @@ __pycache__/
 *.bin
 *.npy
 *.npz
+*.bf16
+*.reply.hex
 *.pack
 *.safetensors
 *.log
 *.part
+*.pending
+*.tmp
 
 # Build outputs for standalone benchmark and Wasm inspection crates.
 /scripts/**/target/

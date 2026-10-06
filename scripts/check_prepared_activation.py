@@ -25,7 +25,7 @@ def main():
     helper = ROOT / 'artifacts/prepared-activation/native/release/activation_args'
     wasm = ROOT / 'artifacts/prepared-activation/wasm/wasm32-unknown-unknown/release/imajev_activation_bench.wasm'
     sha = lambda b: hashlib.sha256(b).hexdigest()
-    paths = sorted(set(list((ROOT / 'crates/imajev-runtime/src').rglob('*.rs')) +
+    paths = sorted(set(list((ROOT / 'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml'] +
                        list((ROOT / 'scripts/activation_bench').rglob('*.rs')) +
                        [ROOT / 'crates/imajev-runtime/Cargo.toml', ROOT / 'Cargo.lock',
                         ROOT / 'scripts/activation_bench/Cargo.toml',

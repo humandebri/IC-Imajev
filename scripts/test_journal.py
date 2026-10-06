@@ -35,6 +35,17 @@ class JournalTests(unittest.TestCase):
     def test_reply_without_metric_is_safely_requeried(self):
         with tempfile.TemporaryDirectory(prefix='imajev-journal-') as name:
             path=pathlib.Path(name);first=FakeJournal(path);first.run('bf16',[1.,2.]);(path/'000000.metric.json').unlink();resumed=FakeJournal(path);resumed.run('bf16',[1.,2.]);self.assertEqual(resumed.calls,1)
+    def test_missing_request_cannot_replay_different_values(self):
+        with tempfile.TemporaryDirectory(prefix='imajev-journal-') as name:
+            path=pathlib.Path(name);FakeJournal(path).run('bf16',[1.,2.]);(path/'000000.request.bin').unlink();resumed=FakeJournal(path)
+            with self.assertRaisesRegex(ValueError,'no matching request'):resumed.run('bf16',[3.,4.])
+            self.assertEqual(resumed.calls,0);self.assertEqual(resumed.index,0)
+    def test_metric_from_another_query_cannot_be_replayed(self):
+        for field,value in [('index',1),('op','embed'),('tensor','other')]:
+            with self.subTest(field=field),tempfile.TemporaryDirectory(prefix='imajev-journal-') as name:
+                path=pathlib.Path(name);FakeJournal(path).run('bf16',[1.,2.]);metric=path/'000000.metric.json';saved=json.loads(metric.read_text());saved[field]=value;metric.write_text(json.dumps(saved));resumed=FakeJournal(path)
+                with self.assertRaisesRegex(ValueError,'metric identity'):resumed.run('bf16',[1.,2.])
+                self.assertEqual(resumed.calls,0);self.assertEqual(resumed.index,0)
     def test_projection_limit_retries_and_remembers_width_on_resume(self):
         with tempfile.TemporaryDirectory(prefix='imajev-journal-') as name:
             path=pathlib.Path(name);x=np.arange(35,dtype=np.float32).reshape(7,5)

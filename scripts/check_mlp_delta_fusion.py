@@ -16,7 +16,7 @@ assert 0<a.partial_rows<2560 and a.partial_rows%32==0
 rows=a.partial_rows;extra=[]if rows==256 else[rows]
 d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=True);source=ROOT/'artifacts/mlp-pipeline-v1-617';raw_report=(source/'report.json').read_bytes();report=json.loads(raw_report);prefix=ROOT/'artifacts/prefix_codec/full-state-layout-proof/prefix';prefix_report=json.loads((prefix/'report.json').read_bytes());sha=lambda b:hashlib.sha256(b).hexdigest()
 for field in ['model','pack_hash']:assert report[field]==prefix_report[field]
-paths=list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'client').glob('*.py'))+list((ROOT/'canisters/inference/src').rglob('*.rs'))+[ROOT/p for p in ['Cargo.toml','Cargo.lock','crates/imajev-runtime/Cargo.toml','canisters/inference/Cargo.toml','MODEL_LOCK.json','checkpoints/full-int8.manifest.json','crates/imajev-runtime/tests/mlp_delta_carry_identity.rs']]+[pathlib.Path(__file__)]
+paths=list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml']+list((ROOT/'client').glob('*.py'))+list((ROOT/'canisters/inference/src').rglob('*.rs'))+[ROOT/p for p in ['Cargo.toml','Cargo.lock','crates/imajev-runtime/Cargo.toml','canisters/inference/Cargo.toml','MODEL_LOCK.json','checkpoints/full-int8.manifest.json','crates/imajev-runtime/tests/mlp_delta_carry_identity.rs']]+[pathlib.Path(__file__)]
 hashes={str(p.relative_to(ROOT)):sha(p.read_bytes())for p in paths};wasm=sha((ROOT/a.wasm).read_bytes());t=Transport(report['model'],'http://localhost:8001/',a.canister,str(ROOT/'artifacts/imajev-local.pem'),d,report['pack_hash']);cases=[];query_count=0
 try:
  verify_module(t,wasm)

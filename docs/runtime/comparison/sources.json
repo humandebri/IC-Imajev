@@ -1,0 +1,37 @@
+{
+  "repository": "https://github.com/onicai/llama_cpp_canister",
+  "commit": "e987fca5ff91dbff3026a1ac5ff44cb372039212",
+  "commit_date": "2026-09-22T16:50:56Z",
+  "review_date": "2026-10-05",
+  "files": {
+    "README.md": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_canister/e987fca5ff91dbff3026a1ac5ff44cb372039212/README.md",
+      "sha256": "67be8e664a6f9699a657012aa1a0b5ec75a6c80c5214c00010f308227a61de97"
+    },
+    "README-qwen3-1.7B.md": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_canister/e987fca5ff91dbff3026a1ac5ff44cb372039212/README-qwen3-1.7B.md",
+      "sha256": "bc9c141e9c59aae3c993f81ea1c3d555288c8511decc11f9d1e70d419625bd22"
+    },
+    "version_fork.env": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_canister/e987fca5ff91dbff3026a1ac5ff44cb372039212/version_fork.env",
+      "sha256": "61f758cba664897b77d3d62d10dad64b9ccfb040bf77c67a74ba74fb7808b703"
+    },
+    "src/main_.cpp": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_canister/e987fca5ff91dbff3026a1ac5ff44cb372039212/src/main_.cpp",
+      "sha256": "4d918e70c264900ba5bb1bd95e1559357e27bab29f6cd3d24c39013b9dcf406b"
+    },
+    "src/llama_cpp.did": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_canister/e987fca5ff91dbff3026a1ac5ff44cb372039212/src/llama_cpp.did",
+      "sha256": "3c9184cd8c0aeb3cbfe2df8ae7a14d7c53bad10f66b3f327f211cd0a4393cbbf"
+    },
+    "icpp.toml": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_canister/e987fca5ff91dbff3026a1ac5ff44cb372039212/icpp.toml",
+      "sha256": "8ff05c9c3c102919da32b7f970e86b279d196de54d4dad740505cc4880ac0836"
+    },
+    "LICENSE": {
+      "url": "https://raw.githubusercontent.com/onicai/llama_cpp_canister/e987fca5ff91dbff3026a1ac5ff44cb372039212/LICENSE",
+      "sha256": "8dd39f0472931f7fb7ad7d59f90868c86593fb17bce57cff36b32062c5da32ca"
+    }
+  },
+  "scope": "Read-only source review; no external canister calls or performance benchmark."
+}
