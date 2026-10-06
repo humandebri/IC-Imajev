@@ -12,7 +12,7 @@ ap=argparse.ArgumentParser(description=__doc__)
 for name in ['canister','wasm','directory']:ap.add_argument('--'+name,required=True)
 ap.add_argument('--q4',action='store_true');ap.add_argument('--cases',default='617,insufficient,maximum');ap.add_argument('--layers',default='2');ap.add_argument('--front',type=int,default=1024);ap.add_argument('--begins',default='4096,4352,4608,4864,5120');a=ap.parse_args()
 d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=True);assert not(d/'report.json').exists();sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();m=json.loads((ROOT/'checkpoints/full-int8.manifest.json').read_text());module=sha(ROOT/a.wasm)
-paths=list((ROOT/'client').glob('*.py'))+list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+[pathlib.Path(__file__)];hashes={str(p.relative_to(ROOT)):sha(p)for p in paths}
+paths=list((ROOT/'client').glob('*.py'))+list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml']+[pathlib.Path(__file__)];hashes={str(p.relative_to(ROOT)):sha(p)for p in paths}
 t=Transport(m['model'],'http://localhost:8001/',a.canister,str(ROOT/'artifacts/imajev-local.pem'),d,m['pack_hash'],wire_codec=MLP_NAME,frame_version=3);cases=[]
 def query(root,report,op,layer):
  q=next(q for q in report['queries']if q['op']==op and f'.layers.{layer}.'in q['tensor']);request=root/'queries'/f"{q['index']:06d}.request.bin";response=root/'queries'/f"{q['index']:06d}.response.bin";h,x=decode(request.read_bytes());_,expected=decode(response.read_bytes());return h,x,expected,request,response

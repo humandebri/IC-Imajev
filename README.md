@@ -1,3 +1,5 @@
+[ランタイムと再利用知見](docs/runtime/README.md)：共通crate、命名、モデルとの境界、llama_cpp_canister比較を整理。
+
 [計算量削減の手段まとめ](docs/COMPUTE_REDUCTION.md)：削減した処理、実測効果、準備費用、採用・未採用の状況を一覧化。
 
 2026-10-03最新：固定INT8配置を準備updateで置換し、query内の入力変換を共有。分割queryの8行境界でも元byteへ読み戻さず、全5条件で保持hidden/state/判断/確率が一致、失敗/replay0。主65.21億handler命令（2.3933%）減、全条件2.39〜7.78%減。主67/初回133 query・通信量は同じ、50/32未達。cache容量は同じ4.065 GB、一度の準備は609.94億命令へ増加。単回時間は主・prefixなし等で悪化し速度改善は未確認。採用module36c04a57…、build時`experimental-prepared-output-pairs`、準備・検証時`--require-output-pairs`を追加。 [実装・全5条件実測](docs/OUTPUT_PAIRS.md)。

@@ -324,10 +324,15 @@ version = "0.1.0"
 dependencies = [
  "candid",
  "ic-cdk",
+ "inference-core",
  "serde",
  "serde_json",
  "sha2",
 ]
+
+[[package]]
+name = "inference-core"
+version = "0.1.0"
 
 [[package]]
 name = "itoa"

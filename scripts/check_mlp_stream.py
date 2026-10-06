@@ -14,7 +14,7 @@ ap.add_argument('--complete',action='store_true',help='Fuse last chunk and finis
 ap.add_argument('--source-case',choices=['617','insufficient','maximum'],default='617')
 a=ap.parse_args();d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=True);sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();wasm=sha(ROOT/a.wasm)
 references={};source=ROOT/'artifacts/prefix_codec/full-capture-prepared-proof'/a.source_case;report=read_report(source/'report.json',ROOT,references);m=json.loads((ROOT/'checkpoints/full-int8.manifest.json').read_bytes())
-paths=list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'canisters/inference/src').rglob('*.rs'))+list((ROOT/'client').glob('*.py'))+[pathlib.Path(__file__),ROOT/'scripts/proof_inputs.py',ROOT/'crates/imajev-runtime/Cargo.toml',ROOT/'canisters/inference/Cargo.toml',ROOT/'MODEL_LOCK.json',ROOT/'Cargo.lock',ROOT/'checkpoints/full-int8.manifest.json'];hashes={str(p.relative_to(ROOT)):sha(p)for p in paths};cases=[]
+paths=list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml']+list((ROOT/'canisters/inference/src').rglob('*.rs'))+list((ROOT/'client').glob('*.py'))+[pathlib.Path(__file__),ROOT/'scripts/proof_inputs.py',ROOT/'crates/imajev-runtime/Cargo.toml',ROOT/'canisters/inference/Cargo.toml',ROOT/'MODEL_LOCK.json',ROOT/'Cargo.lock',ROOT/'checkpoints/full-int8.manifest.json'];hashes={str(p.relative_to(ROOT)):sha(p)for p in paths};cases=[]
 t=Transport(m['model'],'http://localhost:8001/',a.canister,str(ROOT/'artifacts/imajev-local.pem'),d,m['pack_hash'],wire_codec=NAME,frame_version=3)
 try:
  verify_module(t,wasm)

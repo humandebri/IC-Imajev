@@ -1,8 +1,8 @@
 //! Same-module old finite+codec passes versus checked streaming codec.
 use candid::{CandidType,Principal};use serde::{Deserialize,Serialize};use sha2::{Digest,Sha256};use std::cell::Cell;
 pub type Result<T>=std::result::Result<T,String>;pub const MAX_FLOATS:usize=900_000;
-#[path="../../../crates/imajev-runtime/src/bf16_codec.rs"]pub mod bf16_codec;
-#[path="../../../crates/imajev-runtime/src/block_codec.rs"]pub mod block_codec;
+pub use inference_core::bf16 as bf16_codec;
+pub use inference_core::block256 as block_codec;
 mod old_block;
 thread_local!{static OWNER:Cell<Option<Principal>>=const{Cell::new(None)};}
 #[ic_cdk::init]fn init(owner:Principal){assert_ne!(owner,Principal::anonymous());OWNER.with(|o|o.set(Some(owner)));}

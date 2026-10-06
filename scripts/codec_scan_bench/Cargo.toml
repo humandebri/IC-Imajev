@@ -6,6 +6,7 @@ edition="2021"
 [lib]
 crate-type=["cdylib","rlib"]
 [dependencies]
+inference-core={path="../../crates/inference-core"}
 ic-cdk="=0.20.3"
 candid="=0.10.35"
 serde={version="1",features=["derive"]}

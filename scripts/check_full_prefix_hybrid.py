@@ -34,7 +34,7 @@ def main():
     directory.mkdir(parents=True, exist_ok=True)
     if any(directory.iterdir()):raise ValueError('Use a new evidence directory')
     sha = lambda b: hashlib.sha256(b).hexdigest()
-    paths = list((ROOT/'client').glob('*.py')) + list((ROOT/'crates/imajev-runtime/src').rglob('*.rs')) + list((ROOT/'canisters/inference/src').rglob('*.rs'))
+    paths = list((ROOT/'client').glob('*.py')) + list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml'] + list((ROOT/'canisters/inference/src').rglob('*.rs'))
     paths += [ROOT/p for p in ['scripts/run_prefix_canister.py','scripts/run_full_canister.py','scripts/prepare_prefix_reuse.py','scripts/proof_inputs.py','scripts/build_full_prefix_candidate.py','Cargo.toml','crates/imajev-runtime/Cargo.toml','canisters/inference/Cargo.toml','Cargo.lock','MODEL_LOCK.json','checkpoints/full-int8.manifest.json']]
     paths += list((ROOT/'crates/imajev-client/src').rglob('*.rs'))
     paths += [ROOT/'crates/imajev-client/Cargo.toml', ROOT/'canisters/inference/inference.did']

@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 [dependencies]
+inference-core = { path = "../inference-core" }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

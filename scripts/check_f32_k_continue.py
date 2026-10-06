@@ -11,7 +11,7 @@ from prefix_inference import verify_module
 ap=argparse.ArgumentParser(description=__doc__)
 for name in ['canister','wasm','directory']:ap.add_argument('--'+name,required=True)
 ap.add_argument('--layers',default='0,1,3');a=ap.parse_args();d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=True);sha=lambda b:hashlib.sha256(b).hexdigest();source=ROOT/'artifacts/prefix_codec/full-s1-wide-proof/617';raw=(source/'report.json').read_bytes();r=json.loads(raw);m=json.loads((ROOT/'checkpoints/full-int8.manifest.json').read_bytes());helper=ROOT/'artifacts/f32-block-native/release/f32_args';wasm=sha((ROOT/a.wasm).read_bytes());cases=[]
-paths=list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'canisters/inference/src').rglob('*.rs'))+list((ROOT/'client').glob('*.py'))+[pathlib.Path(__file__),ROOT/'Cargo.lock',ROOT/'MODEL_LOCK.json',ROOT/'checkpoints/full-int8.manifest.json',ROOT/'crates/imajev-runtime/Cargo.toml',ROOT/'canisters/inference/Cargo.toml'];hashes={str(p.relative_to(ROOT)):sha(p.read_bytes())for p in paths}
+paths=list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml']+list((ROOT/'canisters/inference/src').rglob('*.rs'))+list((ROOT/'client').glob('*.py'))+[pathlib.Path(__file__),ROOT/'Cargo.lock',ROOT/'MODEL_LOCK.json',ROOT/'checkpoints/full-int8.manifest.json',ROOT/'crates/imajev-runtime/Cargo.toml',ROOT/'canisters/inference/Cargo.toml'];hashes={str(p.relative_to(ROOT)):sha(p.read_bytes())for p in paths}
 t=Transport(m['model'],'http://localhost:8001/',a.canister,str(ROOT/'artifacts/imajev-local.pem'),d,m['pack_hash'],wire_codec='bf16-block256-exact-v1',frame_version=3)
 try:
  verify_module(t,wasm)

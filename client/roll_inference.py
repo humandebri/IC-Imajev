@@ -13,7 +13,7 @@ class RollPrefixGraph(PrefixTextGraph):
   if type(roll_begin)is not int or not 0<roll_begin<9216 or roll_begin%256 or type(roll_heads)is not int or not 0<roll_heads<32 or roll_heads%2 or type(roll_down)is not int or not 0<roll_down<2560 or roll_down%32:raise ValueError('rolled chunk bounds')
   self.roll_blocks=True
   self.roll_begin=roll_begin;self.roll_heads=roll_heads;self.roll_down=roll_down
-  if self.position_offset!=45 or self.retain_terminal_state or not self.fuse_mlp_full or not self.fuse_delta_full_log or self.t.frame_version!=3:raise ValueError('rolled graph requires prepared log prefix, full MLP and host frame')
+  if not 1<=self.position_offset<=132 or self.retain_terminal_state or not self.fuse_mlp_full or not self.fuse_delta_full_log or self.t.frame_version!=3:raise ValueError('rolled graph requires prepared log prefix, full MLP and host frame')
  def header(self,op,codec,dims,layer):
   return dict(version=3,model=self.t.model,pack_hash=self.t.pack_hash,input_hash=self.t.input_hash,step=self.t.index,op=op,encoding=codec,tensor=f'{PREFIX}layers.{layer}.post_attention_layernorm.weight',aux=[f'{PREFIX}layers.{layer+1}.input_layernorm.weight'],dims=dims,scalars=[2.,1e-6])
  def record(self,layer,hidden,start,clock,extra):

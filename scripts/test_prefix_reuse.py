@@ -14,7 +14,7 @@ class PrefixReuseTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.directory = pathlib.Path(self.temp.name)
-        self.identity = dict(version=1, layers={'0': 'source'}, input_hash='original')
+        self.identity = dict(version=1, layers={'0': 'source'}, input_hash='original', tokens=45, codec_module=CODEC_MODULE)
         # Only envelope/hash policy is under test here, not dense codec decoding.
         self.packet = struct.pack('<4sII', b'NPF1', 45, (1 << 18) - 1)
         self.save()
@@ -51,6 +51,18 @@ class PrefixReuseTests(unittest.TestCase):
     def test_different_module_rejected(self):
         with self.assertRaisesRegex(ValueError, 'module mismatch'):
             self.run_cache('another-module')
+
+    def test_short_prefix_cache_hit(self):
+        self.identity['tokens'] = 27
+        self.packet = struct.pack('<4sII', b'NPF1', 27, (1 << 18) - 1)
+        self.save()
+        self.assertTrue(self.run_cache()['cache_hit'])
+
+    def test_packet_token_identity_rejected(self):
+        self.packet = struct.pack('<4sII', b'NPF1', 27, (1 << 18) - 1)
+        self.save()
+        with self.assertRaisesRegex(ValueError, 'packet header'):
+            self.run_cache()
 
 
 if __name__ == '__main__':

@@ -9,7 +9,7 @@ a=ap.parse_args();d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=True)
 assert not (d/'report.json').exists() and not (d/'source.zip').exists()
 if not (ROOT/'scripts/prefix_update_bench/Cargo.lock').exists():
  subprocess.run(['cargo','generate-lockfile','--offline','--manifest-path','scripts/prefix_update_bench/Cargo.toml'],cwd=ROOT,check=True)
-paths=list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'scripts/prefix_update_bench/src').rglob('*.rs'))
+paths=list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml']+list((ROOT/'scripts/prefix_update_bench/src').rglob('*.rs'))
 paths += [ROOT/'crates/imajev-runtime/Cargo.toml',ROOT/'scripts/prefix_update_bench/Cargo.toml',ROOT/'scripts/prefix_update_bench/Cargo.lock',pathlib.Path(__file__)]
 sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
 sources={str(p.relative_to(ROOT)):sha(p)for p in paths}

@@ -100,7 +100,7 @@ kernel = ROOT/('artifacts/prefix_codec/direct-input-build/direct-input.wat'
 generator=ROOT/'scripts'/('generate_pair_direct_input_wat.py' if args.direct_input
                          else 'generate_pair_reuse_wat.py')
 subprocess.run([sys.executable,str(generator)],cwd=ROOT,check=True)
-paths = list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))
+paths = list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml']
 paths += list((ROOT/'canisters/inference/src').rglob('*.rs'))
 paths += list((ROOT/'crates/imajev-client/src').rglob('*.rs'))
 paths += list((ROOT/'client').glob('*.py'))

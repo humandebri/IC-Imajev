@@ -10,7 +10,7 @@ ap=argparse.ArgumentParser(description=__doc__)
 for name in ['canister','wasm','directory']:ap.add_argument('--'+name,required=True)
 a=ap.parse_args();d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=True)
 if any(d.iterdir()):raise ValueError('Use a new evidence directory')
-sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();paths=list((ROOT/'client').glob('*.py'))+list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'canisters/inference/src').rglob('*.rs'))+[ROOT/p for p in ['Cargo.toml','Cargo.lock','crates/imajev-runtime/Cargo.toml','canisters/inference/Cargo.toml','MODEL_LOCK.json','checkpoints/full-int8.manifest.json','scripts/build_full_prefix_candidate.py']]+[pathlib.Path(__file__)];hashes={str(p.relative_to(ROOT)):sha(p)for p in paths};module=sha(ROOT/a.wasm);m=json.loads((ROOT/'checkpoints/full-int8.manifest.json').read_bytes());rows=[]
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest();paths=list((ROOT/'client').glob('*.py'))+list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml']+list((ROOT/'canisters/inference/src').rglob('*.rs'))+[ROOT/p for p in ['Cargo.toml','Cargo.lock','crates/imajev-runtime/Cargo.toml','canisters/inference/Cargo.toml','MODEL_LOCK.json','checkpoints/full-int8.manifest.json','scripts/build_full_prefix_candidate.py']]+[pathlib.Path(__file__)];hashes={str(p.relative_to(ROOT)):sha(p)for p in paths};module=sha(ROOT/a.wasm);m=json.loads((ROOT/'checkpoints/full-int8.manifest.json').read_bytes());rows=[]
 t=Transport(m['model'],'http://localhost:8001/',a.canister,str(ROOT/'artifacts/imajev-local.pem'),d,m['pack_hash'],wire_codec='bf16-block256-exact-v1',frame_version=3)
 try:
  verify_module(t,module)

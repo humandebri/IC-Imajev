@@ -9,7 +9,7 @@ from prefix_inference import verify_module
 def main():
  ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--canister',required=True);ap.add_argument('--wasm',required=True);ap.add_argument('--directory',required=True);ap.add_argument('--host-checksum',action='store_true');a=ap.parse_args();d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=True)
  m=json.loads((ROOT/'checkpoints/full-int8.manifest.json').read_text());sha=lambda b:hashlib.sha256(b).hexdigest();module=sha((ROOT/a.wasm).read_bytes())
- paths=list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'canisters/inference/src').rglob('*.rs'))+[ROOT/'client/transport.py',pathlib.Path(__file__)];hashes={str(p.relative_to(ROOT)):sha(p.read_bytes())for p in paths}
+ paths=list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml']+list((ROOT/'canisters/inference/src').rglob('*.rs'))+[ROOT/'client/transport.py',pathlib.Path(__file__)];hashes={str(p.relative_to(ROOT)):sha(p.read_bytes())for p in paths}
  source=ROOT/'artifacts/codec_scan/check';r=json.loads((source/'report.json').read_text());cases=[]
  t=Transport(m['model'],'http://localhost:8001/',a.canister,str(ROOT/'artifacts/imajev-local.pem'),d,m['pack_hash'])
  try:

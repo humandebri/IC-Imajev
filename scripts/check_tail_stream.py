@@ -25,7 +25,7 @@ def main():
     d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=True)
     if any(d.iterdir()):raise ValueError('Use a fresh proof directory')
     sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
-    paths=list((ROOT/'client').glob('*.py'))+list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'canisters/inference/src').rglob('*.rs'))+[ROOT/p for p in ['Cargo.toml','Cargo.lock','crates/imajev-runtime/Cargo.toml','canisters/inference/Cargo.toml','MODEL_LOCK.json','checkpoints/full-int8.manifest.json','scripts/proof_inputs.py','scripts/build_full_prefix_candidate.py']]+[pathlib.Path(__file__)]
+    paths=list((ROOT/'client').glob('*.py'))+list((ROOT/'crates/imajev-runtime/src').rglob('*.rs'))+list((ROOT/'crates/inference-core/src').rglob('*.rs'))+[ROOT/'crates/inference-core/Cargo.toml']+list((ROOT/'canisters/inference/src').rglob('*.rs'))+[ROOT/p for p in ['Cargo.toml','Cargo.lock','crates/imajev-runtime/Cargo.toml','canisters/inference/Cargo.toml','MODEL_LOCK.json','checkpoints/full-int8.manifest.json','scripts/proof_inputs.py','scripts/build_full_prefix_candidate.py']]+[pathlib.Path(__file__)]
     hashes={str(p.relative_to(ROOT)):sha(p)for p in paths};refs={};rows=[];module=sha(ROOT/a.wasm);base=ROOT/'artifacts/prefix_codec/full-attention-q4-proof-v1';baseline=ROOT/'artifacts/output-pairs-v2-617';p=45;C,H,KV=2560,9216,2048
     m=json.loads(read_bytes(ROOT/'checkpoints/full-int8.manifest.json',ROOT,refs))
     t=Transport(m['model'],'http://localhost:8001/',a.canister,str(ROOT/'artifacts/imajev-local.pem'),d,m['pack_hash'],wire_codec=STREAM,frame_version=3)

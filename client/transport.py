@@ -167,12 +167,12 @@ def decode(b):
 def atomic(path,data):
     path=pathlib.Path(path);path.parent.mkdir(parents=True,exist_ok=True);temp=path.with_suffix(path.suffix+'.part');temp.write_bytes(data);temp.replace(path)
 class Transport:
-    def __init__(self,model,url,canister,pem,directory,pack_hash,wire_codec="",frame_version=1):
+    def __init__(self,model,url,canister,pem,directory,pack_hash,wire_codec="",frame_version=1,bridge_binary=None):
         if type(frame_version) is not int or frame_version not in (1,2,3):raise ValueError('unsupported frame version')
         self.frame_version=frame_version
         self.wire_codec=wire_codec;self.max_floats=900000 if wire_codec in ("bf16-exact","bf16-block256-exact-v1","int8-block256-v1","projection-block256-exact-v1") else 450000
         self.pack_hash=pack_hash;self.model=model;self.directory=pathlib.Path(directory);self.directory.mkdir(parents=True,exist_ok=True);self.index=0;self.measurements=[]
-        self.process=subprocess.Popen([str(ROOT/'target/release/imajev-client'),url,canister,pem],stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
+        self.process=subprocess.Popen([str(bridge_binary or ROOT/'target/release/imajev-client'),url,canister,pem],stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
     def command(self,cmd):
         self.process.stdin.write(json.dumps(cmd)+'\n');self.process.stdin.flush();line=self.process.stdout.readline()
         if not line:raise RuntimeError('bridge exited')
