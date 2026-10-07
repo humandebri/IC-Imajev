@@ -11,13 +11,17 @@
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --experimental-strip-types scripts/check-tokenizer.mjs && playwright test",
     "prepare:tokenizer": "node scripts/prepare-tokenizer.mjs",
-    "predev": "npm run prepare:tokenizer",
-    "prebuild": "npm run prepare:tokenizer",
+    "prepare:inference": "../.venv/bin/python -B ../scripts/prepare_browser_prefix.py",
+    "predev": "node scripts/prepare-tokenizer.mjs && ../.venv/bin/python -B ../scripts/prepare_browser_prefix.py",
+    "prebuild": "node scripts/prepare-tokenizer.mjs && ../.venv/bin/python -B ../scripts/prepare_browser_prefix.py",
     "test:tokenizer": "node --experimental-strip-types scripts/check-tokenizer.mjs",
-    "pretest": "npm run prepare:tokenizer"
+    "test:query": "node --experimental-strip-types scripts/check-query-runner.mjs",
+    "test:live-query": "node scripts/check-live-query.mjs",
+    "pretest": "node scripts/prepare-tokenizer.mjs && ../.venv/bin/python -B ../scripts/prepare_browser_prefix.py"
   },
   "dependencies": {
     "@huggingface/tokenizers": "^0.2.0",
+    "@icp-sdk/core": "6.1.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
