@@ -59,7 +59,7 @@ npx vlmkit check copy http://127.0.0.1:5173 --manifest verification/copy.txt
 
 ## 公開
 
-`cloudflare.config.ts` の希望公開先は https://imajev.kinin.xyz です。Cloudflareの認証済みプロファイルとzone権限を確認して公開します。
+公開先は https://imajev.kinic.xyz です。`cloudflare.config.ts` にCustom Domainを設定しています。Cloudflareの認証済みプロファイルとzone権限を確認して公開します。
 
 ```sh
 npm run build
@@ -67,4 +67,4 @@ node scripts/prepare-cf-output.mjs
 cf --profile kinic-production deploy --prebuilt
 ```
 
-`npm run deploy` は同じビルド・成果物生成と、デフォルトプロファイルの `cf deploy --prebuilt` を行います。Custom Domainの設定だけでは公開先へ反映されません。今回の実装・テストではfrontendの公開操作は行っていません。
+`npm run deploy` は同じビルド・成果物生成と、デフォルトプロファイルの `cf deploy --prebuilt` を行います。Custom Domainの設定だけでは公開先へ反映されません。`workersDev: true` により https://ic-imajev.hude.workers.dev からも同じfrontendを利用できます。
