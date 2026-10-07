@@ -25,7 +25,7 @@ PlaywrightのChromiumがない場合は `npx playwright install chromium` が必
 
 ## 入力と実行
 
-質問は必須、判断材料は任意、選択肢は2〜7件です。空欄、前後空白を除いた重複、1選択肢128 UTF-8 bytes超は拒否します。固定27-token prefixと追加1〜57 token、合計28〜84 tokenが対象です。prompt、選択肢、unknown、chat templateを含む実token数で実行可否を判断します。
+質問は必須、判断材料は任意、選択肢は2〜7件です。空欄、前後空白を除いた重複、判断保留用の予約語 `__unknown__`、1選択肢128 UTF-8 bytes超は拒否します。固定27-token prefixと追加1〜57 token、合計28〜84 tokenが対象です。prompt、選択肢、unknown、chat templateを含む実token数で実行可否を判断します。
 
 `Run inference` で送信時の入力を固定し、32回の推論queryをcarryの依存順に呼びます。実行前に2回のreadiness query、実行前後にmodule hashの証明を確認します。結果には選択値、候補別確率、unknown、判断保留を表示します。途中で入力を編集しても実行中の入力や結果ラベルは変わりません。完了数と経過時間は実際の応答から更新します。
 
