@@ -32,6 +32,10 @@ struct Store {
     weight_cache: weight_cache::WeightCache,
 }
 thread_local! {static STORE:RefCell<Store>=RefCell::new(Store::default());}
+// Ordinary queries are public. Replicated execution remains an owner operation.
+fn query_access() {
+    if ic_cdk::api::in_replicated_execution() { owner(); }
+}
 fn owner() {
     #[cfg(feature="paid-update-inference")] paid_inference::admin_guard();
     owner_auth();
@@ -159,7 +163,7 @@ struct PackStatus {
 }
 #[ic_cdk::query]
 fn pack_status() -> PackStatus {
-    owner();
+    query_access();
     STORE.with(|s| {
         let s = s.borrow();
         PackStatus {
@@ -277,7 +281,7 @@ fn seal() -> std::result::Result<(), String> {
 }
 #[ic_cdk::query]
 fn step(state: StateBytes) -> std::result::Result<Measurement, String> {
-    owner();
+    query_access();
     let start = ic_cdk::api::performance_counter(0u32);
     #[cfg(feature = "experimental-projection-reuse")]
     let (mut r, input) = decode_query(&state)?;
@@ -438,7 +442,7 @@ fn validate_terminal_decision(r: &imajev_runtime::Request, options: &[String]) -
 }
 #[ic_cdk::query]
 fn terminal_step_decision(state: StateBytes, options: Vec<String>) -> Result<TerminalDecisionMeasurement, String> {
-    owner();
+    query_access();
     let start = ic_cdk::api::performance_counter(0);
     if !cfg!(feature="experimental-terminal-attention") {return Err("terminal attention feature is disabled".into());}
     #[cfg(feature="experimental-projection-reuse")]
@@ -480,7 +484,7 @@ fn decision_fast(
     state: Vec<u8>,
     options: Vec<String>,
 ) -> std::result::Result<ChoiceResult, String> {
-    owner();
+    query_access();
     let start = ic_cdk::api::performance_counter(0u32);
     let (mut r, x) = decode(&state)?;
     if r.op != "matmul"
@@ -516,7 +520,7 @@ struct ChoiceResult {
 }
 #[ic_cdk::query]
 fn decision(state: StateBytes, options: Vec<String>) -> std::result::Result<ChoiceResult, String> {
-    owner();
+    query_access();
     let (r, x) = decode(&state)?;
     if r.op != "matmul"
         || !matches!(r.tensor.as_str(), "readout-f32" | "readout-int8")
@@ -614,12 +618,12 @@ fn clear_weight_cache() -> WeightCacheInfo {
 }
 #[ic_cdk::query]
 fn weight_cache_status() -> WeightCacheInfo {
-    owner();
+    query_access();
     STORE.with(|s| cache_info(&s.borrow(), 0))
 }
 #[ic_cdk::query]
 fn status() -> (u64, bool) {
-    owner();
+    query_access();
     STORE.with(|s| (s.borrow().received, s.borrow().ready))
 }
 // Metadata survives upgrades separately from weight bytes. Restore only after compatible upgrade.
