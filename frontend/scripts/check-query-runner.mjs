@@ -48,6 +48,17 @@ await assert.rejects(runQueryGraph(record.token_ids, record.options, {
   signal: cancelled.signal, progress() {},
 }), /abort/i);
 assert.equal(calls, 0);
+// The reserved decision label must fail before any prefix fetch or query.
+for (const reserved of ["__unknown__", "  __unknown__  "]) {
+  let queryCalls = 0, assetCalls = 0;
+  await assert.rejects(runQueryGraph(record.token_ids, [reserved, "yes"], {
+    manifest, signal: controller.signal, progress() {},
+    asset: async () => { assetCalls++; throw new Error("Unexpected prefix fetch"); },
+    client: { query: async () => { queryCalls++; }, checkModule: async () => {} },
+  }), /reserved for abstention/);
+  assert.equal(queryCalls, 0);
+  assert.equal(assetCalls, 0);
+}
 // Cancellation after a completed query cannot issue the next dependent call.
 count = 0;
 const midway = new AbortController();

@@ -30,9 +30,11 @@ export default function App() {
   const optionErrors = normalized.map((text) =>
     !text
       ? "Enter an option."
-      : normalized.filter((value) => value === text).length > 1
-        ? "Options must be unique."
-        : "",
+      : text === "__unknown__"
+        ? "This option is reserved for abstention."
+        : normalized.filter((value) => value === text).length > 1
+          ? "Options must be unique."
+          : "",
   );
   const questionError = !question.trim() ? "Enter a question." : "";
   const valid = !questionError && optionErrors.every((error) => !error);

@@ -17,6 +17,9 @@ function unwrap(value: unknown): Measurement {
   return reply.Ok;
 }
 export function validateInput(ids: number[], options: string[], manifest: PrefixManifest) {
+  if (options.some(o => o.trim() === "__unknown__")) {
+    throw new Error("This option is reserved for abstention.");
+  }
   if (ids.length < 28 || ids.length > 84 || !ids.every(id => Number.isInteger(id) && id >= 0 && id < 248320) ||
       manifest.prefix.length !== 27 || !manifest.prefix.every((id, i) => ids[i] === id)) {
     throw new Error("Input must have the common prefix and 1–57 additional tokens (84 total maximum).");

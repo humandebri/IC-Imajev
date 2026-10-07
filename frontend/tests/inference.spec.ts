@@ -80,3 +80,25 @@ test("query failure clears progress and allows the user to retry", async ({ page
   await expect(page.locator(".actual-result")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Run inference" })).toBeEnabled();
 });
+
+test("reserved abstention option blocks submission before any canister request", async ({ page }) => {
+  let requests = 0;
+  await page.route("https://icp-api.io/**", route => { requests++; return route.abort(); });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Value change" }).click();
+  const run = page.getByRole("button", { name: "Run inference" });
+  await expect(run).toBeEnabled();
+  for (const value of ["__unknown__", "  __unknown__  "]) {
+    await page.getByLabel("Option 1", { exact: true }).fill(value);
+    await expect(page.getByText("This option is reserved for abstention.")).toBeVisible();
+    await expect(page.getByLabel("Option 1", { exact: true })).toHaveAttribute("aria-invalid", "true");
+    await expect(run).toBeDisabled();
+    // Even programmatic form submission must obey the validation guard.
+    await page.locator("form").evaluate(form => (form as HTMLFormElement).requestSubmit());
+    await expect(page.locator(".result-panel")).toHaveAttribute("data-state", "idle");
+    expect(requests).toBe(0);
+  }
+  await page.getByLabel("Option 1", { exact: true }).fill("yes");
+  await expect(run).toBeEnabled();
+  await expect(page.getByText("This option is reserved for abstention.")).toHaveCount(0);
+});
