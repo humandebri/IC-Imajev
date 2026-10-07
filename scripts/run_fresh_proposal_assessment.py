@@ -65,7 +65,21 @@ def prepare(snapshot_archive=None):
          scope='Whole numerical participation tasks; original routing, exact units and approval evidence gate.'))
 
 
+def archive_attempt(dest):
+    """Preserve an unfinished attempt before starting with an empty journal."""
+    if not dest.exists() or not any(dest.iterdir()):
+        return
+    relative = dest.relative_to(D)
+    archived = D / 'aborted' / relative.parent
+    archived.mkdir(parents=True, exist_ok=True)
+    attempt = 1
+    while (archived / f'{dest.name}-attempt-{attempt:03d}').exists():
+        attempt += 1
+    dest.rename(archived / f'{dest.name}-attempt-{attempt:03d}')
+
+
 def call(cmd, dest):
+    archive_attempt(dest)
     dest.mkdir(parents=True, exist_ok=True)
     save(dest / 'command.json', cmd)
     with (dest / 'run.log').open('a') as log:
@@ -175,10 +189,13 @@ def execute():
             continue
         prefix, packets = D / 'prefixes' / f'{b:02d}', D / 'packets' / f'{b:02d}'
         if not (prefix / 'report.json').exists():
+            # Codec packets belong to this prefix attempt, even if their cache
+            # marker survived an interrupted preparation.
+            archive_attempt(packets)
             print(json.dumps(dict(stage='fresh-prefix', bank=b, tokens=p['prefix'])), flush=True)
             call(command(b) + ['--record', str(plan['banks'][b]['record']), '--prefix-tokens', str(p['prefix']),
                               '--prepare-prefix', '--directory', str(prefix)], prefix)
-        if not (packets / 'cache.json').exists():
+        if not (packets / 'cache.json').exists() or not (packets / 'report.json').exists():
             call([sys.executable, '-B', str(ROOT / 'scripts/prepare_prefix_reuse.py'), '--prefix-directory', str(prefix),
                   '--directory', str(packets), '--canister', '7vs54-wt777-77775-aaajq-cai', '--codec-module', CODEC,
                   '--run-report', str(packets / 'report.json')], packets)

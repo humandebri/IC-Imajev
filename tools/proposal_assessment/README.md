@@ -1,6 +1,6 @@
 # Proposal assessment: local binary harness
 
-IC-Laya-Standaloneの`compact_units.py`と`benchmark_600_660_binary.py`を、必要な依存とともに取り込んだ。取り込み元リポジトリ名、相対パス、原本と現行コピーのSHA-256は`UPSTREAM.json`に記録している。この2ファイルの判定・圧縮ロジックは変更していない。`binary_benchmark.IMAJEV`とtoken計測CLIの既定値は、このリポジトリのrootを使う。旧本文ベンチマーク用の`evaluation.py`も原本と同じ内容で取り込んだ。
+IC-Laya-Standaloneの`compact_units.py`と`benchmark_600_660_binary.py`を、必要な依存とともに取り込んだ。取り込み元リポジトリ名、相対パス、原本と現行コピーのSHA-256は`UPSTREAM.json`に記録している。この2ファイルの判定・圧縮ロジックは変更していない。600〜660の準備処理には、選択したarchive内のsnapshotをhash・proposal ID・SNS rootで検証する読み込みと`--snapshot-archive`を追加した。`binary_benchmark.IMAJEV`とtoken計測CLIの既定値は、このリポジトリのrootを使う。旧本文ベンチマーク用の`evaluation.py`も原本と同じ内容で取り込んだ。
 
 数値上の投票参加条件の検査であり、proposal全体の安全性・賛否の正解を保証するものではない。
 
@@ -16,10 +16,13 @@ IC-Laya-Standaloneの`compact_units.py`と`benchmark_600_660_binary.py`を、必
 
 ```sh
 .venv/bin/python -B -m tools.proposal_assessment.benchmark_600_660_binary prepare \
-  --output artifacts/proposal-assessment/my-600-660 --compact-ratio
+  --output artifacts/proposal-assessment/my-600-660 --compact-ratio \
+  --snapshot-archive ../retained-600-660/v1
 .venv/bin/python -B -m tools.proposal_assessment.benchmark_600_660_binary report \
   --output artifacts/proposal-assessment/my-600-660
 ```
+
+`--snapshot-archive`は`manifest.json`と`snapshots/`を含むディレクトリ。省略時はこのcheckoutの`artifacts/proposal-assessment/boomdao-600-660/v1`を使う。manifestに旧絶対パスが残っていても選択したarchive内だけを読み、移動先にsnapshotがなければ停止する。
 
 500〜660の全161件には、同じローカル依存を使う`scripts/assess_proposal_range.py`を使用する。新しい出力ディレクトリの`snapshots/manifest.json`に、hash付きの取得済みsnapshot manifestを置く。
 
@@ -46,6 +49,8 @@ IC-Laya-Standaloneの`compact_units.py`と`benchmark_600_660_binary.py`を、必
 .venv/bin/python -B scripts/run_fresh_proposal_assessment.py run
 .venv/bin/python -B scripts/verify_fresh_proposal_assessment.py
 ```
+
+途中終了した推論・prefix準備・codec準備を再実行する際は、前の試行をrun内の`aborted/`へ番号付きで退避し、空のquery journalから開始する。検証済みの推論と完了した準備は維持する。prefixを作り直す場合は対応するcodec packetも作り直す。旧ソースhashを持つ過去runの凍結情報は更新せず、当時のソースで検証する。
 
 移植の一致確認:
 

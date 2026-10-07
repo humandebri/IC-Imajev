@@ -82,8 +82,8 @@
     "benchmark_600_660_binary.py": {
       "source": "tools/proposal_assessment/benchmark_600_660_binary.py",
       "source_sha256": "da9db15ba32cda22fdf9288c3639e9a1fa9a83dfe581b4c533774025f433c7a9",
-      "local_sha256": "da9db15ba32cda22fdf9288c3639e9a1fa9a83dfe581b4c533774025f433c7a9",
-      "adapted": false
+      "local_sha256": "33c28c147312b23fcfef59c570cfce1750033868ec2145394dd1eb8e1893c113",
+      "adapted": true
     },
     "evaluation.py": {
       "source": "tools/proposal_assessment/evaluation.py",
