@@ -15,12 +15,18 @@ from .routing import select_task
 from .token_sweep import ROOT, save, sha
 from .validate_binary_improvement import THRESHOLD, COMPACT_QUESTION
 
+sys.path.insert(0, str(ROOT / 'scripts'))
+from proposal_snapshots import read_snapshot
+from repository_paths import existing_directory
 
-def prepare(out, compact_overflow=False, compact_ratio=False):
+
+def prepare(out, compact_overflow=False, compact_ratio=False, snapshot_archive=None):
     if out.exists():
         raise ValueError('fresh output directory required')
     reference = ROOT/'tools/proposal_assessment/gpt-6.1-sol-medium-20261005-1509/vote-results.json'
-    manifest_path = ROOT/'artifacts/proposal-assessment/boomdao-600-660/v1/manifest.json'
+    archive = (Path(snapshot_archive) if snapshot_archive is not None else
+               ROOT/'artifacts/proposal-assessment/boomdao-600-660/v1')
+    manifest_path = archive / 'manifest.json'
     manifest = json.loads(manifest_path.read_text())
     source = json.loads(reference.read_text())
     assert manifest['complete'] and source['complete']
@@ -30,7 +36,8 @@ def prepare(out, compact_overflow=False, compact_ratio=False):
     grouped = {}
     for proposal in source['proposals']:
         snapshot = snapshots[proposal['proposal_id']]
-        assert sha(snapshot['snapshot']) == snapshot['sha256'] == proposal['snapshot_sha256']
+        read_snapshot(archive, snapshot, manifest['sns_root'])
+        assert snapshot['sha256'] == proposal['snapshot_sha256']
         key = json.dumps(proposal['task'], sort_keys=True)
         if key not in grouped:
             grouped[key] = dict(task=proposal['task'], proposal_ids=[], expected=proposal['prediction']['label'])
@@ -175,8 +182,11 @@ def main():
     parser=argparse.ArgumentParser();parser.add_argument('mode',choices=['prepare','run','report']);parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--compact-overflow',action='store_true')
     parser.add_argument('--compact-ratio',action='store_true')
+    parser.add_argument('--snapshot-archive',type=existing_directory,
+                        help='prepare source archive containing manifest.json and snapshots/')
     args=parser.parse_args();out=args.output.resolve()
-    if args.mode=='prepare':prepare(out,args.compact_overflow or args.compact_ratio,args.compact_ratio)
+    if args.mode=='prepare':prepare(out,args.compact_overflow or args.compact_ratio,args.compact_ratio,
+                                   snapshot_archive=args.snapshot_archive)
     elif args.mode=='run':run(out,0,1)
     else:report(out)
 
