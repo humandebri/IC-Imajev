@@ -1,6 +1,9 @@
 import { Tokenizer } from "@huggingface/tokenizers";
 import { tokenizeInput } from "./tokenization.ts";
 import type { DecisionInput } from "./types";
+import { createQueryClient, loadPrefix } from "./inference-agent.ts";
+import { runQueryGraph, validateInput } from "./query-runner.ts";
+import release from "./inference-release.json" with { type: "json" };
 
 async function loadTokenizer() {
   const base = `${import.meta.env.BASE_URL}tokenizer/`;
@@ -36,16 +39,43 @@ async function loadTokenizer() {
   };
 }
 let loaded: ReturnType<typeof loadTokenizer> | undefined;
+const runs = new Map<number, AbortController>();
 self.onmessage = async (
-  event: MessageEvent<{ id: number; input: DecisionInput }>,
+  event: MessageEvent<{ id: number; input: DecisionInput; op?: "count" | "run" | "cancel" }>,
 ) => {
-  const { id, input } = event.data;
+  const { id, input, op } = event.data;
+  if (op === "cancel") { runs.get(id)?.abort(); return; }
+  const controller = op === "run" ? new AbortController() : undefined;
+  if (controller) runs.set(id, controller);
   try {
+    if (!input || typeof input.state !== "string" || typeof input.question !== "string" ||
+        input.state.length + input.question.length > 100_000 || !Array.isArray(input.options) ||
+        input.options.length > 7 || input.options.some(o => typeof o !== "string" || o.length > 128)) {
+      throw new Error("Invalid or oversized input.");
+    }
     const { tokenizer, codes } = await (loaded ??= loadTokenizer());
-    self.postMessage({
-      id,
-      counts: tokenizeInput(tokenizer, input, codes).counts,
+    const tokenized = tokenizeInput(tokenizer, input, codes);
+    if (!controller) { self.postMessage({ id, counts: tokenized.counts }); return; }
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(300_000)]);
+    signal.throwIfAborted();
+    if (!input.question.trim()) throw new Error("Enter a question.");
+    if (tokenized.counts.total > 84) throw new Error("Input exceeds 84 tokens. Shorten the context, question or options.");
+    const prefix = await loadPrefix(`${import.meta.env.BASE_URL}inference/prefix27-v1/`, signal);
+    validateInput(tokenized.tokenIds, input.options, prefix.manifest);
+    const client = await createQueryClient(signal);
+    await client.checkModule();
+    const pack = await client.query("pack_status", []) as { model: string; pack_hash: string; ready: boolean; bytes: bigint };
+    const cache = await client.query("weight_cache_status", []) as { names: string[] };
+    if (!pack.ready || pack.model !== release.model || pack.pack_hash !== release.pack_hash ||
+        Number(pack.bytes) !== prefix.manifest.model_bytes || cache.names.length !== 721) {
+      throw new Error("Inference canister is being prepared. Please try later.");
+    }
+    const result = await runQueryGraph(tokenized.tokenIds, input.options, {
+      ...prefix, client, signal, progress: completed => self.postMessage({ id, completed }),
     });
+    await client.checkModule();
+    signal.throwIfAborted();
+    self.postMessage({ id, result });
   } catch (error) {
     self.postMessage({
       id,
@@ -54,5 +84,5 @@ self.onmessage = async (
           ? error.message
           : "Could not count tokens.",
     });
-  }
+  } finally { runs.delete(id); }
 };

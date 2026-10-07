@@ -1,23 +1,10 @@
 # IC-Imajev 判断プレイグラウンド
 
-API接続前の入力フォームと結果表示領域です。実推論、モック判定、架空の結果、課金処理はありません。「判定する」は無効です。
+ブラウザから公開canister `xis3j-paaaa-aaaai-axumq-cai` に匿名queryを送り、実推論の結果を表示します。tokenizerとqueryの組み立ては同じWeb Workerで実行します。Cloudflareは静的ファイルを配信します。
 
-## 公開ドメイン
+## 起動とビルド
 
-希望する公開先は https://imajev.kinin.xyz です。`cloudflare.config.ts` の `worker.domains` に設定しています。現在の `kinic-production` 認証では `kinic.xyz` のzoneは確認できましたが、`kinin.xyz` は見つからず、カスタムドメインの適用は未完了です。
-
-```sh
-cd frontend
-npm run deploy
-```
-
-`npm run deploy` はフロントエンドをビルドし、`scripts/prepare-cf-output.mjs` で静的配信用成果物を生成してから、`cf deploy --prebuilt` で公開します。名前付き認証を使う場合は、`npm run build` → `node scripts/prepare-cf-output.mjs` → `npx cf --profile kinic-production deploy --prebuilt` の順に実行します。
-
-デプロイには `kinin.xyz` のCloudflare zoneへの権限が必要です。Custom DomainのDNSレコードとTLS証明書はCloudflareが管理します。設定の追加だけでは公開先に反映されません。
-
-## 起動
-
-Node.js 24以上とnpmを使います。
+Node.js 24以上、npm、リポジトリの `.venv/bin/python` とNumPyが必要です。`MODEL_LOCK.json` のtokenizer・readoutファイル、`checkpoints/full-int8.manifest.json`、検証済みprefix archive `artifacts/query-packing-v3/prefix-v2/` を準備してください。モデル重み本体はfrontendのビルドに不要です。
 
 ```sh
 cd frontend
@@ -25,7 +12,7 @@ npm ci
 npm run dev
 ```
 
-ブラウザで http://127.0.0.1:5173 を開きます。
+http://127.0.0.1:5173 を開きます。`dev`、`build`、`test` の前処理で固定tokenizerのhashとprefix archiveのidentity・各ファイルのhashを検証し、静的素材を生成します。tokenizerは約12.8MB、prefix素材は15,418,368 bytesです。`public/tokenizer/` と `public/inference/` はGit対象外で、ビルド成果物に含まれます。
 
 ```sh
 npm run typecheck
@@ -36,37 +23,48 @@ npm test
 
 PlaywrightのChromiumがない場合は `npx playwright install chromium` が必要です。
 
-## 入力と結果
+## 入力と実行
 
-判断材料は任意、質問は必須、選択肢は2〜7件です。空欄または前後空白を除いた重複はエラーとなり、入力コピーを無効にします。コピーするJSONは `state`、`question`、`options` のUI入力形式で、token化されたCandidリクエストではありません。入力はページ内だけに保持され、再読み込みで初期化されます。
+質問は必須、判断材料は任意、選択肢は2〜7件です。空欄、前後空白を除いた重複、1選択肢128 UTF-8 bytes超は拒否します。固定27-token prefixと追加1〜57 token、合計28〜84 tokenが対象です。prompt、選択肢、unknown、chat templateを含む実token数で実行可否を判断します。
 
-基本の3例は、月額料金の $10 → $10,000 への変更、配達予定日と現在地の不明な荷物、製品は最高・配達は最悪というレビューです。タブは `Value change` / `Missing info` / `Three choices`。正解・モデル出力をフォームに埋め込みません。実際のBOOM DAO proposalのpayload原文抜粋は、折りたたみの `Real-world examples` に分け、出典リンクとデモ用の質問である旨を表示します。
+`Run inference` で送信時の入力を固定し、32回の推論queryをcarryの依存順に呼びます。実行前に2回のreadiness query、実行前後にmodule hashの証明を確認します。結果には選択値、候補別確率、unknown、判断保留を表示します。途中で入力を編集しても実行中の入力や結果ラベルは変わりません。完了数と経過時間は実際の応答から更新します。
 
-この3入力を、固定された公式ネイティブMLXのQwen3.5-4B + adapter、同じ `text-only-short-v2`、元の温度校正で測定しました。結果は `yes`（97.68%）、`unknown` による判断保留（99.32%）、`mixed`（86.07%）。これはネイティブBF16/F32の実測で、ICのINT8版の結果ではありません。ローカルICはstatus取得がタイムアウトしました。確率は校正済み候補スコアであり、この3例だけから一般的な正確さは主張しません。[完全精度の実測とlogits](<../artifacts/ui-extreme-examples-20261007/attempt2/results.json>)、[モデル・実行環境の証跡](<../artifacts/ui-extreme-examples-20261007/attempt2/provenance.json>)。公開UIのAPI接続状況は変えていません。
+`Cancel` は通信を中断し、次のquery発行を止めます。すでにcanisterで実行されている計算の停止は保証しません。キャンセル後の古い応答は表示しません。queryは30秒、全推論は5分でtimeoutし、自動retryは行いません。失敗時はエラーを表示し、利用者が再実行できます。
 
-通信量の注意書きは画面に表示しません。約71〜79 MBは `docs/QUERY32_PROGRESS.md` の既存短文3入力（固定prefix準備済み）のローカル測定に基づくCandid送受信合計です。HTTP等の追加通信、初回準備、再試行を含む上限値ではありません。query接続はまだ実装していません。
+独立した入力・タブ・利用者の実行を直列化するqueueはありません。各実行がcarry・進捗・キャンセルを持ちます。モデル重み4.7GBをブラウザへ配布せず、ownerの秘密鍵やログインも必要ありません。IC agentのnode署名検証を有効にし、固定module/model/packとprefix素材のhashを確認します。host-checksum runtimeのzero footerは署名検証済み応答に限って受け入れ、全headerを送信条件に束縛した後、クライアントでchecksumを付けます。
 
-`ResultPanel` は実応答の選択値、候補別確率、unknown、判断保留を表示できるコンポーネントです。現在は `null` のみを渡して未接続表示にしています。接続時は応答と同じリクエストの選択肢を渡してください。tokenizer、prompt生成、token制限、中継canisterは未実装です。
+入力例ボタンはフォームへ入力するだけです。`Copy input` は `state`、`question`、`options` のJSONをコピーします。履歴は永続保存しません。基本例のBF16ネイティブ実測は `artifacts/ui-extreme-examples-20261007/attempt2/` にあり、ICのINT8推論結果とは別の測定です。
 
-実行中は `ResultPanel` の `progress` に実際の進捗だけを渡します。固定重み・prefixの準備は公開前に済ませるため数えません。通常queryを順に呼ぶ推論経路は `{ kind: "steps", completed, total, startedAt, phase? }` で「完了数 / 予定数」・経過・残り目安（同じ実行の完了済みqueryの平均から算出、3回完了まで「計測中」）を表示します。有料updateのように1回の呼び出しで内部の進捗が見えない経路は `{ kind: "waiting", startedAt }` で経過時間だけを表示し、進捗率は出しません。結果を受け取ったら `progress` を `null` にして `result` を渡します。
+## 検証
 
-## UI検証
+`npm test` は実tokenizerのPython出力との一致とPlaywrightのUIテストを実行します。
+
+```sh
+npm run test:query
+PLAYGROUND_URL=http://127.0.0.1:4173 npm run test:live-query
+```
+
+`test:query` はローカルの本番証跡 `artifacts/mainnet-prefix27-upgrade-20261007/anonymous-query-653/` と `artifacts/text-short-v2/inputs.json` を使います。32回のCandid送信byte、frame、中間返信、最終結果を照合し、破損・header不一致・キャンセルを検証します。
+
+`test:live-query` は起動済みのサイトから本番へ読み取りqueryを送る明示的な試験です。独立した2ブラウザで異なる入力を同時実行し、update呼び出しがないこと、各32推論query＋2readiness queryで完了することを確認します。84-token入力は既存の本番結果とも一致を確認します。2026-10-07のproduction build試験は両方成功し、87.346秒と67.498秒でした。証跡は `artifacts/browser-query-test-20261007/report.json` です。
+
+全ての入力で命令数上限に収まることを保証する試験ではありません。instruction limit等で失敗した場合は結果を作らずエラーを表示します。低速回線・実スマートフォン・多数同時実行での性能は未測定です。
 
 ```sh
 npx vlmkit check integrity http://127.0.0.1:5173
 npx vlmkit check copy http://127.0.0.1:5173 --manifest verification/copy.txt
-npx vlmkit scan scroll http://127.0.0.1:5173
-npx vlmkit scan handlers http://127.0.0.1:5173
-npx vlmkit check interactions http://127.0.0.1:5173
-npx vlmkit check breakpoints http://127.0.0.1:5173 --sweep
 ```
 
-## トークン数
+閉じたnative details内の検出は、展開時の可視性をPlaywrightで確認した上で当該selectorだけを除外します。
 
-固定モデルの `tokenizer.json` / `tokenizer_config.json` とreadoutコードを使い、ブラウザのWorker内で数えます。`text-only-short-v2` のprompt、選択肢、unknown、chat templateを含んだ合計・共通prefix・追加tokenを表示します。有料updateは固定27-token prefix＋追加57 token（合計84 token）を上限としてqueryの上限とは分けて表示します。入力を外部サービスへ送る処理はありません。
+## 公開
 
-`npm run dev` / `npm run build` / `npm test` の前に、`MODEL_LOCK.json` のhashを検証して `checkpoints/` からtokenizerをコピーします。これらの固定ファイルがないcheckoutでは事前にモデルのtokenizerとreadoutファイルの準備が必要です。生成先 `public/tokenizer/` はGit対象外ですが、ビルド成果物に含まれます。モデル重みは不要です。tokenizerの初回読み込みは約12.8 MBです。
+`cloudflare.config.ts` の希望公開先は https://imajev.kinin.xyz です。Cloudflareの認証済みプロファイルとzone権限を確認して公開します。
 
-`npm run test:tokenizer` でPythonの既存 `TextPreparer` と全token ID列を照合できます。`tests/tokenizer-parity.json` は既存入力例、日本語、空の判断材料、引用符・改行の実tokenizer出力を保存した検証用データです。推論のモックではありません。
+```sh
+npm run build
+node scripts/prepare-cf-output.mjs
+cf --profile kinic-production deploy --prebuilt
+```
 
-画面は入力を左、実応答の表示領域とtoken数を右に配置します。初期表示では重複する説明や回答候補プレビューを省き、token数は合計だけ表示します。内訳と有料APIの条件は「カウントの詳細」で確認できます。入力例はフォームへの反映だけを行います。
+`npm run deploy` は同じビルド・成果物生成と、デフォルトプロファイルの `cf deploy --prebuilt` を行います。Custom Domainの設定だけでは公開先へ反映されません。今回の実装・テストではfrontendの公開操作は行っていません。

@@ -258,10 +258,10 @@ test("former voting prefix uses the common-prefix 84-token limit", async ({ page
   const state = "Minimum voting dissolve delay changes from 1 day to 2 days.";
   await page.getByLabel("Context").fill(state + " more".repeat(15));
   await expect(counter.locator(".token-counts dd")).toHaveText("84", { timeout: 15000 });
-  await expect(counter).toContainText("Paid update API: 57 / 57");
+  await expect(counter).toContainText("Query limit: 57 / 57");
   await expect(counter).not.toContainText("limit exceeded");
   await page.getByLabel("Context").fill(state + " more".repeat(16));
   await expect(counter.locator(".token-counts dd")).toHaveText("85");
-  await expect(counter).toContainText("Paid update API: 58 / 57");
+  await expect(counter).toContainText("Query limit: 58 / 57");
   await expect(counter).toContainText("limit exceeded");
 });
