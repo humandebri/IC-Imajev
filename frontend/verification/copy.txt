@@ -1,0 +1,18 @@
+Imajev
+on IC
+Qwen 3.5-4B + adapter
+API disconnected
+From text to decisions.
+Decision input
+Context
+Question
+Options
+Not enough information
+→ Abstain
+Run inference
+Copy input
+Connect an API to run inference.
+Result
+Results appear here.
+Tokens
+Count details

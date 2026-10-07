@@ -17,8 +17,8 @@ import time
 
 sys.dont_write_bytecode = True
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-SOURCE = pathlib.Path('/Volumes/KINGSTON/ICP/IC-Laya-Standalone')
-sys.path.insert(0, str(SOURCE / 'tools'))
+SOURCE = ROOT
+sys.path.insert(0, str(ROOT / 'tools'))
 from proposal_assessment.core import assess, make_tasks, run_advisory
 from proposal_assessment.vote import make_vote_task, predict_vote
 from proposal_assessment.evaluation import evaluate
@@ -26,6 +26,7 @@ from prepare_text import TextPreparer
 from evaluate_prompt_accuracy import base_flags, MODULE
 sys.path.insert(0, str(ROOT / 'client'))
 from decision_validation import validate_decision
+from proposal_snapshots import read_snapshot
 
 def sha(path):
     h = hashlib.sha256()
@@ -50,10 +51,7 @@ def prepare(directory):
     assert sorted(r['proposal_id'] for r in manifest['records']) == list(range(600, 661))
     preparer, tasks, proposals, records = TextPreparer(), {}, [], []
     for rec in sorted(manifest['records'], key=lambda r: r['proposal_id']):
-        path = pathlib.Path(rec['snapshot'])
-        assert path.stat().st_size <= 2 * 1024 * 1024 and sha(path) == rec['sha256']
-        proposal = json.loads(path.read_text())
-        assert str(proposal['id']) == str(rec['proposal_id']) and proposal['root_canister_id'] == manifest['sns_root']
+        path, proposal = read_snapshot(manifest_path.parent, rec, manifest['sns_root'])
         facts = assess(proposal)
         text_tasks, vote = make_tasks(facts), make_vote_task(facts)
         proposals.append(dict(proposal_id=rec['proposal_id'], snapshot_path=str(path), snapshot_sha256=rec['sha256'],
@@ -79,13 +77,13 @@ def prepare(directory):
                     raise
                 entry.update(status='unavailable', reason=str(error) + '; no truncation')
             tasks[key] = entry
-    paths = [ROOT / 'MODEL_LOCK.json', ROOT / 'scripts/prepare_text.py', pathlib.Path(__file__),
+    paths = [ROOT / 'scripts/proposal_snapshots.py', ROOT / 'MODEL_LOCK.json', ROOT / 'scripts/prepare_text.py', pathlib.Path(__file__),
              ROOT / 'scripts/run_prefix_canister.py', ROOT / 'scripts/evaluate_prompt_accuracy.py',
              ROOT / 'artifacts/query-packing-v3/build/full.wasm', ROOT / 'artifacts/query-packing-v3/build/imajev-client',
              ROOT / 'artifacts/decision-index-v1/dense-prefix/queries/cache.json',
              ROOT / 'artifacts/decision-index-v1/prefix/queries/cache.json', ROOT / 'artifacts/decision-index-v1/packets/cache.json']
     paths += sorted((ROOT / 'client').glob('*.py'))
-    paths += [SOURCE / 'tools/proposal_assessment' / n for n in ('core.py','extensions.py','adapters.py','evaluation.py','vote.py')]
+    paths += [ROOT / 'tools/proposal_assessment' / n for n in ('core.py','extensions.py','adapters.py','evaluation.py','vote.py')]
     assert sha(ROOT / 'artifacts/query-packing-v3/build/full.wasm') == MODULE
     fixture = dict(model_lock_sha256=sha(ROOT / 'MODEL_LOCK.json'), records=records)
     for name in ('prefix', 'dense-prefix'):
@@ -263,11 +261,16 @@ def score(directory):
     write(directory / 'report.json', report)
 
 def main():
+    global SOURCE
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--directory', default='artifacts/proposal-assessment-canister-20261005')
     parser.add_argument('--mode', choices=('prepare','run','score'), required=True)
     parser.add_argument('--retry-errors', action='store_true')
+    parser.add_argument('--source-root', type=pathlib.Path, default=ROOT, help='root containing artifacts/proposal-assessment/boomdao-600-660/v1')
     args = parser.parse_args()
+    SOURCE = args.source_root.expanduser().resolve()
+    if not (SOURCE / 'artifacts/proposal-assessment/boomdao-600-660/v1').is_dir():
+        parser.error('snapshot archive missing; specify --source-root for the retained benchmark archive')
     directory = ROOT / args.directory
     if args.mode == 'prepare': prepare(directory)
     elif args.mode == 'run': run(directory, args.retry_errors)

@@ -1,0 +1,10 @@
+{
+  "model_module": "6ce099e1f128b835b153bb28cde9f27dee719711be3822a38976cb4688613de4",
+  "inference_canister": "7st3i-3l777-77775-aaaja-cai",
+  "codec_canister": "7vs54-wt777-77775-aaajq-cai",
+  "threshold": 0.6,
+  "prediction_reuse": false,
+  "prior_prefix_reuse": false,
+  "snapshot_refresh": false,
+  "scope": "Whole numerical participation tasks; original routing, exact units and approval evidence gate."
+}

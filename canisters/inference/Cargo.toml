@@ -15,6 +15,8 @@ sha2.workspace = true
 serde_bytes = { version = "=0.11.19", optional = true }
 
 [features]
+paid-update-inference = ["experimental-update-inference"]
+paid-update-diagnostics = ["paid-update-inference"]
 experimental-update-inference = ["experimental-prefix-hybrid", "experimental-mlp-full89", "experimental-attention-full", "experimental-mlp-delta-query"]
 experimental-mlp-delta-query = ["experimental-mlp-stream", "experimental-delta-full-log"]
 experimental-single-quad = ["experimental-strassen-raw", "imajev-runtime/experimental-single-quad"]

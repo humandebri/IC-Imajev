@@ -2,10 +2,11 @@
 """Test Imajev's unsigned-bit peak scan on a frozen copy of Laya quantization."""
 import argparse, hashlib, json, os, shutil, subprocess, zipfile
 from pathlib import Path
+from repository_paths import existing_directory
 ROOT=Path(__file__).resolve().parents[1]
 def sha(b):return hashlib.sha256(b).hexdigest()
 def main():
-    ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--directory',required=True);ap.add_argument('--laya-root',default='/Volumes/KINGSTON/ICP/IC-Laya-Standalone');args=ap.parse_args()
+    ap=argparse.ArgumentParser(description=__doc__);ap.add_argument('--directory',required=True);ap.add_argument('--laya-root',type=existing_directory, required=True);args=ap.parse_args()
     dest=(ROOT/args.directory).resolve();laya=Path(args.laya_root).resolve()
     if not dest.is_relative_to(ROOT):raise ValueError('output must stay inside repository')
     dest.mkdir(parents=True,exist_ok=False)

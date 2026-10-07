@@ -1,0 +1,103 @@
+{
+  "source_repository": "IC-Laya-Standalone",
+  "files": {
+    "__init__.py": {
+      "source": "tools/proposal_assessment/__init__.py",
+      "source_sha256": "2b11543e4de6a0bd8e1785c67ab2552480d7745d49b895c566c6c9f8e0a0a066",
+      "local_sha256": "2b11543e4de6a0bd8e1785c67ab2552480d7745d49b895c566c6c9f8e0a0a066",
+      "adapted": false
+    },
+    "core.py": {
+      "source": "tools/proposal_assessment/core.py",
+      "source_sha256": "08777421ac7cb3fe09cfc0baeab285c1ab1c93f8d17d9038e013bb16c1127e18",
+      "local_sha256": "08777421ac7cb3fe09cfc0baeab285c1ab1c93f8d17d9038e013bb16c1127e18",
+      "adapted": false
+    },
+    "extensions.py": {
+      "source": "tools/proposal_assessment/extensions.py",
+      "source_sha256": "8334ce46a5a6112a9069cc69196463efb243a4bebc4890e26df30cf32fb29372",
+      "local_sha256": "8334ce46a5a6112a9069cc69196463efb243a4bebc4890e26df30cf32fb29372",
+      "adapted": false
+    },
+    "adapters.py": {
+      "source": "tools/proposal_assessment/adapters.py",
+      "source_sha256": "1438e7bac9fcf30e0a8b3c33e3457631d4b9929c991d38932d779484f4a634e7",
+      "local_sha256": "1438e7bac9fcf30e0a8b3c33e3457631d4b9929c991d38932d779484f4a634e7",
+      "adapted": false
+    },
+    "vote.py": {
+      "source": "tools/proposal_assessment/vote.py",
+      "source_sha256": "bb9cc4a04af0555acd5784282abc50aab00a9a1b1d094e0eb6964a6e59578ee2",
+      "local_sha256": "bb9cc4a04af0555acd5784282abc50aab00a9a1b1d094e0eb6964a6e59578ee2",
+      "adapted": false
+    },
+    "routing.py": {
+      "source": "tools/proposal_assessment/routing.py",
+      "source_sha256": "e87ba4c9d5aedc2c7e9e8eef0c8f22e624c39c6f360ba01af2a8318b2568cd73",
+      "local_sha256": "e87ba4c9d5aedc2c7e9e8eef0c8f22e624c39c6f360ba01af2a8318b2568cd73",
+      "adapted": false
+    },
+    "budget_policy.py": {
+      "source": "tools/proposal_assessment/budget_policy.py",
+      "source_sha256": "c534f4fd915aff51ad3624d9e1222e26a33902de54beec835e69c1c86eacdc55",
+      "local_sha256": "c534f4fd915aff51ad3624d9e1222e26a33902de54beec835e69c1c86eacdc55",
+      "adapted": false
+    },
+    "token_sweep.py": {
+      "source": "tools/proposal_assessment/token_sweep.py",
+      "source_sha256": "80ef90446e8e32c5edd1f22728d41318fa7ad42124e05faa6feffb0195adfaf5",
+      "local_sha256": "3215829ea0757863592ce0ec87c7c5ba2592eb06578fc34fb5ebbf3df9b7d8aa",
+      "adapted": true
+    },
+    "binary_benchmark.py": {
+      "source": "tools/proposal_assessment/binary_benchmark.py",
+      "source_sha256": "fa8a65d963534309ebc6e74919efa0f74b070158bea1e0a190ac854ffc947319",
+      "local_sha256": "1ad672c4ba2e248d7f13610055c280a1c9fd63db816c5499e472704fef7d437d",
+      "adapted": true
+    },
+    "improve_binary.py": {
+      "source": "tools/proposal_assessment/improve_binary.py",
+      "source_sha256": "45cc2d138dfe946258ccf2f930fd924c32bbee5ea66ef29164ab8c522bf308f2",
+      "local_sha256": "45cc2d138dfe946258ccf2f930fd924c32bbee5ea66ef29164ab8c522bf308f2",
+      "adapted": false
+    },
+    "million_notation.py": {
+      "source": "tools/proposal_assessment/million_notation.py",
+      "source_sha256": "14752ef6aba8bb1c955649a004c3e5db6482f6e2768bbd02fed8c6b80f381afe",
+      "local_sha256": "02fa75c3706fafe04d4317693a6e7fb1639a748f4eb2fb46a72ea39ef24d7f3b",
+      "adapted": true
+    },
+    "validate_binary_improvement.py": {
+      "source": "tools/proposal_assessment/validate_binary_improvement.py",
+      "source_sha256": "25e3d6a2ccde1bca0ff6dc1260b72a749f6adbec96c8dccbc7a68dbc3c524ab7",
+      "local_sha256": "25e3d6a2ccde1bca0ff6dc1260b72a749f6adbec96c8dccbc7a68dbc3c524ab7",
+      "adapted": false
+    },
+    "compact_units.py": {
+      "source": "tools/proposal_assessment/compact_units.py",
+      "source_sha256": "0a6b41110b533e75ae47c4c24e196bc3665c23e0ae72e514dd32c1bc33cf293a",
+      "local_sha256": "0a6b41110b533e75ae47c4c24e196bc3665c23e0ae72e514dd32c1bc33cf293a",
+      "adapted": false
+    },
+    "benchmark_600_660_binary.py": {
+      "source": "tools/proposal_assessment/benchmark_600_660_binary.py",
+      "source_sha256": "da9db15ba32cda22fdf9288c3639e9a1fa9a83dfe581b4c533774025f433c7a9",
+      "local_sha256": "33c28c147312b23fcfef59c570cfce1750033868ec2145394dd1eb8e1893c113",
+      "adapted": true
+    },
+    "evaluation.py": {
+      "source": "tools/proposal_assessment/evaluation.py",
+      "source_sha256": "e4372d6360ca2b895abc6f88519ecc7df67dd74f352c00b1d5cbe1a1ce1250b7",
+      "local_sha256": "e4372d6360ca2b895abc6f88519ecc7df67dd74f352c00b1d5cbe1a1ce1250b7",
+      "adapted": false
+    }
+  },
+  "adaptations": [
+    "binary_benchmark.IMAJEV uses the local repository root",
+    "Benchmark archive manifests point to locally retained identical snapshots",
+    "token_sweep and million_notation --imajev defaults use the local repository root",
+    "evaluation.py copied unchanged for historical text-task reporting",
+    "Source paths are relative to source_repository; source hashes retain original upstream bytes; local hashes identify the current copy"
+  ],
+  "baseline_runs": "Reports only; no weights or request/reply frames copied. Existing verified inference, not newly executed."
+}

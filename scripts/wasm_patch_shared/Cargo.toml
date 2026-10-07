@@ -1,0 +1,10 @@
+[package]
+name = "imajev-wasm-patch-shared"
+version = "0.1.0"
+edition = "2021"
+[workspace]
+[dependencies]
+wasmparser = "=0.224.1"
+wat = "=1.227.1"
+serde_json = "1"
+sha2 = "=0.10.9"

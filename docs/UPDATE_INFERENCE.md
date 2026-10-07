@@ -1,6 +1,6 @@
 # 中間状態をcanisterに保持する連結update推論
 
-短縮後のBoomDAO 3件では各3回の実測で **6 / 5 / 5 update**。詳細は [UPDATE_BOOMDAO_SHORT.md](UPDATE_BOOMDAO_SHORT.md)。
+最新の最適化後は各3回の実測で **5 / 4 / 5 update**。詳細は [UPDATE_TEMPLATES_MEASURED.md](UPDATE_TEMPLATES_MEASURED.md)。以前の短縮版は **6 / 5 / 5 update**（[UPDATE_BOOMDAO_SHORT.md](UPDATE_BOOMDAO_SHORT.md)）。
 
 2026-10-05。50 queryを50 updateとして再送する比較から進め、update専用入口で通常のtext graphを内部実行した。固定45-token prefixを一度登録し、token IDsから新たに推論する。保存した質問依存hiddenや返信を入力に使わない。
 
