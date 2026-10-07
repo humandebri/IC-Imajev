@@ -63,7 +63,7 @@ npx vlmkit check breakpoints http://127.0.0.1:5173 --sweep
 
 ## トークン数
 
-固定モデルの `tokenizer.json` / `tokenizer_config.json` とreadoutコードを使い、ブラウザのWorker内で数えます。`text-only-short-v2` のprompt、選択肢、unknown、chat templateを含んだ合計・共通prefix・追加tokenを表示します。有料updateの57-token上限はqueryの上限とは分けて表示します。入力を外部サービスへ送る処理はありません。
+固定モデルの `tokenizer.json` / `tokenizer_config.json` とreadoutコードを使い、ブラウザのWorker内で数えます。`text-only-short-v2` のprompt、選択肢、unknown、chat templateを含んだ合計・共通prefix・追加tokenを表示します。有料updateは固定27-token prefix＋追加57 token（合計84 token）を上限としてqueryの上限とは分けて表示します。入力を外部サービスへ送る処理はありません。
 
 `npm run dev` / `npm run build` / `npm test` の前に、`MODEL_LOCK.json` のhashを検証して `checkpoints/` からtokenizerをコピーします。これらの固定ファイルがないcheckoutでは事前にモデルのtokenizerとreadoutファイルの準備が必要です。生成先 `public/tokenizer/` はGit対象外ですが、ビルド成果物に含まれます。モデル重みは不要です。tokenizerの初回読み込みは約12.8 MBです。
 

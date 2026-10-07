@@ -8,21 +8,6 @@ const PREFIX27 = [
   248045, 846, 198, 56555, 279, 2420, 5721, 321, 4087, 279, 3296, 1608, 279,
   10661, 12521, 13, 3301, 1132, 279, 3074, 2904, 1970, 13, 198, 1349, 25, 328,
 ];
-const PREFIX38 = [
-  ...PREFIX27,
-  27756,
-  15209,
-  70173,
-  7383,
-  4203,
-  494,
-  220,
-  16,
-  1834,
-  310,
-  220,
-];
-
 export interface TokenCounts {
   total: number;
   prefix: number;
@@ -58,8 +43,7 @@ export function tokenizeInput(
     prefix++;
   const matches = (ids: number[]) =>
     ids.every((id, index) => tokenIds[index] === id);
-  // 38 applies only if that bank has been prepared on the eventual target canister.
-  const paidPrefix = matches(PREFIX38) ? 38 : matches(PREFIX27) ? 27 : null;
+  const paidPrefix = matches(PREFIX27) ? 27 : null;
   const counts: TokenCounts = {
     total: tokenIds.length,
     prefix,

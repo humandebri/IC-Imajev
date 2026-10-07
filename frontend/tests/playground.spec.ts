@@ -247,3 +247,21 @@ test("token details are available without cluttering the initial view", async ({
   await expect(page.locator(".token-breakdown")).toBeVisible();
   await expect(page.locator(".token-counter dd")).toHaveCount(3);
 });
+
+test("former voting prefix uses the common-prefix 84-token limit", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Question").fill("Approve?");
+  await page.locator(".option-control input").nth(0).fill("no");
+  await page.locator(".option-control input").nth(1).fill("yes");
+  await page.getByText("Count details", { exact: true }).click();
+  const counter = page.getByRole("region", { name: "Tokens", exact: true });
+  const state = "Minimum voting dissolve delay changes from 1 day to 2 days.";
+  await page.getByLabel("Context").fill(state + " more".repeat(15));
+  await expect(counter.locator(".token-counts dd")).toHaveText("84", { timeout: 15000 });
+  await expect(counter).toContainText("Paid update API: 57 / 57");
+  await expect(counter).not.toContainText("limit exceeded");
+  await page.getByLabel("Context").fill(state + " more".repeat(16));
+  await expect(counter.locator(".token-counts dd")).toHaveText("85");
+  await expect(counter).toContainText("Paid update API: 58 / 57");
+  await expect(counter).toContainText("limit exceeded");
+});
