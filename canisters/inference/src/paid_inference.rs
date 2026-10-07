@@ -73,7 +73,6 @@ async fn infer(request:InferRequest,request_id:String,quote_version:u64)->Result
 }
 #[ic_cdk::update]
 fn inference_step(job_id:u64,expected_stage:u64)->Result<StepResult,String> {
- let started=ic_cdk::api::performance_counter(0);
  if ic_cdk::api::msg_caller()!=ic_cdk::api::canister_self(){return Err("self only".into());}
  let (request,q,graph_id)=PAID.with(|s|->Result<_,String>{let s=s.borrow();let j=s.active.as_ref().ok_or("missing job")?;
   if j.id!=job_id || j.stage!=expected_stage || !j.in_flight || j.workers.len()>=j.quote.max_steps as usize{return Err("job progress mismatch".into());}
@@ -87,7 +86,11 @@ fn inference_step(job_id:u64,expected_stage:u64)->Result<StepResult,String> {
   if done {Ok(Some(InferenceResult{job_id,decision:decision(p.decision.clone().ok_or("missing decision")?),paid_cycles:j.quote.fee,quote_version:j.quote.version,prefix_tokens:j.quote.prefix_tokens,suffix_tokens:j.quote.suffix_tokens,workers:j.workers.clone()}))}else{Ok(None)}})?;
  if let Some(r)=result {DEBUG.with(|d|*d.borrow_mut()=Some(DebugResult{job_id,hidden_hashes:p.hidden_hashes,state_hashes:p.state_hashes,final_hidden:p.final_hidden}));
   PAID.with(|s|{let mut s=s.borrow_mut();if let Some(row)=s.receipts.iter_mut().find(|r|r.job_id==job_id){row.state=ReceiptState::Completed(r);}});update_inference::release();}
- let measured=ic_cdk::api::performance_counter(0)-started;
+ // Counter zero starts at the IC message entry, before CDK argument decoding.
+ // Do not subtract a checkpoint taken inside this function: that omits the
+ // wrapper/prologue. This remains a checkpoint; the metric update and reply
+ // epilogue below still need a separate whole-message accounting bound.
+ let measured=ic_cdk::api::performance_counter(0);
  PAID.with(|s|{let mut s=s.borrow_mut();if let Some(j)=s.active.as_mut(){if let Some(m)=j.workers.last_mut(){m.instructions=measured;}}
   if let Some(r)=s.receipts.iter_mut().find(|r|r.job_id==job_id){if let ReceiptState::Completed(v)=&mut r.state {if let Some(m)=v.workers.last_mut(){m.instructions=measured;}}}});
  Ok(StepResult{job_id,stage,done})
