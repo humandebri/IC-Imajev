@@ -6,6 +6,11 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+import argparse
+from repository_paths import existing_directory
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--source', type=existing_directory, required=True, help='saved boomdao-600-660/v1 archive')
+args=parser.parse_args()
 D = ROOT / 'artifacts/proposal-assessment-canister-20261005'
 r = json.loads((D / 'report.json').read_text())
 assert r['complete'] and r['completed_canister_inferences'] == r['runnable_unique_tasks']
@@ -20,9 +25,9 @@ stats = r['text_evaluation']['models']['imajev-canister-int8']
 unique = r['unique_text_evaluation']['models']['imajev-canister-int8']
 words = {'approve': '承認', 'reject': '否決', 'hold': '保留', 'unavailable': '実行不可/棄権'}
 counts = r['vote_counts']
-sys.path.insert(0, '/Volumes/KINGSTON/ICP/IC-Laya-Standalone/tools')
+sys.path.insert(0, str(ROOT / 'tools'))
 from proposal_assessment.evaluation import evaluate
-source = Path('/Volumes/KINGSTON/ICP/IC-Laya-Standalone/artifacts/proposal-assessment/boomdao-600-660/v1')
+source = args.source
 reference_labels = json.loads((source / 'reviewed-text-labels.json').read_text())
 eligible_labels = {'schema_version': 1, 'snapshots': {
     e['snapshot_sha256']: reference_labels['snapshots'][e['snapshot_sha256']]
