@@ -189,7 +189,7 @@ LocalLLaMA/typed-decisionsを補助ベンチに使う場合は、trainで学習�
 
 ## 独立した作業領域
 
-作業領域は`/Volumes/KINGSTON/ICP/IC-Imajev`とし、リポジトリ名は`IC-Imajev`にする。既存のIC-Laya-Standaloneのソース、Git状態、モデル、稼働中のローカルcanisterを変更しない。既存実装は参照元として読み、再利用するコードは依存関係とライセンスを記録して新しいリポジトリへ取り込む。
+作業領域は`IC-Imajev`リポジトリとする。既存のIC-Laya-Standaloneのソース、Git状態、モデル、稼働中のローカルcanisterを変更しない。既存実装は参照元として読み、再利用するコードは依存関係とライセンスを記録して新しいリポジトリへ取り込む。
 
 実装開始後の配置案:
 

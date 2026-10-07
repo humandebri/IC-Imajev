@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 import hashlib,json,pathlib
 root=pathlib.Path(__file__).resolve().parents[1]
-src=pathlib.Path('/Volumes/KINGSTON/ICP/IC-Laya-Standalone/artifacts/boomdao_query_benchmark/summary.json')
+import argparse
+from repository_paths import existing_file
+parser=argparse.ArgumentParser()
+parser.add_argument('--source', type=existing_file, required=True, help='saved Laya boomdao_query_benchmark/summary.json')
+src=parser.parse_args().source
 baseline=json.loads(src.read_text())
 (root/'benchmarks/laya_baseline.json').write_text(json.dumps({'source':str(src),'sha256':hashlib.sha256(src.read_bytes()).hexdigest(),'baseline':baseline},indent=2)+'\n')
 cases=[]

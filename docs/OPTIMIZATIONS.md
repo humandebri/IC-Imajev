@@ -68,8 +68,10 @@ cargo test --workspace --offline
 .venv/bin/python scripts/check_optimized_scheduler.py
 .venv/bin/python scripts/check_fast_readout.py
 .venv/bin/python scripts/explore_transport.py
-.venv/bin/python scripts/summarize_optimizations.py
+.venv/bin/python scripts/summarize_optimizations.py --laya-root ../IC-Laya-Standalone
 ```
+
+`--laya-root`は比較用ソースを持つ読み取り用checkoutを指定する。上の例は隣にLaya checkoutがある場合で、配置に合わせて変更する。
 
 生ログは`artifacts/optimization-check/`、`optimized-scheduler/`、`fast-readout-contracts/`。これらの検証スクリプトは再実行で自分のログを置き換える。以前の原型測定`artifacts/projection-check/`、`canister-check/`はbenchmarkでは上書きしない。
 

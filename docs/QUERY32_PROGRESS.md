@@ -2,6 +2,8 @@
 
 ## 最新結果（2026-10-06）：3入力すべて32 query
 
+同じ最適化をupdate推論でも再計測し、617/620/653は各3回すべて **5 / 4 / 5 update**。以前の6/5/5から投票2件は各1回減った。詳細は [UPDATE_TEMPLATES_MEASURED.md](UPDATE_TEMPLATES_MEASURED.md)。
+
 固定prefixを準備した状態で、現行短文BOOM DAO 617/620/653をすべて通常query32回で実行した。元INT8モデルから重み・入力本文・質問・選択肢・calibrationを変えておらず、全exported hidden、畳み込み/KV状態、最終normalized hidden、判定・確率・logitsがbit一致した。
 
 |入力|元→改善後query|改善後命令|元からの削減|prefix/suffix|最大query命令|Candid通信|

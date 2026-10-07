@@ -90,5 +90,61 @@ class Tests(unittest.TestCase):
                     b.verified_report(self.target, self.record, self.session)
 
 
+class SnapshotTests(unittest.TestCase):
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.old = self.root / 'original archive/snapshots/proposal-600.json'
+        self.moved = self.root / 'moved archive/snapshots/proposal-600.json'
+        for path in (self.old, self.moved):
+            path.parent.mkdir(parents=True)
+            b.write(path, {'id': 600, 'root_canister_id': 'sns-root'})
+        self.record = dict(proposal_id=600, snapshot=str(self.old), sha256=b.sha(self.old))
+        self.archive = self.moved.parent.parent
+
+    def read(self):
+        return b.read_snapshot(self.archive, self.record, 'sns-root')
+
+    def test_relocated_copy_is_used_even_when_original_exists(self):
+        path, proposal = self.read()
+        self.assertEqual(path, self.moved.resolve())
+        self.assertEqual(proposal['id'], 600)
+        self.record['snapshot'] = 'snapshots/proposal-600.json'
+        self.assertEqual(self.read()[0], self.moved.resolve())
+
+    def test_missing_relocated_copy_does_not_fall_back(self):
+        self.moved.unlink()
+        with self.assertRaises(FileNotFoundError):
+            self.read()
+        self.assertTrue(self.old.exists())
+
+    def test_modified_copy_is_rejected_even_when_original_matches(self):
+        self.moved.write_text('{}')
+        with self.assertRaisesRegex(ValueError, 'hash mismatch'):
+            self.read()
+
+    def test_traversal_and_external_symlink_are_rejected(self):
+        for stored in ('../snapshots/proposal-600.json', 'snapshots/../snapshots/proposal-600.json',
+                       str(self.root / 'other/proposal-600.json')):
+            with self.subTest(stored=stored):
+                self.record['snapshot'] = stored
+                with self.assertRaisesRegex(ValueError, 'invalid snapshot path'):
+                    self.read()
+        self.record['snapshot'] = str(self.old)
+        self.moved.unlink()
+        self.moved.symlink_to(self.old)
+        with self.assertRaisesRegex(ValueError, 'outside the selected archive'):
+            self.read()
+
+    def test_matching_hash_does_not_bypass_identity_checks(self):
+        for proposal in ({'id': 601, 'root_canister_id': 'sns-root'},
+                         {'id': 600, 'root_canister_id': 'other-root'}):
+            b.write(self.moved, proposal)
+            self.record['sha256'] = b.sha(self.moved)
+            with self.assertRaisesRegex(ValueError, 'identity mismatch'):
+                self.read()
+
+
 if __name__ == '__main__':
     unittest.main()

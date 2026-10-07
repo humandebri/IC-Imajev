@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """Read-only comparison: structural MACs and actual reports; no inference in Laya."""
 import collections,hashlib,json,math,pathlib
-ROOT=pathlib.Path(__file__).resolve().parents[1];LAYA=pathlib.Path('/Volumes/KINGSTON/ICP/IC-Laya-Standalone')
+ROOT=pathlib.Path(__file__).resolve().parents[1]
+import argparse
+from repository_paths import existing_directory
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--laya-root', type=existing_directory, required=True)
+LAYA=parser.parse_args().laya_root
 i=json.loads((ROOT/'checkpoints/full-int8.manifest.json').read_text());l=json.loads((LAYA/'checkpoints/laya-int8/manifest.json').read_text());r=json.loads((ROOT/'docs/fused-results.json').read_text());ops=collections.Counter()
 for q in r['query_metrics']:ops[q['op']]+=q['instructions']
 # Exclude embedding lookup, depthwise convolution, small gate projections and norm vectors.
