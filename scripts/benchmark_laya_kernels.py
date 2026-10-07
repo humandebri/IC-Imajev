@@ -12,6 +12,8 @@ import shutil
 import subprocess
 import zipfile
 
+from repository_paths import existing_directory
+
 ROOT = Path(__file__).resolve().parents[1]
 
 def sha(data): return hashlib.sha256(data).hexdigest()
@@ -27,7 +29,7 @@ def extract(source, declaration, last=False):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument('--laya-root', default='/Volumes/KINGSTON/ICP/IC-Laya-Standalone')
+    ap.add_argument('--laya-root', type=existing_directory, required=True)
     ap.add_argument('--directory', required=True)
     args = ap.parse_args()
     laya = Path(args.laya_root).resolve()

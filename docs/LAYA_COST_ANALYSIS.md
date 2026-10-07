@@ -62,7 +62,7 @@ queryの行幅・token幅・演算予算は変更せず、入力の量子化bloc
 ## 再現
 
 ```sh
-.venv/bin/python scripts/analyze_laya_cost.py
+.venv/bin/python scripts/analyze_laya_cost.py --laya-root ../IC-Laya-Standalone
 cargo test --workspace --offline
 cargo build --release --target wasm32-unknown-unknown -p imajev-inference --offline
 cargo build --release -p imajev-runtime --offline
@@ -71,5 +71,7 @@ cargo build --release -p imajev-runtime --offline
 .venv/bin/python scripts/run_full_canister.py --wire-codec int8-block256-v1 \
   --delta-head-cap 16 --attention-head-cap 8 --directory artifacts/new-linear-tiling-run
 ```
+
+`--laya-root`は比較用ソース・重みを持つ読み取り用checkoutを指定する。上の例は隣にLaya checkoutがある場合で、配置に合わせて変更する。
 
 候補A/Bは `scripts/benchmark_linear_tiling.py --phase NAME`。実測履歴を再測定するときは新しいphase名を使う。歴史的Wasm・ソース・要求/返信はignoredの `artifacts/linear-tiling/` に保存した。時間はcache/負荷未制御の単回local測定。命令数はhandler内、通信はCandid request/replyでHTTP/CBOR/signatureを含まない。

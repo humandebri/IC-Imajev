@@ -17,8 +17,8 @@ import time
 
 sys.dont_write_bytecode = True
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-SOURCE = pathlib.Path('/Volumes/KINGSTON/ICP/IC-Laya-Standalone')
-sys.path.insert(0, str(SOURCE / 'tools'))
+SOURCE = ROOT
+sys.path.insert(0, str(ROOT / 'tools'))
 from proposal_assessment.core import assess, make_tasks, run_advisory
 from proposal_assessment.vote import make_vote_task, predict_vote
 from proposal_assessment.evaluation import evaluate
@@ -42,6 +42,27 @@ def write(path, data):
     temporary.write_text(json.dumps(data, ensure_ascii=False, indent=2, allow_nan=False) + '\n')
     temporary.replace(path)
 
+def read_snapshot(archive, record, sns_root):
+    """Rebase historical paths onto the selected archive and verify its bytes."""
+    stored = pathlib.Path(record['snapshot'])
+    relative = pathlib.Path('snapshots') / f"proposal-{record['proposal_id']}.json"
+    if '..' in stored.parts or (stored.is_absolute() and pathlib.Path(*stored.parts[-2:]) != relative) or \
+            (not stored.is_absolute() and stored != relative):
+        raise ValueError(f"invalid snapshot path for proposal {record['proposal_id']}")
+    archive = pathlib.Path(archive).resolve()
+    path = (archive / relative).resolve(strict=True)
+    if not path.is_relative_to(archive):
+        raise ValueError('snapshot resolves outside the selected archive')
+    if path.stat().st_size > 2 * 1024 * 1024:
+        raise ValueError(f"snapshot size mismatch for proposal {record['proposal_id']}")
+    data = path.read_bytes()
+    if len(data) > 2 * 1024 * 1024 or hashlib.sha256(data).hexdigest() != record['sha256']:
+        raise ValueError(f"snapshot size or hash mismatch for proposal {record['proposal_id']}")
+    proposal = json.loads(data)
+    if str(proposal['id']) != str(record['proposal_id']) or proposal['root_canister_id'] != sns_root:
+        raise ValueError(f"snapshot identity mismatch for proposal {record['proposal_id']}")
+    return path, proposal
+
 def prepare(directory):
     directory.mkdir(parents=True, exist_ok=False)
     manifest_path = SOURCE / 'artifacts/proposal-assessment/boomdao-600-660/v1/manifest.json'
@@ -50,10 +71,7 @@ def prepare(directory):
     assert sorted(r['proposal_id'] for r in manifest['records']) == list(range(600, 661))
     preparer, tasks, proposals, records = TextPreparer(), {}, [], []
     for rec in sorted(manifest['records'], key=lambda r: r['proposal_id']):
-        path = pathlib.Path(rec['snapshot'])
-        assert path.stat().st_size <= 2 * 1024 * 1024 and sha(path) == rec['sha256']
-        proposal = json.loads(path.read_text())
-        assert str(proposal['id']) == str(rec['proposal_id']) and proposal['root_canister_id'] == manifest['sns_root']
+        path, proposal = read_snapshot(manifest_path.parent, rec, manifest['sns_root'])
         facts = assess(proposal)
         text_tasks, vote = make_tasks(facts), make_vote_task(facts)
         proposals.append(dict(proposal_id=rec['proposal_id'], snapshot_path=str(path), snapshot_sha256=rec['sha256'],
@@ -85,7 +103,7 @@ def prepare(directory):
              ROOT / 'artifacts/decision-index-v1/dense-prefix/queries/cache.json',
              ROOT / 'artifacts/decision-index-v1/prefix/queries/cache.json', ROOT / 'artifacts/decision-index-v1/packets/cache.json']
     paths += sorted((ROOT / 'client').glob('*.py'))
-    paths += [SOURCE / 'tools/proposal_assessment' / n for n in ('core.py','extensions.py','adapters.py','evaluation.py','vote.py')]
+    paths += [ROOT / 'tools/proposal_assessment' / n for n in ('core.py','extensions.py','adapters.py','evaluation.py','vote.py')]
     assert sha(ROOT / 'artifacts/query-packing-v3/build/full.wasm') == MODULE
     fixture = dict(model_lock_sha256=sha(ROOT / 'MODEL_LOCK.json'), records=records)
     for name in ('prefix', 'dense-prefix'):
@@ -263,11 +281,16 @@ def score(directory):
     write(directory / 'report.json', report)
 
 def main():
+    global SOURCE
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--directory', default='artifacts/proposal-assessment-canister-20261005')
     parser.add_argument('--mode', choices=('prepare','run','score'), required=True)
     parser.add_argument('--retry-errors', action='store_true')
+    parser.add_argument('--source-root', type=pathlib.Path, default=ROOT, help='root containing artifacts/proposal-assessment/boomdao-600-660/v1')
     args = parser.parse_args()
+    SOURCE = args.source_root.expanduser().resolve()
+    if not (SOURCE / 'artifacts/proposal-assessment/boomdao-600-660/v1').is_dir():
+        parser.error('snapshot archive missing; specify --source-root for the retained benchmark archive')
     directory = ROOT / args.directory
     if args.mode == 'prepare': prepare(directory)
     elif args.mode == 'run': run(directory, args.retry_errors)
