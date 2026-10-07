@@ -9,7 +9,7 @@ export default defineConfig({
 			notFoundHandling: "single-page-application",
 		},
 		domains: [
-			"imajev.kinin.xyz",
+			"imajev.kinic.xyz",
 		],
 	},
 });
