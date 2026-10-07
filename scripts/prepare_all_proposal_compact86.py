@@ -5,6 +5,7 @@ This is an experimental three-choice evidence probe, not an automatic vote.
 All original snapshots remain authoritative. Binary/logo contents represented
 by the existing extractor's hashes are not silently claimed as model evidence.
 """
+import argparse
 import hashlib
 import json
 from collections import Counter
@@ -16,6 +17,8 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 TOOLS = ROOT / 'tools'
 sys.path.insert(0, str(TOOLS))
 from prepare_text import TextPreparer
+from proposal_snapshots import read_snapshot
+from repository_paths import existing_directory
 from proposal_assessment.core import assess
 from vision_decision.scoring import verified_label_ids
 
@@ -65,6 +68,13 @@ def render_item(row):
     return json.dumps(row,ensure_ascii=False,separators=(',',':'))
 
 def main():
+    global D, OLD
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--source-directory', type=existing_directory, default=OLD,
+                        help='retained source run containing snapshots/manifest.json and evaluation/report.json')
+    parser.add_argument('--directory', type=Path, default=D, help='new output directory')
+    args = parser.parse_args()
+    OLD, D = args.source_directory, args.directory.expanduser().resolve()
     D.mkdir(parents=True, exist_ok=True)
     if (D / 'inputs.json').exists():
         raise ValueError('frozen inputs already exist')
@@ -91,11 +101,8 @@ def main():
         return p.tokenizer.encode(p.render(HEADER + body + ENDING), add_special_tokens=False)
 
     for snap in manifest['records']:
-        path = Path(snap['snapshot'])
-        assert sha(path) == snap['sha256']
-        raw = json.loads(path.read_text())
+        path, raw = read_snapshot(OLD / 'snapshots', snap, manifest['sns_root'])
         pid = snap['proposal_id']
-        assert str(raw['id']) == str(pid) and raw['root_canister_id'] == manifest['sns_root']
         facts = assess(raw)
         atoms, exclusions = [], []
         for n, item in enumerate(facts['items']):
@@ -175,7 +182,7 @@ def main():
                              'gold_labels_available': False, 'accuracy_measured': False,
                              'aggregation': 'Raw window outputs only; multi-window results are not a holistic proposal recommendation.',
                              'proposals': proposals})
-    paths = [Path(__file__), ROOT / 'scripts/prepare_text.py', ROOT / 'MODEL_LOCK.json',
+    paths = [ROOT / 'scripts/proposal_snapshots.py', Path(__file__), ROOT / 'scripts/prepare_text.py', ROOT / 'MODEL_LOCK.json',
              TOOLS / 'proposal_assessment/core.py', TOOLS / 'proposal_assessment/extensions.py',
              OLD / 'snapshots/manifest.json', OLD / 'evaluation/report.json', D / 'inputs.json', D / 'prepared.json']
     save(D / 'preparation-identities.json', {str(x): sha(x) for x in paths})

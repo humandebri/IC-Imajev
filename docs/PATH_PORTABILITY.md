@@ -16,6 +16,8 @@
 |`make_benchmark.py`|`--source`|保存済み`boomdao_query_benchmark/summary.json`|
 |`report_proposal_assessment.py`|`--source`|保存済み`boomdao-600-660/v1`ディレクトリ|
 |`benchmark_proposal_assessment.py`|`--source-root`|旧benchmark archiveを持つroot。既定値はこのcheckout|
+|`assess_proposal_range.py` / `run_fresh_proposal_assessment.py`|`--snapshot-archive`|`manifest.json`と`snapshots/`を持つ参照元archive|
+|`prepare_all_proposal_windows.py` / `prepare_all_proposal_query32.py` / `prepare_all_proposal_compact86.py`|`--source-directory`|`snapshots/manifest.json`と`evaluation/report.json`を持つ保存済みrun|
 |`checkpoint_goal_recovery_baseline.py`|`--backup`|snapshotを書き出す新しいディレクトリ。親ディレクトリは既存であること|
 
 たとえば隣に読み取り用Laya checkoutがある場合、次のように指定する。
@@ -28,6 +30,17 @@ python3 scripts/make_benchmark.py --source ../IC-Laya-Standalone/artifacts/boomd
 復旧用snapshotの保存先は自動選択しない。上表は指定方法の説明であり、snapshot操作や推論を今回実行したものではない。
 
 `benchmark_proposal_assessment.py`は、manifestに旧絶対パスが残っていても、`--source-root`で選んだarchive内の`snapshots/proposal-ID.json`を読む。移動先にファイルがなければ停止し、元の絶対パスには戻らない。archive外への参照を拒否し、内容のSHA-256・proposal ID・SNS rootを検証する。凍結manifest自体は書き換えない。
+
+同じ検証を`proposal_snapshots.py`へ共通化し、500–660用driverと3つの準備スクリプトにも適用した。fresh driverはmanifestだけを出力先へコピーし、snapshotは指定した参照元archiveから読む。評価用manifestと参照元manifestのhashが一致しなければ停止する。`--directory`には新しい出力先を指定する。
+
+```sh
+.venv/bin/python scripts/run_fresh_proposal_assessment.py prepare \
+  --snapshot-archive ../retained-run/snapshots --directory artifacts/new-fresh-run
+.venv/bin/python scripts/prepare_all_proposal_query32.py \
+  --source-directory ../retained-run --directory artifacts/new-query32-inputs
+```
+
+参照元archiveは`manifest.json`と、その隣の`snapshots/proposal-ID.json`を含む。上記は指定方法の例で、移植後の入力準備では移動した161件のhash・ID・SNS rootと、既存18種類の入力との一致を確認した。推論は再実行していない。
 
 ## 原本と現在のソース
 

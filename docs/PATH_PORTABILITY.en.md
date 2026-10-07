@@ -16,6 +16,8 @@ Data specified by these arguments is read-only input. Missing required arguments
 |`make_benchmark.py`|`--source`|Retained `boomdao_query_benchmark/summary.json`|
 |`report_proposal_assessment.py`|`--source`|Retained `boomdao-600-660/v1` directory|
 |`benchmark_proposal_assessment.py`|`--source-root`|Root containing the historical benchmark archive; defaults to this checkout|
+|`assess_proposal_range.py` / `run_fresh_proposal_assessment.py`|`--snapshot-archive`|Source archive containing `manifest.json` and `snapshots/`|
+|`prepare_all_proposal_windows.py` / `prepare_all_proposal_query32.py` / `prepare_all_proposal_compact86.py`|`--source-directory`|Retained run containing `snapshots/manifest.json` and `evaluation/report.json`|
 |`checkpoint_goal_recovery_baseline.py`|`--backup`|New directory for a snapshot download; its parent must already exist|
 
 For example, with a read-only Laya checkout beside this repository:
@@ -28,6 +30,17 @@ python3 scripts/make_benchmark.py --source ../IC-Laya-Standalone/artifacts/boomd
 The recovery snapshot destination is never chosen automatically. These examples explain argument usage; snapshot operations and inference were not performed during this portability work.
 
 `benchmark_proposal_assessment.py` reads `snapshots/proposal-ID.json` inside the archive selected by `--source-root`, even when the manifest retains historical absolute paths. A missing relocated file stops execution; the script does not fall back to the original absolute path. It rejects references outside the archive and verifies the content SHA-256, proposal ID, and SNS root. The frozen manifest remains unchanged.
+
+The same verification now resides in `proposal_snapshots.py` and is used by the 500–660 driver and all three window preparers. The fresh driver copies only the manifest into its output and reads snapshots from the selected source archive. It stops if the evaluation manifest and source manifest hashes differ. Use `--directory` to select a fresh output.
+
+```sh
+.venv/bin/python scripts/run_fresh_proposal_assessment.py prepare \
+  --snapshot-archive ../retained-run/snapshots --directory artifacts/new-fresh-run
+.venv/bin/python scripts/prepare_all_proposal_query32.py \
+  --source-directory ../retained-run --directory artifacts/new-query32-inputs
+```
+
+The source archive contains `manifest.json` and an adjacent `snapshots/proposal-ID.json` directory. These commands illustrate argument usage. Relocated preparation verified hashes, IDs, and SNS roots for all 161 snapshots and exact agreement with the 18 retained model inputs. No inference was rerun.
 
 ## Original and current sources
 

@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / 'scripts'))
 import assess_proposal_range as assessment
 from evaluation_run_lock import run_lock
+from repository_paths import existing_directory
 from tools.proposal_assessment.binary_benchmark import binary_decision
 from tools.proposal_assessment.validate_binary_improvement import THRESHOLD
 
@@ -43,11 +44,12 @@ def frozen():
             assert sha(Path(path)) == digest, f'source changed: {path}'
 
 
-def prepare():
+def prepare(snapshot_archive=None):
+    snapshot_archive = Path(snapshot_archive) if snapshot_archive is not None else ROOT / 'artifacts/proposal-assessment-500-660-20261006/snapshots'
     D.mkdir(exist_ok=False)
     (D / 'snapshots').mkdir()
-    (D / 'snapshots/manifest.json').write_bytes((ROOT / 'artifacts/proposal-assessment-500-660-20261006/snapshots/manifest.json').read_bytes())
-    assessment.prepare(D, reuse=False)
+    (D / 'snapshots/manifest.json').write_bytes((snapshot_archive / 'manifest.json').read_bytes())
+    assessment.prepare(D, reuse=False, snapshot_archive=snapshot_archive)
     fixture = read(E / 'inputs.json')
     assert fixture == read(O / 'inputs.json'), 'different inputs require a new query schedule'
     save(D / 'plan.json', read(O / 'plan.json'))
@@ -190,9 +192,12 @@ def execute():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(); parser.add_argument('mode', choices=['prepare', 'run', 'report'])
+    parser.add_argument('--snapshot-archive', type=existing_directory, help='prepare source archive containing manifest.json and snapshots/')
+    parser.add_argument('--directory', type=Path, default=D, help='new run directory or retained run to inspect')
     args = parser.parse_args()
+    D = args.directory.expanduser().resolve(); E = D / 'evaluation'
     if args.mode == 'prepare':
-        prepare()
+        prepare(args.snapshot_archive)
     else:
         with run_lock(E):
             if args.mode == 'run':

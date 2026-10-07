@@ -26,6 +26,7 @@ from prepare_text import TextPreparer
 from evaluate_prompt_accuracy import base_flags, MODULE
 sys.path.insert(0, str(ROOT / 'client'))
 from decision_validation import validate_decision
+from proposal_snapshots import read_snapshot
 
 def sha(path):
     h = hashlib.sha256()
@@ -41,27 +42,6 @@ def write(path, data):
     temporary = path.with_suffix(path.suffix + '.pending')
     temporary.write_text(json.dumps(data, ensure_ascii=False, indent=2, allow_nan=False) + '\n')
     temporary.replace(path)
-
-def read_snapshot(archive, record, sns_root):
-    """Rebase historical paths onto the selected archive and verify its bytes."""
-    stored = pathlib.Path(record['snapshot'])
-    relative = pathlib.Path('snapshots') / f"proposal-{record['proposal_id']}.json"
-    if '..' in stored.parts or (stored.is_absolute() and pathlib.Path(*stored.parts[-2:]) != relative) or \
-            (not stored.is_absolute() and stored != relative):
-        raise ValueError(f"invalid snapshot path for proposal {record['proposal_id']}")
-    archive = pathlib.Path(archive).resolve()
-    path = (archive / relative).resolve(strict=True)
-    if not path.is_relative_to(archive):
-        raise ValueError('snapshot resolves outside the selected archive')
-    if path.stat().st_size > 2 * 1024 * 1024:
-        raise ValueError(f"snapshot size mismatch for proposal {record['proposal_id']}")
-    data = path.read_bytes()
-    if len(data) > 2 * 1024 * 1024 or hashlib.sha256(data).hexdigest() != record['sha256']:
-        raise ValueError(f"snapshot size or hash mismatch for proposal {record['proposal_id']}")
-    proposal = json.loads(data)
-    if str(proposal['id']) != str(record['proposal_id']) or proposal['root_canister_id'] != sns_root:
-        raise ValueError(f"snapshot identity mismatch for proposal {record['proposal_id']}")
-    return path, proposal
 
 def prepare(directory):
     directory.mkdir(parents=True, exist_ok=False)
@@ -97,7 +77,7 @@ def prepare(directory):
                     raise
                 entry.update(status='unavailable', reason=str(error) + '; no truncation')
             tasks[key] = entry
-    paths = [ROOT / 'MODEL_LOCK.json', ROOT / 'scripts/prepare_text.py', pathlib.Path(__file__),
+    paths = [ROOT / 'scripts/proposal_snapshots.py', ROOT / 'MODEL_LOCK.json', ROOT / 'scripts/prepare_text.py', pathlib.Path(__file__),
              ROOT / 'scripts/run_prefix_canister.py', ROOT / 'scripts/evaluate_prompt_accuracy.py',
              ROOT / 'artifacts/query-packing-v3/build/full.wasm', ROOT / 'artifacts/query-packing-v3/build/imajev-client',
              ROOT / 'artifacts/decision-index-v1/dense-prefix/queries/cache.json',
