@@ -7,7 +7,6 @@ const RECEIPTS:usize=128;
 const TTL:u64=86_400_000_000_000;
 const MAX_STEPS:u32=6;
 const PREFIX27:[u32;27]=[248045,846,198,56555,279,2420,5721,321,4087,279,3296,1608,279,10661,12521,13,3301,1132,279,3074,2904,1970,13,198,1349,25,328];
-const PREFIX38:[u32;38]=[248045,846,198,56555,279,2420,5721,321,4087,279,3296,1608,279,10661,12521,13,3301,1132,279,3074,2904,1970,13,198,1349,25,328,27756,15209,70173,7383,4203,494,220,16,1834,310,220];
 #[derive(Serialize,Deserialize)]
 struct PaidStore {config:Config,next_id:u64,receipts:Vec<Receipt>,active:Option<Job>}
 #[derive(Serialize,Deserialize)]
@@ -17,13 +16,20 @@ thread_local! {static PAID:RefCell<PaidStore>=RefCell::new(PaidStore::default())
 #[cfg(feature="paid-update-diagnostics")]
 thread_local! {static FAULT:RefCell<Option<(u64,bool)>>=RefCell::new(None);static REFUND_FAULT:RefCell<bool>=RefCell::new(false);}
 fn decision(d:ChoiceResult)->Decision {Decision{value:d.value,probabilities:d.probabilities,unknown_probability:d.unknown_probability,abstained:d.abstained,raw_logits:d.raw_logits,instructions:d.instructions,calibration_version:d.calibration_version}}
+fn suffix_tokens(r:&InferRequest)->Result<usize,InferError> {
+ if r.version!=1 || r.model.len()!=64 || r.token_ids.len()>84 || r.token_ids.is_empty() || r.token_ids.iter().any(|i|*i>=248320) {return Err(InferError::Invalid("input bounds/version".into()));}
+ if !r.token_ids.starts_with(&PREFIX27){return Err(InferError::Invalid("common prefix mismatch".into()));}
+ let n=r.token_ids.len()-PREFIX27.len();
+ if !(1..=57).contains(&n){return Err(InferError::Invalid("suffix bounds".into()));}
+ Ok(n)
+}
 fn plan(r:&InferRequest)->Result<Quote,InferError> {
- if r.version!=1 || r.model.len()!=64 || r.token_ids.len()>95 || r.token_ids.is_empty() || r.token_ids.iter().any(|i|*i>=248320) {return Err(InferError::Invalid("input bounds/version".into()));}
+ let n=suffix_tokens(r)?;
  imajev_runtime::decide_candidates(&r.options,&vec![0.;r.options.len().min(7)+1],1.3051569717552742).map_err(InferError::Invalid)?;
  let valid=STORE.with(|s|s.borrow().manifest.as_ref().is_some_and(|m|m.model==r.model));
  if !valid {return Err(InferError::Invalid("model mismatch".into()));}
- let p=if r.token_ids.starts_with(&PREFIX38) && update_inference::bank_ready(38){38}else if r.token_ids.starts_with(&PREFIX27) && update_inference::bank_ready(27){27}else{return Err(InferError::NotReady)};
- let n=r.token_ids.len()-p;if !(1..=57).contains(&n){return Err(InferError::Invalid("suffix bounds".into()));}
+ let p=PREFIX27.len();
+ if !update_inference::bank_ready(p){return Err(InferError::NotReady);}
  if !STORE.with(|s|s.borrow().ready && s.borrow().weight_cache.names().len()==721) {return Err(InferError::NotReady);}
  PAID.with(|s|{let s=s.borrow();let fee=s.config.fee_per_token.checked_mul(n as u128).and_then(|v|v.checked_add(s.config.base_fee)).ok_or_else(||InferError::Invalid("fee overflow".into()))?;
   if fee==0{return Err(InferError::NotReady);}
@@ -41,6 +47,7 @@ fn prune(s:&mut PaidStore){let now=ic_cdk::api::time();s.receipts.retain(|r|matc
 async fn infer(request:InferRequest,request_id:String,quote_version:u64)->Result<InferenceResult,InferError> {
  let caller=ic_cdk::api::msg_caller();
  if caller==Principal::anonymous() || caller==ic_cdk::api::canister_self() || request_id.is_empty() || request_id.len()>64 {return Err(InferError::Invalid("caller/request ID".into()));}
+ // Preserve replay of pre-upgrade receipts with up to 95 tokens; plan limits new work to 84.
  if request.token_ids.len()>95 || request.options.len()>7 || request.options.iter().any(|s|s.len()>128){return Err(InferError::Invalid("input size".into()));}
  let hash=input_hash(&request);
  let duplicate=PAID.with(|s|{let mut s=s.borrow_mut();prune(&mut s);s.receipts.iter().find(|r|r.caller==caller && r.request_id==request_id).cloned()});
@@ -136,6 +143,25 @@ async fn paid_probe_step(job_id:u64,stage:u64)->Result<StepResult,String>{
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn request_with_suffix(n:usize)->InferRequest {
+        let mut token_ids=PREFIX27.to_vec();token_ids.extend(vec![1;n]);
+        InferRequest{model:"0".repeat(64),version:1,token_ids,options:vec!["no".into(),"yes".into()]}
+    }
+    #[test]
+    fn common_prefix_accepts_84_tokens_but_rejects_85_and_empty_suffix() {
+        assert_eq!(suffix_tokens(&request_with_suffix(57)).unwrap(),57);
+        assert!(matches!(suffix_tokens(&request_with_suffix(58)),Err(InferError::Invalid(_))));
+        assert!(matches!(suffix_tokens(&request_with_suffix(0)),Err(InferError::Invalid(_))));
+    }
+    #[test]
+    fn former_voting_prefix_is_part_of_the_paid_suffix() {
+        let mut r=request_with_suffix(0);
+        r.token_ids.extend([27756,15209,70173,7383,4203,494,220,16,1834,310,220]);
+        r.token_ids.push(1);
+        assert_eq!(suffix_tokens(&r).unwrap(),12);
+        r.token_ids[0]=1;
+        assert!(matches!(suffix_tokens(&r),Err(InferError::Invalid(_))));
+    }
     #[test]
     fn pause_during_inference_preserves_job_quote_and_blocks_reopening() {
         let quote=Quote{version:2,fee:268_000_000_000,prefix_tokens:38,suffix_tokens:56,estimated_steps:5,max_steps:6};

@@ -93,9 +93,7 @@ export function TokenCounter({ input }: { input: DecisionInput }) {
               <p className={overLimit ? "error" : "help"}>
                 Paid update API: {counts.paidSuffix} / 57 additional tokens
                 {overLimit ? " (limit exceeded)" : ""}.
-                {counts.paidPrefix === 38
-                  ? " Prepare the 38-token prefix first."
-                  : ""}
+                {" Fixed prefix: 27 tokens; total limit: 84 tokens."}
               </p>
             )}
           </>
