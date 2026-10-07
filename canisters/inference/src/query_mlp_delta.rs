@@ -11,7 +11,7 @@ pub(super) struct MlpDeltaMeasurement {
 fn bf16_bytes(v:&[f32])->Vec<u8> {v.iter().flat_map(|v|((v.to_bits()>>16)as u16).to_le_bytes()).collect()}
 #[ic_cdk::query]
 fn mlp_delta_front(state:StateBytes,prefix:StateBytes,p:u32,front:u32)->Result<MlpDeltaMeasurement,String> {
-    owner();let start=ic_cdk::api::performance_counter(0);
+    query_access();let start=ic_cdk::api::performance_counter(0);
     if state.len()+prefix.len()>1_990_000 || !(1..=27).contains(&p) || front==0 || front>=H as u32 || front%256!=0 {return Err("bridge input bounds".into());}
     let(r,input)=decode_query(&state)?;
     let layer=r.tensor.strip_prefix("model.language_model.layers.").and_then(|s|s.strip_suffix(".post_attention_layernorm.weight")).and_then(|s|s.parse::<usize>().ok()).ok_or("bridge layer")?;
