@@ -25,14 +25,19 @@ from proposal_assessment.token_sweep import save, sha
 from prepare_text import TextPreparer
 from vision_decision.scoring import verified_label_ids
 from evaluation_run_lock import run_lock
+from proposal_snapshots import read_snapshot
+from repository_paths import existing_directory
 
 ORIGIN = TOOLS.parent / 'artifacts/proposal-assessment'
 
-def prepare(directory, reuse=True):
+def prepare(directory, reuse=True, snapshot_archive=None):
     out = directory / 'evaluation'
     if out.exists():
         raise ValueError('evaluation directory exists')
     manifest_path = directory / 'snapshots/manifest.json'
+    snapshot_archive = Path(snapshot_archive) if snapshot_archive is not None else manifest_path.parent
+    if sha(snapshot_archive / 'manifest.json') != sha(manifest_path):
+        raise ValueError('selected snapshot archive manifest mismatch')
     manifest = json.loads(manifest_path.read_text())
     assert manifest['complete'] and manifest['all_fetched']
     assert sorted(r['proposal_id'] for r in manifest['records']) == list(range(manifest['first'], manifest['last'] + 1))
@@ -40,10 +45,7 @@ def prepare(directory, reuse=True):
     records, entries, gates, facts_rows = [], [], [], []
     indices = {}
     for snapshot in manifest['records']:
-        path = Path(snapshot['snapshot'])
-        assert sha(path) == snapshot['sha256']
-        proposal = json.loads(path.read_text())
-        assert str(proposal['id']) == str(snapshot['proposal_id']) and proposal['root_canister_id'] == manifest['sns_root']
+        path, proposal = read_snapshot(snapshot_archive, snapshot, manifest['sns_root'])
         facts = assess(proposal)
         facts_rows.append(dict(proposal_id=snapshot['proposal_id'], snapshot_sha256=snapshot['sha256'], facts=facts))
         task = make_vote_task(facts)
@@ -99,7 +101,7 @@ def prepare(directory, reuse=True):
                                   accuracy_measured=False, reference_is_gold=False, source_manifest_sha256=sha(manifest_path)))
     save(out/'facts.json', facts_rows)
     shutil.copyfile(ORIGIN/'binary-improved-final-20261006/runner.py', out/'runner.py')
-    source_paths = [Path(__file__), ROOT/'MODEL_LOCK.json'] + list((TOOLS/'proposal_assessment').glob('*.py'))
+    source_paths = [Path(__file__), ROOT/'scripts/proposal_snapshots.py', ROOT/'MODEL_LOCK.json'] + list((TOOLS/'proposal_assessment').glob('*.py'))
     save(out/'source-hashes.json', {str(p):sha(p) for p in source_paths})
     save(out/'identity.json',dict(inputs_sha256=sha(out/'inputs.json'), prepared_sha256=sha(out/'prepared.json'), runner_sha256=sha(out/'runner.py'), bridge_sha256=sha(ROOT/'target/release/imajev-client')))
     # Exact token/model identity permits reuse, separately counted from new execution.
@@ -160,8 +162,8 @@ def report(directory, results_fn=results):
 
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('mode',choices=['prepare','run','report']);p.add_argument('--directory',type=Path,required=True);p.add_argument('--no-reuse',action='store_true');a=p.parse_args();d=a.directory.resolve()
-    if a.mode=='prepare':prepare(d,reuse=not a.no_reuse)
+    p=argparse.ArgumentParser();p.add_argument('mode',choices=['prepare','run','report']);p.add_argument('--directory',type=Path,required=True);p.add_argument('--no-reuse',action='store_true');p.add_argument('--snapshot-archive',type=existing_directory,help='archive containing manifest.json and snapshots/; defaults to DIRECTORY/snapshots');a=p.parse_args();d=a.directory.resolve()
+    if a.mode=='prepare':prepare(d,reuse=not a.no_reuse,snapshot_archive=a.snapshot_archive)
     elif a.mode=='report':report(d)
     else:
         with run_lock(d/'evaluation'):

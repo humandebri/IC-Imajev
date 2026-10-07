@@ -95,7 +95,7 @@
     },
     "scripts/benchmark_proposal_assessment.py": {
       "original_sha256": "2771701a40bd03f0a87d6800d4178a396ff13993b1dccd1cd23b0b78c82bcdc9",
-      "current_sha256": "e7aeb832a459c4e708db36c81e88bd57334bbd9802a3427610b155367b873809",
+      "current_sha256": "3a7ed54214d36807f764077fa8ed0d409e6a5f60c8b22e61fc5b159c3b78bd75",
       "changed": true
     },
     "scripts/checkpoint_goal_recovery_baseline.py": {
@@ -120,17 +120,17 @@
     },
     "scripts/prepare_all_proposal_compact86.py": {
       "original_sha256": "40b5d4ca027a7bb5de7b7708c5886dbecc636fe68724b037ae536d87b4cc856b",
-      "current_sha256": "fc048c6a68810410fed057bd755dcd596d64e3b81d016ae73ec1a7e223090821",
+      "current_sha256": "6962eaaa39378a7e36391772077544776d86fc47f992a1421a2f4e6f2b72c889",
       "changed": true
     },
     "scripts/prepare_all_proposal_query32.py": {
       "original_sha256": "87c54c1bb2b4d27c6a03e79ae22ab7c47c66b4d874c1bc9b56854578c8257b61",
-      "current_sha256": "7fb5904241b9855b734079b550f3dcbe2e84f66ef7867bc27dc4621be84e9267",
+      "current_sha256": "f7aaec649bb0184cee0131afa2f4c38d9d0782f93f2c8549487d7eea831c6ef0",
       "changed": true
     },
     "scripts/prepare_all_proposal_windows.py": {
       "original_sha256": "117a3d34f90fc635c574d3a090090eff40140e1ee403ca8ab5d11b5c466d8ab4",
-      "current_sha256": "e771ad6eb2bf8e1906863e3663024ea0e148740375a1cb2e68620e9a8c212cab",
+      "current_sha256": "ae25f8cec3cb50867aac62759b4923389ae59ebb8ac6a460169d3c75f7afbfbd",
       "changed": true
     },
     "scripts/report_proposal_assessment.py": {
@@ -140,7 +140,7 @@
     },
     "scripts/run_fresh_proposal_assessment.py": {
       "original_sha256": "95f00f907765533ca006fb1d40ca3b77813bb8aaf614adae5e7b1f556306eb0d",
-      "current_sha256": "95f00f907765533ca006fb1d40ca3b77813bb8aaf614adae5e7b1f556306eb0d",
+      "current_sha256": "91101673d4598578fcde896c3dcaa0caf4e9fb426e44c4f965e858720231b3c9",
       "changed": false
     },
     "scripts/summarize_optimizations.py": {
@@ -246,7 +246,7 @@
   "added_source_hashes": {
     "scripts/repository_paths.py": "069c1fef9c59df532cb48192fde9598d4b5b2b2800411b2e2d4f74f31cc74918",
     "tools/proposal_assessment/evaluation.py": "e4372d6360ca2b895abc6f88519ecc7df67dd74f352c00b1d5cbe1a1ce1250b7",
-    "docs/PATH_PORTABILITY.md": "151679662b7dd6deb7235d132696111cb7cdc02f3c06ebc49843aedcbdad46c9"
+    "docs/PATH_PORTABILITY.md": "1e809ecbf2e3472329128a1fed1fcc4af7057604904c41592f3808cddac2f90a"
   },
   "translation_note": "English reports and navigation links added after the portability checks; source hashes for edited documentation refreshed. Execution code and saved inference results unchanged.",
   "review_followup": {
@@ -284,5 +284,39 @@
     "new_inferences": 0,
     "canister_operations": 0,
     "checkpoint_note": "Earlier verification entries describe their recorded checkpoints; unrelated files may have changed independently since those checks."
+  },
+  "snapshot_archive_followup": {
+    "scope": "Shared archive-bound snapshot verification across the 500-660 driver, fresh preparation, all three window preparers and the 600-660 runner.",
+    "tests": [
+      {
+        "command": ".venv/bin/python -B scripts/test_proposal_snapshot_archives.py",
+        "passed": 4
+      },
+      {
+        "command": ".venv/bin/python -B scripts/test_proposal_assessment_runs.py",
+        "passed": 11
+      }
+    ],
+    "relocated_archive": {
+      "snapshots_verified": 161,
+      "prepared_model_inputs": 18,
+      "all_inputs_equal_to_retained_inputs": true,
+      "original_manifest_preserved": true
+    },
+    "source_hashes": {
+      "scripts/assess_proposal_range.py": "9d02a40e21e3aae8bf03d1f58a9348dcf59a10d854dba145a8917ac687a06438",
+      "scripts/benchmark_proposal_assessment.py": "3a7ed54214d36807f764077fa8ed0d409e6a5f60c8b22e61fc5b159c3b78bd75",
+      "scripts/prepare_all_proposal_windows.py": "ae25f8cec3cb50867aac62759b4923389ae59ebb8ac6a460169d3c75f7afbfbd",
+      "scripts/prepare_all_proposal_query32.py": "f7aaec649bb0184cee0131afa2f4c38d9d0782f93f2c8549487d7eea831c6ef0",
+      "scripts/prepare_all_proposal_compact86.py": "6962eaaa39378a7e36391772077544776d86fc47f992a1421a2f4e6f2b72c889",
+      "scripts/run_fresh_proposal_assessment.py": "91101673d4598578fcde896c3dcaa0caf4e9fb426e44c4f965e858720231b3c9",
+      "scripts/proposal_snapshots.py": "4229feb67af8d7cb6c3430d3b840b0b8aeb1298bfc77d873ee38ca67314719b4",
+      "scripts/test_proposal_snapshot_archives.py": "7ece7b3622c7a5b6c38c7bf62b618525972f41db27e44a140cc4276b8351d561",
+      "docs/PATH_PORTABILITY.md": "1e809ecbf2e3472329128a1fed1fcc4af7057604904c41592f3808cddac2f90a",
+      "docs/PATH_PORTABILITY.en.md": "cf30e59ea3ee550b50dd4f75572079291b4b4a054a7e6a5af5fa2384e0e9810a"
+    },
+    "new_inferences": 0,
+    "canister_operations": 0,
+    "frozen_experiment_manifests_updated": false
   }
 }
