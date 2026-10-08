@@ -31,6 +31,8 @@ PlaywrightのChromiumがない場合は `npx playwright install chromium` が必
 
 `Cancel` は通信を中断し、次のquery発行を止めます。すでにcanisterで実行されている計算の停止は保証しません。キャンセル後の古い応答は表示しません。queryは30秒、全推論は5分でtimeoutし、自動retryは行いません。失敗時はエラーを表示し、利用者が再実行できます。
 
+prefix素材は現在の層と次の層を並行して取得し、SHA-256検証が終わった素材をWorker内で再利用します。上限は15,418,368 bytesです。manifestとagentの準備、実行前の独立した3件の確認も並列化します。キャンセルは各実行の通信だけを中断します。仕組み、内部計測、比較結果は [FRONTEND_PREFETCH.md](../docs/FRONTEND_PREFETCH.md) を参照してください。
+
 独立した入力・タブ・利用者の実行を直列化するqueueはありません。各実行がcarry・進捗・キャンセルを持ちます。モデル重み4.7GBをブラウザへ配布せず、ownerの秘密鍵やログインも必要ありません。IC agentのnode署名検証を有効にし、固定module/model/packとprefix素材のhashを確認します。host-checksum runtimeのzero footerは署名検証済み応答に限って受け入れ、全headerを送信条件に束縛した後、クライアントでchecksumを付けます。
 
 入力例ボタンはフォームへ入力するだけです。`Copy input` は `state`、`question`、`options` のJSONをコピーします。履歴は永続保存しません。基本例のBF16ネイティブ実測は `artifacts/ui-extreme-examples-20261007/attempt2/` にあり、ICのINT8推論結果とは別の測定です。

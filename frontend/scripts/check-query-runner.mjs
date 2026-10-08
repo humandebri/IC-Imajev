@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { IDL } from "@icp-sdk/core/candid";
-import { methods } from "../src/inference-agent.ts";
+import { methods, loadPrefix } from "../src/inference-agent.ts";
 import { runQueryGraph, validateInput } from "../src/query-runner.ts";
 import { baselinePlan, MAX_TOKENS } from "../src/query-plan.ts";
 import { frame, unframe } from "../src/query-codec.ts";
@@ -40,6 +40,22 @@ assert.equal(count, 32);
 assert.deepEqual(progress, Array.from({ length: 33 }, (_, i) => i));
 const report = await json("artifacts/mainnet-prefix27-upgrade-20261007/anonymous-query-653/report.json");
 for (const field of ["value", "probabilities", "unknown_probability", "abstained"]) assert.deepEqual(result[field], report.decision[field]);
+// Replay the same signed evidence with the actual prefetch/cache loader too.
+const originalFetch = globalThis.fetch, prefetchController = new AbortController();
+try {
+  globalThis.fetch = async (url, init) => {
+    init.signal.throwIfAborted();
+    const name = new URL(url).pathname.split("/").at(-1);
+    return new Response(await readFile(new URL(`frontend/public/inference/prefix27-v1/${name}`, root)));
+  };
+  const prefix = await loadPrefix("https://verified-fixture/", prefetchController.signal);
+  count = 0;
+  const prefetchedResult = await runQueryGraph(record.token_ids, record.options, {
+    ...prefix, client, plan: baselinePlan(57), signal: prefetchController.signal, progress() {},
+  });
+  assert.equal(count, 32);
+  assert.deepEqual(prefetchedResult, result, "Prefetch preserves Candid byte parity and decision bits");
+} finally { prefetchController.abort(); globalThis.fetch = originalFetch; }
 assert.throws(() => validateInput([...manifest.prefix, ...Array(MAX_TOKENS - 26).fill(1)], record.options, manifest), /total maximum/);
 assert.throws(() => validateInput([1, ...record.token_ids.slice(1)], record.options, manifest), /prefix/);
 const cancelled = new AbortController(); cancelled.abort();
