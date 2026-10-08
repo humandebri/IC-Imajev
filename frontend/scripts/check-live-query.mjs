@@ -39,7 +39,9 @@ try {
     await page.waitForFunction(() => document.querySelector('.result-panel[data-state="done"]') || document.querySelector('[role="alert"]'), null, { timeout: 360_000 });
     const error = await page.locator('[role="alert"]').allTextContents();
     if (error.length) throw new Error(`Browser run ${index}: ${error.join(" ")}`);
-    const selected = await page.locator(".actual-result h3").innerText();
+    const heading = await page.locator(".actual-result h3").innerText();
+    const selected = await page.locator(".result-label").innerText() === "Abstained" ? null
+      : heading.replace(/\s*·\s*[\d,.]+%$/, "");
     const probabilities = await page.locator("meter").evaluateAll(nodes => nodes.map(n => n.value));
     if (writes.length || errors.length) throw new Error(`Unexpected writes/errors: ${JSON.stringify({ writes, errors })}`);
     const totalText = await page.locator(".token-counts dd").innerText();
