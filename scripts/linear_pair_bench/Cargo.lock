@@ -366,10 +366,15 @@ name = "imajev-runtime"
 version = "0.1.0"
 dependencies = [
  "blake3",
+ "inference-core",
  "serde",
  "serde_json",
  "sha2",
 ]
+
+[[package]]
+name = "inference-core"
+version = "0.1.0"
 
 [[package]]
 name = "itoa"

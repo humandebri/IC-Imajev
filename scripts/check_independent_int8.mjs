@@ -11,7 +11,7 @@ const fnv=b=>{let value=14695981039346656037n;for(const byte of b)value=BigInt.a
 const hash=b=>createHash('sha256').update(b).digest('hex');
 const median=a=>[...a].sort((x,y)=>x-y)[Math.floor(a.length/2)];
 const rows=[];
-for(let mode=0;mode<=6;mode++) {
+for(const mode of [0]) {
   for(const n of Array.from({length:132},(_,i)=>i+1)) {
     for(const cols of [256,512,2560,9216]) for(let pattern=0;pattern<6;pattern++) {
       for(const i of instances){i.exports.setup(mode,n,cols,pattern);i.exports.run();}

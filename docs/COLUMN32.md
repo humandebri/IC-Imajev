@@ -1,3 +1,5 @@
+2026-10-08更新：この文書は当時の実験・測定記録。旧column16/column32・balanced44・dot-scale・whole-token scaleの実装とfeatureは削除済みで、以下の旧featureを指定するコマンドは現行ソースでは使えない。現行実装と検証は[INDEPENDENT_RUNTIME.md](runtime/INDEPENDENT_RUNTIME.md)を参照。
+
 2026-10-03後続：全32 headのDelta統合を全5条件で検証・採用し、主91→67 query。現在の採用版は[DELTA_FULL_LOG.md](DELTA_FULL_LOG.md)。以下は探索・採用時の履歴。
 
 # 入力ロードの32出力共有と87トークンMLPの統合

@@ -29,7 +29,7 @@ pub struct Measurement {pub digest:Vec<u8>,pub quantize_instructions:u64,pub inp
 #[ic_cdk::query]
 fn project(input:Vec<u8>,paired:bool)->Measurement {FIXED.with(|s| {let s=s.borrow();let f=s.as_ref().unwrap();assert_eq!(f.owner,ic_cdk::api::msg_caller());assert!(f.sealed && !input.is_empty() && input.len()<=1_500_000 && input.len()%(f.cols*4)==0);let n=input.len()/(f.cols*4);let rows=if n>109 {f.rows.min(4096)} else {f.rows};assert!((81..=88).contains(&n) && n*rows<=900_000);let begin=ic_cdk::api::performance_counter(0);
  let x:Vec<f32>=input.chunks_exact(4).map(|b|f32::from_le_bytes(b.try_into().unwrap())).collect();let q=int8_kernel::quantize_rows(&x,n,f.cols).unwrap();let quant=ic_cdk::api::performance_counter(0);let prepared=paired.then(||layout::prepare_input(&q));let prep=ic_cdk::api::performance_counter(0);
- let out=if let Some(prepared)=prepared {layout::project(&q,&prepared,f.paired.as_ref().unwrap(),&f.scales).unwrap()}else{int8_kernel::project_column32_balanced(&q,&f.w,&f.scales,f.rows).unwrap()};let end=ic_cdk::api::performance_counter(0);
+ let out=if let Some(prepared)=prepared {layout::project(&q,&prepared,f.paired.as_ref().unwrap(),&f.scales).unwrap()}else{int8_kernel::project(&q,&f.w,&f.scales,f.rows).unwrap()};let end=ic_cdk::api::performance_counter(0);
  let mut digest=Sha256::new();for v in &out {digest.update(v.to_le_bytes());}
  #[cfg(target_arch="wasm32")] let heap_pages=core::arch::wasm32::memory_size(0) as u64;
  #[cfg(not(target_arch="wasm32"))] let heap_pages=0;

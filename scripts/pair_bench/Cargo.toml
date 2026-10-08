@@ -6,13 +6,7 @@ edition="2021"
 [lib]
 crate-type=["cdylib","rlib"]
 [features]
-column32 = ["balanced44", "imajev-runtime/experimental-column32"]
-balanced44 = ["dot-scale", "imajev-runtime/experimental-balanced44"]
-dot-scale = ["column16-token48", "imajev-runtime/experimental-dot-scale"]
 matrix-tail=["imajev-runtime/experimental-matrix-tail"]
-column16=["imajev-runtime/experimental-column16"]
-column16-token48=["column16-explicit","imajev-runtime/experimental-column16-token48"]
-column16-explicit=["column16","imajev-runtime/experimental-explicit-weight-loads"]
 [dependencies]
 imajev-runtime={path="../../crates/imajev-runtime"}
 ic-cdk="=0.20.3"

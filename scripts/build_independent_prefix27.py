@@ -13,17 +13,28 @@ import subprocess
 import sys
 
 from build_paid_message_checkpoint import projection_bodies, sha
+from remove_token_scale import remove_token_scale
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME = ROOT/'artifacts/update-rank7-prepare8-unrolled-v1/build'
 
 def replacement_section(text):
-    function = text.index('unsafe fn dot_tile<')
-    begin = text.rfind('#[cfg(target_arch',0,function)
-    end = text.index('#[cfg(test)]',function)
-    if begin < 0:
-        raise ValueError('missing replacement kernel cfg')
+    begin = text.index('// Canonical block256 projection;')
+    end = text.index('#[cfg(test)]',begin)
     return text[begin:end]
+
+def active_flags(command):
+    removed = ('experimental-token-scale','experimental-column','experimental-adopt-column',
+               'experimental-balanced44','experimental-adopt-balanced44','experimental-dot-scale',
+               'experimental-adopt-dot-scale','experimental-wide-token-tiles','experimental-explicit-weight-loads')
+    result=[]
+    i=0
+    while i<len(command):
+        if command[i]=='--cfg' and command[i+1].startswith('feature="') and command[i+1][9:].startswith(removed):
+            i+=2
+        else:
+            result.append(command[i]);i+=1
+    return result
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -61,27 +72,28 @@ def main():
         runtime_command = frozen['runtime_command'][:]
     shutil.copytree(runtime_source,directory/'runtime')
     owned = ROOT/'crates/imajev-runtime/src'
-    for name,marker in (('int8_kernel.rs','// The loop-unrolled load-sharing layout'),
-                        ('int8_token_kernel.rs','// Load sharing follows')):
-        path = directory/'runtime'/name
-        text = path.read_text()
-        start,end = text.index(marker),text.index('#[cfg(test)]',text.index(marker))
-        path.write_text(text[:start]+replacement_section((owned/name).read_text())+text[end:])
-    for name in ('int8_dot_scale.rs','int8_column32.rs','int8_tile.rs'):
-        shutil.copyfile(owned/name,directory/'runtime'/name)
+    path = directory/'runtime/int8_kernel.rs'
+    text = path.read_text()
+    start=text.index('#[cfg(all(target_arch="wasm32",feature="experimental-dot-scale"))]')
+    end=text.index('#[cfg(test)]',start)
+    text=text[:start]+replacement_section((owned/'int8_kernel.rs').read_text())+text[end:]
+    path.write_text(text.replace('#[cfg(all(test, feature = "experimental-wide-token-tiles"))]','#[cfg(test)]'))
+    for name in ('int8_dot_scale.rs','int8_column32.rs','int8_token_kernel.rs'):
+        (directory/'runtime'/name).unlink()
+    shutil.copyfile(owned/'int8_tile.rs',directory/'runtime/int8_tile.rs')
     lib = directory/'runtime/lib.rs'
-    text = lib.read_text()
+    text = remove_token_scale(lib.read_text())
     if text.count('pub mod int8_kernel;')!=1:
         raise ValueError('runtime module anchor mismatch')
     lib.write_text(text.replace('pub mod int8_kernel;','#[cfg(target_arch="wasm32")]\nmod int8_tile;\npub mod int8_kernel;',1))
-    sources = list((directory/'runtime').rglob('*.rs'))+[Path(__file__),ROOT/'scripts/generate_int8_tile.py']+[owned/name for name in ('int8_kernel.rs','int8_token_kernel.rs','int8_dot_scale.rs','int8_column32.rs','int8_tile.rs')]
+    sources = list((directory/'runtime').rglob('*.rs'))+[Path(__file__),ROOT/'scripts/generate_int8_tile.py',ROOT/'scripts/remove_token_scale.py']+[owned/name for name in ('int8_kernel.rs','int8_tile.rs','lib.rs')]
     source_hashes = {str(p.relative_to(ROOT)):sha(p) for p in sources}
-    command = runtime_command
+    command = active_flags(runtime_command)
     command[command.index('--edition=2021')+1] = str(lib)
     command[command.index('-o')+1] = str(directory/'libimajev_runtime.rlib')
     with (directory/'runtime-compiler.log').open('w') as log:
         subprocess.run(command,cwd=ROOT,check=True,stdout=log,stderr=log)
-    wrapper = before['command'][:]
+    wrapper = active_flags(before['command'])
     wrapper = [f'imajev_runtime={directory}/libimajev_runtime.rlib' if value.startswith('imajev_runtime=') else value for value in wrapper]
     wrapper[wrapper.index('-o')+1] = str(directory/'raw.wasm')
     env = dict(os.environ,CARGO_MANIFEST_DIR=str(directory/'baseline'),CARGO_PKG_NAME='imajev-inference',
