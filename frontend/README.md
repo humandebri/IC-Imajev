@@ -25,9 +25,9 @@ PlaywrightのChromiumがない場合は `npx playwright install chromium` が必
 
 ## 入力と実行
 
-質問は必須、判断材料は任意、選択肢は2〜7件です。空欄、前後空白を除いた重複、判断保留用の予約語 `__unknown__`、1選択肢128 UTF-8 bytes超は拒否します。固定27-token prefixと追加1〜57 token、合計28〜84 tokenが対象です。prompt、選択肢、unknown、chat templateを含む実token数で実行可否を判断します。
+質問は必須、判断材料は任意、選択肢は2〜7件です。空欄、前後空白を除いた重複、判断保留用の予約語 `__unknown__`、1選択肢128 UTF-8 bytes超は拒否します。固定27-token prefixと追加1〜69 token、合計28〜96 tokenが対象です。prompt、選択肢、unknown、chat templateを含む実token数で実行可否を判断します。
 
-`Run inference` で送信時の入力を固定し、32回の推論queryをcarryの依存順に呼びます。実行前に2回のreadiness query、実行前後にmodule hashの証明を確認します。結果には選択値、候補別確率、unknown、判断保留を表示します。途中で入力を編集しても実行中の入力や結果ラベルは変わりません。完了数と経過時間は実際の応答から更新します。
+`Run inference` で送信時の入力を固定し、token数に対応する測定済み計画で32〜63回の推論queryをcarryの依存順に呼びます。計画は現在のmodule hashに固定し、MLP生成を256単位で分割します。実行前に2回のreadiness query、実行前後にmodule hashの証明を確認します。結果には選択値、候補別確率、unknown、判断保留を表示します。途中で入力を編集しても実行中の入力や結果ラベルは変わりません。完了数と経過時間は実際の応答から更新します。
 
 `Cancel` は通信を中断し、次のquery発行を止めます。すでにcanisterで実行されている計算の停止は保証しません。キャンセル後の古い応答は表示しません。queryは30秒、全推論は5分でtimeoutし、自動retryは行いません。失敗時はエラーを表示し、利用者が再実行できます。
 
@@ -46,7 +46,7 @@ PLAYGROUND_URL=http://127.0.0.1:4173 npm run test:live-query
 
 `test:query` はローカルの本番証跡 `artifacts/mainnet-prefix27-upgrade-20261007/anonymous-query-653/` と `artifacts/text-short-v2/inputs.json` を使います。32回のCandid送信byte、frame、中間返信、最終結果を照合し、破損・header不一致・キャンセルを検証します。
 
-`test:live-query` は起動済みのサイトから本番へ読み取りqueryを送る明示的な試験です。独立した2ブラウザで異なる入力を同時実行し、update呼び出しがないこと、各32推論query＋2readiness queryで完了することを確認します。84-token入力は既存の本番結果とも一致を確認します。2026-10-07のproduction build試験は両方成功し、87.346秒と67.498秒でした。証跡は `artifacts/browser-query-test-20261007/report.json` です。
+`test:live-query` は起動済みのサイトから本番へ読み取りqueryを送る明示的な試験です。独立した3ブラウザで短文・84token・96tokenの異なる入力を同時実行し、update呼び出しがないこと、選択した計画の推論query数＋2readiness queryで完了することを確認します。84-token入力は既存の本番結果とも一致を確認します。2026-10-07のproduction build試験は両方成功し、87.346秒と67.498秒でした。証跡は `artifacts/browser-query-test-20261007/report.json` です。
 
 全ての入力で命令数上限に収まることを保証する試験ではありません。instruction limit等で失敗した場合は結果を作らずエラーを表示します。低速回線・実スマートフォン・多数同時実行での性能は未測定です。
 
@@ -70,3 +70,5 @@ cf --profile kinic-production deploy --prebuilt
 ```
 
 `npm run deploy` は同じビルド・成果物生成と、デフォルトプロファイルの `cf deploy --prebuilt` を行います。Custom Domainの設定だけでは公開先へ反映されません。`workersDev: true` により https://ic-imajev.hude.workers.dev からも同じfrontendを利用できます。
+
+可変queryの測定、数値結果の比較、採用基準、32回未満の検討は [ADAPTIVE_QUERY_EXECUTION.md](../docs/ADAPTIVE_QUERY_EXECUTION.md) を参照してください。`scripts/profile-query-plans.mjs` は明示的な匿名mainnet query試験です。`scripts/prepare-query-profiles.mjs` は測定に合格した連続範囲だけを公開用の設定へ反映します。

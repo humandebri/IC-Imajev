@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { IDL } from "@icp-sdk/core/candid";
 import { methods } from "../src/inference-agent.ts";
 import { runQueryGraph, validateInput } from "../src/query-runner.ts";
+import { baselinePlan, MAX_TOKENS } from "../src/query-plan.ts";
 import { frame, unframe } from "../src/query-codec.ts";
 const root = new URL("../../", import.meta.url);
 const json = async path => JSON.parse(await readFile(new URL(path, root), "utf8"));
@@ -25,7 +26,7 @@ const client = {
 };
 const assets = async layer => new Uint8Array(await readFile(new URL(`frontend/public/inference/prefix27-v1/${manifest.assets[layer].file}`, root)));
 const result = await runQueryGraph(record.token_ids, record.options, {
-  manifest, asset: assets, client, signal: controller.signal, progress: n => progress.push(n),
+  manifest, asset: assets, client, plan: baselinePlan(57), signal: controller.signal, progress: n => progress.push(n),
   observe(i, request, reply) {
     observed.push((async () => {
       const stem = String(i).padStart(6, "0");
@@ -36,10 +37,10 @@ const result = await runQueryGraph(record.token_ids, record.options, {
 });
 await Promise.all(observed);
 assert.equal(count, 32);
-assert.deepEqual(progress, Array.from({ length: 32 }, (_, i) => i + 1));
+assert.deepEqual(progress, Array.from({ length: 33 }, (_, i) => i));
 const report = await json("artifacts/mainnet-prefix27-upgrade-20261007/anonymous-query-653/report.json");
 for (const field of ["value", "probabilities", "unknown_probability", "abstained"]) assert.deepEqual(result[field], report.decision[field]);
-assert.throws(() => validateInput([...record.token_ids, 1], record.options, manifest), /84/);
+assert.throws(() => validateInput([...manifest.prefix, ...Array(MAX_TOKENS - 26).fill(1)], record.options, manifest), /total maximum/);
 assert.throws(() => validateInput([1, ...record.token_ids.slice(1)], record.options, manifest), /prefix/);
 const cancelled = new AbortController(); cancelled.abort();
 let calls = 0;
@@ -63,7 +64,7 @@ for (const reserved of ["__unknown__", "  __unknown__  "]) {
 count = 0;
 const midway = new AbortController();
 await assert.rejects(runQueryGraph(record.token_ids, record.options, {
-  manifest, asset: assets, client, signal: midway.signal, progress() { midway.abort(); },
+  manifest, asset: assets, client, plan: baselinePlan(57), signal: midway.signal, progress(n) { if (n === 1) midway.abort(); },
 }), /abort/i);
 assert.equal(count, 1);
 

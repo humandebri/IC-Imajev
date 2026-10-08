@@ -3,6 +3,7 @@ import { tokenizeInput } from "./tokenization.ts";
 import type { DecisionInput } from "./types";
 import { createQueryClient, loadPrefix } from "./inference-agent.ts";
 import { runQueryGraph, validateInput } from "./query-runner.ts";
+import { MAX_TOKENS } from "./query-plan.ts";
 import release from "./inference-release.json" with { type: "json" };
 
 async function loadTokenizer() {
@@ -59,7 +60,7 @@ self.onmessage = async (
     const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(300_000)]);
     signal.throwIfAborted();
     if (!input.question.trim()) throw new Error("Enter a question.");
-    if (tokenized.counts.total > 84) throw new Error("Input exceeds 84 tokens. Shorten the context, question or options.");
+    if (tokenized.counts.total > MAX_TOKENS) throw new Error(`Input exceeds ${MAX_TOKENS} tokens. Shorten the context, question or options.`);
     const prefix = await loadPrefix(`${import.meta.env.BASE_URL}inference/prefix27-v1/`, signal);
     validateInput(tokenized.tokenIds, input.options, prefix.manifest);
     const client = await createQueryClient(signal);
@@ -71,7 +72,7 @@ self.onmessage = async (
       throw new Error("Inference canister is being prepared. Please try later.");
     }
     const result = await runQueryGraph(tokenized.tokenIds, input.options, {
-      ...prefix, client, signal, progress: completed => self.postMessage({ id, completed }),
+      ...prefix, client, signal, progress: (completed, total) => self.postMessage({ id, completed, total }),
     });
     await client.checkModule();
     signal.throwIfAborted();

@@ -1,3 +1,4 @@
+import { MAX_SUFFIX, MAX_TOKENS } from "./query-plan.ts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ResultPanel } from "./ResultPanel";
 import { TokenCounter } from "./TokenCounter";
@@ -43,7 +44,7 @@ export default function App() {
   const [tokenAnswer, setTokenAnswer] = useState<{ key: string; counts: TokenCounts | null } | null>(null);
   const onCounts = useCallback((key: string, counts: TokenCounts | null) => setTokenAnswer({ key, counts }), []);
   const counts = tokenAnswer?.key === inputKey ? tokenAnswer.counts : null;
-  const canRun = valid && counts?.paidPrefix === 27 && counts.paidSuffix !== null && counts.paidSuffix >= 1 && counts.paidSuffix <= 57;
+  const canRun = valid && counts?.paidPrefix === 27 && counts.paidSuffix !== null && counts.paidSuffix >= 1 && counts.paidSuffix <= MAX_SUFFIX;
   const [result, setResult] = useState<DecisionResult | null>(null);
   const [resultOptions, setResultOptions] = useState<string[]>([]);
   const [progress, setProgress] = useState<InferenceProgress | null>(null);
@@ -60,9 +61,9 @@ export default function App() {
     const id = ++generation.current, startedAt = Date.now();
     const snapshot = structuredClone(input);
     setResult(null); setResultOptions(snapshot.options); setInferenceError("");
-    setProgress({ kind: "steps", completed: 0, total: 32, startedAt, phase: "Preparing" });
-    const run = infer(snapshot, completed => {
-      if (generation.current === id) setProgress({ kind: "steps", completed, total: 32, startedAt, phase: "Running" });
+    setProgress({ kind: "waiting", startedAt, phase: "Preparing" });
+    const run = infer(snapshot, (completed, total) => {
+      if (generation.current === id) setProgress({ kind: "steps", completed, total, startedAt, phase: "Running" });
     });
     activeRun.current = run;
     try { const answer = await run.promise; if (generation.current === id) setResult(answer); }
@@ -344,7 +345,7 @@ export default function App() {
                 </button>
               </div>
               <p id="connection-help" className="help">
-                {progress ? "Running your submitted input." : "Up to 84 tokens. No login required."}
+                {progress ? "Running your submitted input." : `Up to ${MAX_TOKENS} tokens. No login required.`}
               </p>
               {inferenceError && <p className="error" role="alert">{inferenceError}</p>}
               <p

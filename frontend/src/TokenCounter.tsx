@@ -1,3 +1,4 @@
+import { MAX_SUFFIX, MAX_TOKENS } from "./query-plan.ts";
 import { useEffect, useState } from "react";
 import type { DecisionInput } from "./types";
 import type { TokenCounts } from "./tokenization";
@@ -23,7 +24,7 @@ export function TokenCounter({ input, onCounts }: { input: DecisionInput; onCoun
   const overLimit =
     counts?.paidSuffix !== null &&
     counts?.paidSuffix !== undefined &&
-    counts.paidSuffix > 57;
+    counts.paidSuffix > MAX_SUFFIX;
   return (
     <section className="token-counter" aria-labelledby="tokens-heading">
       <h3 id="tokens-heading">Tokens</h3>
@@ -65,9 +66,9 @@ export function TokenCounter({ input, onCounts }: { input: DecisionInput; onCoun
               </p>
             ) : (
               <p className={overLimit ? "error" : "help"}>
-                Query limit: {counts.paidSuffix} / 57 additional tokens
+                Query limit: {counts.paidSuffix} / {MAX_SUFFIX} additional tokens
                 {overLimit ? " (limit exceeded)" : ""}.
-                {" Fixed prefix: 27 tokens; total limit: 84 tokens."}
+                {` Fixed prefix: 27 tokens; total limit: ${MAX_TOKENS} tokens.`}
               </p>
             )}
           </>

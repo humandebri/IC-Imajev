@@ -1,14 +1,18 @@
-import { concat, u32, sha, frame, unframe, front, checkCarry, C, H, P, CONV } from "./query-codec.ts";
+import { concat, u32, sha, frame, unframe, checkCarry, C, H, P, CONV } from "./query-codec.ts";
 import type { Header } from "./query-codec.ts";
 import type { PrefixManifest, QueryClient } from "./inference-agent.ts";
+import { MAX_SUFFIX, queryCount, selectPlan, validatePlan } from "./query-plan.ts";
+import type { QueryPlan } from "./query-plan.ts";
 import type { DecisionResult } from "./types.ts";
 
-interface Measurement { state: Uint8Array; previous_hidden?: Uint8Array; conv?: Uint8Array; kv?: Uint8Array }
+export interface Measurement { instructions?: bigint; spans?: [string, bigint][]; heap_pages?: bigint; state: Uint8Array; previous_hidden?: Uint8Array; conv?: Uint8Array; kv?: Uint8Array }
 interface Dependencies {
   client: QueryClient; manifest: PrefixManifest; asset: (layer: number) => Promise<Uint8Array>;
-  signal: AbortSignal; progress: (completed: number) => void;
+  signal: AbortSignal; progress: (completed: number, total: number) => void;
+  /** Explicit candidate used by the read-only calibration harness, never user input. */
+  plan?: QueryPlan;
   /** Test evidence hook, never retained by production UI. */
-  observe?: (step: number, request: Uint8Array, reply: Uint8Array) => void;
+  observe?: (step: number, request: Uint8Array, reply: Uint8Array, measurement: Measurement, decision?: unknown) => void;
 }
 function unwrap(value: unknown): Measurement {
   const reply = value as { Ok?: Measurement; Err?: string };
@@ -16,20 +20,26 @@ function unwrap(value: unknown): Measurement {
   if (!reply.Ok) throw new Error("Invalid query result.");
   return reply.Ok;
 }
-export function validateInput(ids: number[], options: string[], manifest: PrefixManifest) {
+export function validateInput(ids: number[], options: string[], manifest: PrefixManifest, maxSuffix = MAX_SUFFIX) {
   if (options.some(o => o.trim() === "__unknown__")) {
     throw new Error("This option is reserved for abstention.");
   }
-  if (ids.length < 28 || ids.length > 84 || !ids.every(id => Number.isInteger(id) && id >= 0 && id < 248320) ||
+  if (ids.length < 28 || ids.length > P + maxSuffix || !ids.every(id => Number.isInteger(id) && id >= 0 && id < 248320) ||
       manifest.prefix.length !== 27 || !manifest.prefix.every((id, i) => ids[i] === id)) {
-    throw new Error("Input must have the common prefix and 1–57 additional tokens (84 total maximum).");
+    throw new Error(`Input must have the common prefix and 1–${maxSuffix} additional tokens (${P + maxSuffix} total maximum).`);
   }
   if (options.length < 2 || options.length > 7 || options.some(o => !o.trim() || new TextEncoder().encode(o).length > 128) ||
       new Set(options.map(o => o.trim())).size !== options.length) throw new Error("Use 2–7 distinct options, each at most 128 UTF-8 bytes.");
 }
 export async function runQueryGraph(ids: number[], options: string[], d: Dependencies): Promise<DecisionResult> {
-  validateInput(ids, options, d.manifest);
   const n = ids.length - P;
+  const selectedPlan = d.plan ?? selectPlan(n);
+  validatePlan(selectedPlan, n);
+  const plan = { ...selectedPlan, fronts: [...selectedPlan.fronts], completions: [...selectedPlan.completions] };
+  validateInput(ids, options, d.manifest, d.plan ? n : MAX_SUFFIX);
+  const total = queryCount(plan);
+  let completed = 0;
+  const progress = () => d.progress(++completed, total);
   const inputHash = await sha(new TextEncoder().encode(JSON.stringify(ids).replaceAll(",", ", ")));
   const header = (step: number, layer: number, op: string, encoding: string, dims: number[]): Header => ({
     version: 3, model: d.manifest.model, pack_hash: d.manifest.pack_hash, input_hash: inputHash,
@@ -43,17 +53,30 @@ export async function runQueryGraph(ids: number[], options: string[], d: Depende
     const reply = unwrap(await d.client.query(method, [request, ...args]));
     d.signal.throwIfAborted();
     const bytes = await unframe(reply.state, expected, true);
-    d.observe?.(step, request, reply.state);
+    d.observe?.(step, request, reply.state, reply);
     return { reply, bytes };
   }
-  const first = header(0, 0, "delta_mlp_stream_start_ids", "delta-mlp-start-exact-v1", [n, front(0), P]);
+  d.signal.throwIfAborted();
+  d.progress(0, total);
+  const first = header(0, 0, "delta_mlp_stream_start_ids", "delta-mlp-start-exact-v1", [n, plan.fronts[0], P]);
   const initial = await send(0, "step", first, concat(new Uint8Array([2]), ...ids.slice(P).map(u32), await d.asset(0)), [], { ...first, step: 1 });
   if (initial.bytes[0] !== 0 || initial.bytes.length <= 1 + 2 * CONV) throw new Error("Invalid initial reply.");
   let carry = initial.bytes.subarray(1, -2 * CONV);
-  checkCarry(carry, n, front(0));
-  d.progress(1);
+  checkCarry(carry, n, plan.fronts[0]);
+  progress();
   for (let layer = 0; layer <= 30; layer++) {
-    const step = layer + 1, begin = front(layer), next = front(layer + 1);
+    let begin = plan.fronts[layer];
+    const next = plan.fronts[layer + 1];
+    if (plan.completions[layer] > begin) {
+      const end = plan.completions[layer];
+      checkCarry(carry, n, begin);
+      const chunk = header(completed, layer, "mlp_stream_next", "mlp-stream-exact-v1", [n, begin, end - begin]);
+      const { bytes } = await send(completed, "step", chunk, carry, [], { ...chunk, step: completed + 1 });
+      checkCarry(bytes, n, end);
+      carry = bytes; begin = end;
+      progress();
+    }
+    const step = completed;
     const attention = layer % 4 === 2;
     const terminal = layer === 30;
     const op = terminal ? "mlp_stream_complete_terminal" : attention ? "mlp_stream_complete_attention_full" : "mlp_stream_complete";
@@ -69,9 +92,9 @@ export async function runQueryGraph(ids: number[], options: string[], d: Depende
       };
       d.signal.throwIfAborted();
       if (!value.Ok) throw new Error(value.Err ?? "Invalid terminal response.");
-      const payload = await unframe(value.Ok.measurement.state, { ...h, step: 32 }, true);
+      const payload = await unframe(value.Ok.measurement.state, { ...h, step: step + 1 }, true);
       if (payload[0] !== 0 || payload.length !== 1 + 2 * (2 * C + n * 2048)) throw new Error("Invalid terminal state.");
-      d.observe?.(step, request, value.Ok.measurement.state);
+      d.observe?.(step, request, value.Ok.measurement.state, value.Ok.measurement, value.Ok.decision);
       const result = value.Ok.decision;
       const probabilities = [...result.probabilities, result.unknown_probability];
       const selected = result.value[0] ?? null;
@@ -81,7 +104,7 @@ export async function runQueryGraph(ids: number[], options: string[], d: Depende
           (selected !== null && !options.includes(selected)) || result.abstained !== (selected === null)) {
         throw new Error("Invalid decision response.");
       }
-      d.progress(32);
+      progress();
       return { value: selected, probabilities: result.probabilities,
         unknown_probability: result.unknown_probability, abstained: result.abstained };
     }
@@ -93,7 +116,7 @@ export async function runQueryGraph(ids: number[], options: string[], d: Depende
         (attention ? reply.kv?.length !== 2 * n * 2048 : reply.conv?.length !== 2 * CONV)) throw new Error("Invalid bridge output shape.");
     checkCarry(bytes, n, next);
     carry = bytes;
-    d.progress(step + 1);
+    progress();
   }
   throw new Error("Inference ended without a decision.");
 }
