@@ -15,7 +15,7 @@
     "predev": "node scripts/prepare-tokenizer.mjs && ../.venv/bin/python -B ../scripts/prepare_browser_prefix.py && node --experimental-strip-types scripts/prepare-public-candid.mjs && node --experimental-strip-types scripts/check-query-profiles.mjs",
     "prebuild": "node scripts/prepare-tokenizer.mjs && ../.venv/bin/python -B ../scripts/prepare_browser_prefix.py && node --experimental-strip-types scripts/prepare-public-candid.mjs && node --experimental-strip-types scripts/check-query-profiles.mjs",
     "test:tokenizer": "node --experimental-strip-types scripts/check-tokenizer.mjs",
-    "test:query": "node --experimental-strip-types scripts/check-query-runner.mjs && node --experimental-strip-types scripts/check-query-plans.mjs && node --experimental-strip-types scripts/check-query-profiles.mjs && node --experimental-strip-types scripts/check-prefix-prefetch.mjs",
+    "test:query": "node --experimental-strip-types scripts/check-prefix-cache.mjs && node --experimental-strip-types scripts/check-query-runner.mjs && node --experimental-strip-types scripts/check-query-plans.mjs && node --experimental-strip-types scripts/check-query-profiles.mjs && node --experimental-strip-types scripts/check-prefix-prefetch.mjs",
     "test:calibration": "node --experimental-strip-types scripts/check-query-calibration-policy.mjs",
     "test:live-query": "node scripts/check-live-query.mjs",
     "pretest": "node scripts/prepare-tokenizer.mjs && ../.venv/bin/python -B ../scripts/prepare_browser_prefix.py && node --experimental-strip-types scripts/prepare-public-candid.mjs && node --experimental-strip-types scripts/check-query-profiles.mjs",

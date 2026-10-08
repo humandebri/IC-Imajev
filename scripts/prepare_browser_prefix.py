@@ -2,6 +2,7 @@
 """Export verified common27 states as immutable browser protocol assets."""
 import hashlib
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -42,10 +43,17 @@ def main():
                 model_bytes=manifest['bytes'], prefix=cache['metadata']['token_ids'], assets=assets)
     encoded = (json.dumps(data, separators=(',', ':')) + '\n').encode()
     (output / 'manifest.json').write_bytes(encoded)
+    # Content-addressed URLs can be cached across reloads without stale-release risk.
+    manifest_hash = hashlib.sha256(encoded).hexdigest()
+    immutable = ROOT / 'frontend/public/inference/immutable' / manifest_hash
+    immutable.mkdir(parents=True, exist_ok=True)
+    (immutable / 'manifest.json').write_bytes(encoded)
+    for entry in assets.values():
+        shutil.copyfile(output / entry['file'], immutable / entry['file'])
     release = dict(canister='xis3j-paaaa-aaaai-axumq-cai', host='https://icp-api.io',
                    module_hash='3291a064976fb13df548582871ae96a3347f052569eceb7b9807dc23ec5b2495',
                    model=manifest['model'], pack_hash=manifest['pack_hash'],
-                   manifest_sha256=hashlib.sha256(encoded).hexdigest())
+                   manifest_sha256=manifest_hash)
     (ROOT / 'frontend/src/inference-release.json').write_text(json.dumps(release, indent=2) + '\n')
     print(f'Exported 32 verified prefix assets ({sum(a["bytes"] for a in assets.values()):,} bytes).')
 

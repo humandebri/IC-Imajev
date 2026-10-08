@@ -29,9 +29,11 @@ PlaywrightのChromiumがない場合は `npx playwright install chromium` が必
 
 `Run inference` で送信時の入力を固定し、token数に対応する測定済み計画で32〜63回の推論queryをcarryの依存順に呼びます。計画は現在のmodule hashに固定し、MLP生成を256単位で分割します。実行前に2回のreadiness query、実行前後にmodule hashの証明を確認します。結果には選択値、候補別確率、unknown、判断保留を表示します。途中で入力を編集しても実行中の入力や結果ラベルは変わりません。完了数と経過時間は実際の応答から更新します。
 
+prefix素材はmanifest hashを含むURLで配信し、ブラウザで1年間キャッシュ可能です。実行準備中に最初の2層を取得し、各層では次の2層まで先読みします。hash検証済みの32層（約15.4MB）はWorker内で再利用するため、同じページでの再実行時に取得・検証を繰り返しません。先読みは実行ごとにキャンセルでき、失敗した先読みは必要になった時に取得し直します。素材・manifestのhashやサイズが不一致ならHTTPキャッシュを迂回して1回だけ再取得し、それも不一致なら実行を中止します。破損した素材はWorker内にキャッシュしません。モデル、推論query数、ICへの中間状態とprefixの送信量は変わりません。
+
 `Cancel` は通信を中断し、次のquery発行を止めます。すでにcanisterで実行されている計算の停止は保証しません。キャンセル後の古い応答は表示しません。queryは30秒、全推論は5分でtimeoutし、自動retryは行いません。失敗時はエラーを表示し、利用者が再実行できます。
 
-prefix素材は現在の層と次の層を並行して取得し、SHA-256検証が終わった素材をWorker内で再利用します。上限は15,418,368 bytesです。manifestとagentの準備、実行前の独立した3件の確認も並列化します。キャンセルは各実行の通信だけを中断します。仕組み、内部計測、比較結果は [FRONTEND_PREFETCH.md](../docs/FRONTEND_PREFETCH.md) を参照してください。
+Worker内で保持する素材の上限は15,418,368 bytesです。manifestとagentの準備、実行前の独立した3件の確認も並列化します。キャンセルは各実行の通信だけを中断します。仕組み、内部計測、比較結果は [FRONTEND_PREFETCH.md](../docs/FRONTEND_PREFETCH.md) を参照してください。
 
 独立した入力・タブ・利用者の実行を直列化するqueueはありません。各実行がcarry・進捗・キャンセルを持ちます。モデル重み4.7GBをブラウザへ配布せず、ownerの秘密鍵やログインも必要ありません。IC agentのnode署名検証を有効にし、固定module/model/packとprefix素材のhashを確認します。host-checksum runtimeのzero footerは署名検証済み応答に限って受け入れ、全headerを送信条件に束縛した後、クライアントでchecksumを付けます。
 
