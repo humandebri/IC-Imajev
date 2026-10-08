@@ -80,11 +80,9 @@ export async function loadPrefix(base: string, signal: AbortSignal, observe?: Ti
     })();
     const request = { promise, speculative };
     pending.set(layer, request);
-    // Failed lookahead never poisons a later demand. Keep rejections handled even
-    // if this layer is never consumed because the inference fails or is cancelled.
-    void promise.catch(() => {
-      if (pending.get(layer) === request) pending.delete(layer);
-    });
+    // Retain failures so overlapping lookahead cannot start another request.
+    // Handle rejections even if this layer is never consumed.
+    void promise.catch(() => {});
     return request;
   }
   function prefetch(first: number) {
@@ -104,6 +102,9 @@ export async function loadPrefix(base: string, signal: AbortSignal, observe?: Ti
     catch (error) {
       // Also recover when demand arrives before a speculative request fails.
       if (!current.speculative || signal.aborted || error instanceof PrefixIntegrityError) throw error;
+      // Only demand may replace a failed speculative request. Concurrent demand
+      // shares the replacement, whose failure is retained without another retry.
+      if (pending.get(layer) === current) pending.delete(layer);
       bytes = await load(layer, false).promise;
     }
     signal.throwIfAborted();

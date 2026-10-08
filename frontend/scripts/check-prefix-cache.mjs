@@ -111,9 +111,11 @@ try {
     }
   };
   const inFlight = await loadPrefix(`${base}inflight/`, signal);
-  const demanded = inFlight.asset(0);
+  const demanded = Promise.all([inFlight.asset(0), inFlight.asset(0)]);
   releaseFailure();
-  assert.deepEqual(Buffer.from(await demanded), files.get("layer-00.bin"));
+  const [demandedA, demandedB] = await demanded;
+  assert.deepEqual(Buffer.from(demandedA), files.get("layer-00.bin"));
+  assert.strictEqual(demandedA, demandedB, "concurrent demand shares the one recovery request");
   assert.equal(attempts, 2);
 
   // Cached invalid bytes get exactly one reload-mode recovery request.
@@ -165,6 +167,43 @@ try {
   const busy = await loadPrefix(`${base}persistent-busy/`, signal);
   await assert.rejects(busy.asset(0), /Could not load prefix state/);
   assert.equal(busyAttempts, 2);
+
+  // Overlapping lookahead must not retry a settled failure before demand.
+  let overlappingAttempts = 0;
+  respond = async url => {
+    if (url.endsWith("layer-01.bin")) {
+      overlappingAttempts++;
+      return new Response("", { status: 503 });
+    }
+  };
+  const overlapping = await loadPrefix(`${base}overlapping-busy/`, signal);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  await overlapping.asset(0);
+  assert.equal(overlappingAttempts, 1, "a second lookahead cannot retry the failed first lookahead");
+  await assert.rejects(overlapping.asset(1), /Could not load prefix state/);
+  assert.equal(overlappingAttempts, 2, "only demand gets one retry");
+  await overlapping.asset(0);
+  await assert.rejects(overlapping.asset(1), /Could not load prefix state/);
+  assert.equal(overlappingAttempts, 2, "a failed demand retry stays failed in the same run");
+
+  // A settled integrity failure must retain the two-request cache-repair limit.
+  const overlappingModes = [], integrityEvents = [];
+  respond = async (url, init) => {
+    if (url.endsWith("layer-01.bin")) {
+      overlappingModes.push(init.cache);
+      return new Response(Buffer.alloc(files.get("layer-01.bin").length));
+    }
+  };
+  const invalidLookahead = await loadPrefix(`${base}overlapping-integrity/`, signal, event => integrityEvents.push(event));
+  for (let i = 0; i < 100 && integrityEvents.filter(e => e.layer === 1 && e.phase === "prefix-hash").length < 2; i++) {
+    await new Promise(resolve => setTimeout(resolve, 2));
+  }
+  assert.equal(integrityEvents.filter(e => e.layer === 1 && e.phase === "prefix-hash").length, 2);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  await invalidLookahead.asset(0);
+  await assert.rejects(invalidLookahead.asset(1), /Prefix state mismatch/);
+  await assert.rejects(invalidLookahead.asset(1), /Prefix state mismatch/);
+  assert.deepEqual(overlappingModes, ["default", "reload"], "integrity failure cannot restart on later lookahead or demand");
   respond = undefined;
   console.log("Verified prefix lookahead, warm reuse, transient/in-flight recovery, bounded cache-bypass integrity recovery and independent cancellation passed.");
 } finally { globalThis.fetch = originalFetch; }
