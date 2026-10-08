@@ -3,6 +3,8 @@ import { test, expect } from "@playwright/test";
 test("abstention is explained separately and is not an editable option", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto("/");
+  // Let the initial Worker/tokenizer load finish before Vite can remount the form.
+  await expect(page.locator(".token-counts dd")).toHaveText("51", { timeout: 15000 });
   await expect(page.locator("#abstention-help")).toHaveText("Not enough information → Abstain");
   await expect(page.locator("fieldset.choices")).toHaveAttribute("aria-describedby", "abstention-help");
   await page.getByRole("button", { name: "Missing info" }).click();
