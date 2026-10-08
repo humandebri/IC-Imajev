@@ -2909,3 +2909,17 @@ pub fn server_delta_hybrid_input(r: &Request, input: &[f32], packet: &[u8]) -> R
     payload.extend((packet.len() as u32).to_le_bytes()); payload.extend(packet);
     Ok(DecodedQueryInput::DeltaHybrid(delta_hybrid::PreparedDeltaHybrid::decode(r,&payload)?))
 }
+
+#[cfg(feature="experimental-update-token-chunks")]
+pub use delta_hybrid::ServerDeltaStream;
+#[cfg(feature="experimental-update-token-chunks")]
+mod attention_token_chunks;
+#[cfg(feature="experimental-update-token-chunks")]
+pub use attention_token_chunks::{evaluate as server_attention_token_tile, needs_split as server_attention_needs_split};
+#[cfg(feature="experimental-update-token-chunks")]
+pub fn server_delta_stream(r:&Request,input:&[f32],packet:&[u8])->Result<ServerDeltaStream> {
+    match server_delta_hybrid_input(r,input,packet)? {
+        DecodedQueryInput::DeltaHybrid(v)=>Ok(ServerDeltaStream::new(v)),
+        _=>Err("server Delta stream input variant".into()),
+    }
+}

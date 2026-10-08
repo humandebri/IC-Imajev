@@ -2,7 +2,12 @@
 use super::*;
 use imajev_runtime::Request;
 const C: usize = 2560;
-const STOP: u64 = 34_000_000_000;
+pub(super) const WORKER_BUDGET: u64 = 30_000_000_000;
+pub(super) fn progress_limit(n:usize)->u64 {
+    #[cfg(feature="experimental-update-token-chunks")]
+    if n>89 {return crate::token_plan::stages(n);}
+    let _=n;64
+}
 #[derive(Default)]
 struct Prefix { values: Vec<f32>, packet: Vec<u8> }
 #[derive(Default)]
@@ -66,6 +71,9 @@ fn update_infer_start(ids: Vec<u32>, options: Vec<String>) -> Result<UpdateProgr
     owner();paid_admin_guard();start(ids,options)
 }
 pub(super) fn start(ids: Vec<u32>, options: Vec<String>) -> Result<UpdateProgress,String> {
+    if busy(){return Err("inference already active".into());}
+    #[cfg(feature="experimental-update-token-chunks")]
+    if ids.len()>89 {return crate::chunked_update::start(ids,options);}
     if !(1..=89).contains(&ids.len()){return Err("suffix token bounds".into());}
     STORE.with(|s|if s.borrow().ready {Ok(())}else{Err("not ready".to_string())})?;
     imajev_runtime::decide_candidates(&options,&vec![0.;options.len().min(7)+1],1.3051569717552742)?;
@@ -88,13 +96,15 @@ fn update_infer_continue(id:u64, stage:u64) -> Result<UpdateProgress,String> {
     owner();paid_admin_guard();continue_graph(id,stage)
 }
 pub(super) fn continue_graph(id:u64,stage:u64) -> Result<UpdateProgress,String> {
+    #[cfg(feature="experimental-update-token-chunks")]
+    if crate::chunked_update::busy() {return crate::chunked_update::continue_graph(id,stage);}
     GRAPH.with(|g| -> Result<(),String> {let g=g.borrow();let s=g.session.as_ref().ok_or("missing session")?;
         if s.id!=id || s.stage!=stage || stage>=64 {return Err("session progress mismatch".into());}Ok(())})?;
     let start=ic_cdk::api::performance_counter(0);
     let s=GRAPH.with(|g|g.borrow_mut().session.take().unwrap());Ok(run(s,start,0,vec![]))
 }
 fn run(mut s:Session,start:u64,mut reads:u64,mut ops:Vec<(String,u64)>) -> UpdateProgress {
-    while s.stage<64 && ic_cdk::api::performance_counter(0)-start<STOP {
+    while s.stage<64 && ic_cdk::api::performance_counter(0)-start<WORKER_BUDGET {
         let layer=(s.stage/2)as usize;let root=format!("model.language_model.layers.{layer}");
         let before=ic_cdk::api::performance_counter(0);let mut r=s.request.clone();r.step=s.stage;r.aux.clear();r.scalars.clear();
         if s.stage%2==0 {
@@ -139,8 +149,30 @@ fn run(mut s:Session,start:u64,mut reads:u64,mut ops:Vec<(String,u64)>) -> Updat
 
 pub(super) fn bank_ready(tokens:usize)->bool {tokens==27 && GRAPH.with(|g|{let g=g.borrow();g.prefix.len()==32 && g.prefix.iter().all(|p|!p.values.is_empty())})}
 pub(super) fn select_bank(tokens:usize)->Result<(),String> {if bank_ready(tokens){Ok(())}else{Err("prefix incomplete".into())}}
-pub(super) fn busy()->bool {GRAPH.with(|g|g.borrow().session.as_ref().is_some_and(|s|s.stage<64))}
-pub(super) fn release(){GRAPH.with(|g|g.borrow_mut().session=None);}
+pub(super) fn busy()->bool {
+    #[cfg(feature="experimental-update-token-chunks")]
+    if crate::chunked_update::busy(){return true;}
+    GRAPH.with(|g|g.borrow().session.as_ref().is_some_and(|s|s.stage<64))
+}
+pub(super) fn release(){
+    #[cfg(feature="experimental-update-token-chunks")]
+    crate::chunked_update::release();
+    GRAPH.with(|g|g.borrow_mut().session=None);
+}
+#[cfg(feature="experimental-update-token-chunks")]
+pub(super) fn stream_prefix(layer:usize)->Result<(Vec<f32>,Option<imajev_runtime::ServerDeltaStream>),String> {
+    GRAPH.with(|g|{
+        let g=g.borrow();let p=g.prefix.get(layer).ok_or("missing prefix layer")?;
+        if p.values.is_empty(){return Err("prefix incomplete".into());}
+        let stream=if layer%4==3 {None}else{
+            let mut r=template();r.op="delta_full_hybrid_integer".into();r.encoding="delta-hybrid-prefix-exact-v1".into();
+            r.tensor=format!("model.language_model.layers.{layer}.linear_attn.in_proj_qkv.weight");r.dims=vec![1,32,27,0];
+            let mut x=vec![0.;C];x.extend_from_slice(&p.values);
+            Some(imajev_runtime::server_delta_stream(&r,&x,&p.packet)?)
+        };
+        Ok((p.values.clone(),stream))
+    })
+}
 fn paid_admin_guard(){#[cfg(feature="paid-update-inference")]crate::paid_inference::admin_guard();}
 
 
