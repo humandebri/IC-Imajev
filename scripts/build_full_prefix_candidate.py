@@ -50,10 +50,9 @@ directory.mkdir(parents=True, exist_ok=True)
 assert not (directory/'source.zip').exists(), 'Use a new directory for a changed build'
 features = ','.join([
     'experimental-attention-full','experimental-attention-fusion',
-    'experimental-balanced44','experimental-blake3','experimental-byte-buffer',
-    'experimental-column16-token48','experimental-column32',
+    'experimental-blake3','experimental-byte-buffer',
     'experimental-delta-finish','experimental-delta-full-log',
-    'experimental-delta-projected','experimental-dot-scale',
+    'experimental-delta-projected',
     'experimental-full-weight-cache','experimental-matrix-tail',
     'experimental-mlp-full','experimental-mlp-pipeline',
     'experimental-prepared-activation','experimental-prepared-output-pairs',

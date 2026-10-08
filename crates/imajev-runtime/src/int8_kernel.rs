@@ -253,291 +253,48 @@ pub fn quantize_rows(x: &[f32], rows: usize, cols: usize) -> Result<QuantizedRow
         cols,
     })
 }
-#[cfg(all(target_arch="wasm32",feature="experimental-dot-scale"))]
-#[path="int8_dot_scale.rs"]
-#[cfg(not(all(target_arch="wasm32",feature="experimental-paired-only")))]
-mod dot_scale;
-#[cfg(all(target_arch="wasm32",feature="experimental-column32"))]
-#[path="int8_column32.rs"]
-#[cfg(not(all(target_arch="wasm32",feature="experimental-paired-only")))]
-mod column32;
-/// Fixed-pair deployments reject unprepared legacy projections. This removes
-/// unused large fallback specializations from the Wasm build. The native and
-/// default runtime continue to support those paths for comparison and tests.
+// Canonical block256 projection; native code is the scalar numerical reference.
 #[cfg(all(target_arch="wasm32",feature="experimental-paired-only"))]
 pub fn project(_q:&QuantizedRows,_w:&[i8],_scales:&[f32],_rows:usize)->Result<Vec<f32>> {
     Err("fixed paired weights required for this build".into())
 }
-/// Diagnostic: share each input load across 32 outputs for padded88 tokens.
-/// All other shapes retain the adopted column16/balanced44 implementation.
-#[cfg(feature="experimental-column32")]
 #[cfg(not(all(target_arch="wasm32",feature="experimental-paired-only")))]
-pub fn project_column32_balanced(q:&QuantizedRows,w:&[i8],scales:&[f32],rows:usize)->Result<Vec<f32>> {
-    if q.rows.div_ceil(8)!=11 || rows%32!=0 {return project_balanced44(q,w,scales,rows);}
+pub fn project(q:&QuantizedRows,w:&[i8],scales:&[f32],rows:usize)->Result<Vec<f32>> {
     let cols=q.cols;
-    if rows==0 || rows.checked_mul(cols)!=Some(w.len()) || w.len()>30_000_000
+    if rows==0 || rows%8!=0 || rows.checked_mul(cols)!=Some(w.len()) || w.len()>30_000_000
         || q.rows.checked_mul(rows).is_none_or(|v|v>crate::MAX_FLOATS)
         || scales.len()!=rows || !scales.iter().all(|v|v.is_finite()&&*v>0.) {
-        return Err("column32 weights".into());
-    }
-    let mut out=vec![0.;q.rows*rows];
-    for r in (0..rows).step_by(32) {
-        for t in [0,44] {
-            let mut sums=[[0f32;32];44];
-            for block in 0..cols/256 {
-                #[cfg(target_arch="wasm32")]
-                crate::profile::measure("integer_dot_scale",||unsafe {
-                    column32::accumulate::<44,32>(q.values.as_ptr().add(t*cols),w.as_ptr().add(r*cols),cols,block*256,q.scales.as_ptr().add(t*(cols/256)+block),cols/256,scales.as_ptr().add(r),&mut sums)
-                });
-                #[cfg(not(target_arch="wasm32"))]
-                for i in 0..44 {for j in 0..32 {
-                    let mut d=0i32;
-                    for c in block*256..(block+1)*256 {d+=q.values[(t+i)*cols+c]as i32*w[(r+j)*cols+c]as i32;}
-                    sums[i][j]+=(d as f32*q.scales[(t+i)*(cols/256)+block])*scales[r+j];
-                }}
-            }
-            for i in 0..44 {if t+i<q.rows {out[(t+i)*rows+r..(t+i)*rows+r+32].copy_from_slice(&sums[i]);}}
-        }
-    }
-    if !out.iter().all(|v|v.is_finite()) {return Err("column32 output".into());}
-    Ok(out)
-}
-#[cfg(not(all(target_arch="wasm32",feature="experimental-paired-only")))]
-pub fn project(q: &QuantizedRows, w: &[i8], scales: &[f32], rows: usize) -> Result<Vec<f32>> {
-    #[cfg(feature="experimental-adopt-column16")]
-    if rows%16==0 {
-        #[cfg(feature="experimental-adopt-column32")]
-        if q.rows.div_ceil(8)==11 && rows%32==0 {return project_column32_balanced(q,w,scales,rows);}
-        #[cfg(feature="experimental-adopt-balanced44")]
-        if q.rows.div_ceil(8)==11 {return project_balanced44(q,w,scales,rows);}
-        #[cfg(feature="experimental-adopt-column16-token48")]
-        return project_impl::<16, true, {cfg!(feature="experimental-adopt-dot-scale")},false>(q,w,scales,rows);
-        #[cfg(not(feature="experimental-adopt-column16-token48"))]
-        return project_impl::<16, false, {cfg!(feature="experimental-adopt-dot-scale")},false>(q,w,scales,rows);
-    }
-    project_impl::<8, false, {cfg!(feature="experimental-adopt-dot-scale")},false>(q,w,scales,rows)
-}
-/// Diagnostic alternative: share each input load across16 output columns.
-#[cfg(feature="experimental-column16")]
-#[cfg(not(all(target_arch="wasm32",feature="experimental-paired-only")))]
-pub fn project_column16(q: &QuantizedRows, w: &[i8], scales: &[f32], rows: usize) -> Result<Vec<f32>> {
-    project_impl::<16, false, false,false>(q,w,scales,rows)
-}
-#[cfg(feature="experimental-column16-token48")]
-#[cfg(not(all(target_arch="wasm32",feature="experimental-paired-only")))]
-pub fn project_column16_token48(q: &QuantizedRows, w: &[i8], scales: &[f32], rows: usize) -> Result<Vec<f32>> {
-    project_impl::<16, true, false,false>(q,w,scales,rows)
-}
-#[cfg(feature="experimental-dot-scale")]
-#[cfg(not(all(target_arch="wasm32",feature="experimental-paired-only")))]
-pub fn project_dot_scale(q:&QuantizedRows,w:&[i8],scales:&[f32],rows:usize)->Result<Vec<f32>> {project_impl::<16,true,true,false>(q,w,scales,rows)}
-#[cfg(feature="experimental-balanced44")]
-#[cfg(not(all(target_arch="wasm32",feature="experimental-paired-only")))]
-pub fn project_balanced44(q:&QuantizedRows,w:&[i8],scales:&[f32],rows:usize)->Result<Vec<f32>> {
-    if q.rows.div_ceil(8)==11 {project_impl::<16,true,true,true>(q,w,scales,rows)}else{project_dot_scale(q,w,scales,rows)}
-}
-#[cfg(not(all(target_arch="wasm32",feature="experimental-paired-only")))]
-fn project_impl<const C:usize, const TOKEN48:bool, const FUSED:bool, const BALANCED:bool>(q: &QuantizedRows, w: &[i8], scales: &[f32], rows: usize) -> Result<Vec<f32>> {
-    const {assert!(C==8 || C==16); }
-    let cols = q.cols;
-    // QuantizedRows is opaque and cannot be mutated or constructed by callers.
-    // Reuse its constructor invariants instead of scanning every activation
-    // again for each projection (including both halves of fused gate/up).
-    if rows == 0
-        || rows % C != 0
-        || rows.checked_mul(cols) != Some(w.len())
-        || w.len() > 30_000_000
-        || q.rows
-            .checked_mul(rows)
-            .is_none_or(|v| v > crate::MAX_FLOATS)
-        || scales.len() != rows
-        || !scales.iter().all(|v| v.is_finite() && *v > 0.)
-    {
         return Err("integer projection weights".into());
     }
-    // Keep packed INT8 weights; extend each shared 8-byte load in registers.
-    let weights = w;
-    let mut out = vec![0.; q.rows * rows];
-    let mut r = 0;
-    while r < rows {
-        let mut t = 0;
-        while t < q.rows {
-            let padded = if q.rows < 8 {
-                q.rows
-            } else {
-                q.rows.div_ceil(8) * 8
-            };
-            // Exact padded token counts from the real five graphs. Handle the
-            // whole group once so each block's fixed weights are expanded once,
-            // rather than once again for each 64/32/16/8-token remainder.
-            #[cfg(feature = "experimental-wide-token-tiles")]
-            {
-                macro_rules! whole {
-                    ($r:literal) => {
-                        if t == 0 && C==8 && padded == $r {
-                            project_tile::<$r, 8,FUSED>(q, weights, scales, rows, 0, r, &mut out);
-                            t += $r;
-                            continue;
-                        }
-                    };
-                }
-                whole!(48);
-                whole!(80);
-                whole!(88);
-                whole!(96);
-                whole!(136);
-            }
-            // Eight-token padding is unchanged. Cover 88 rows with two
-            // immediate fused groups, avoiding the separate delayed R8 tail.
-            #[cfg(feature="experimental-balanced44")]
-            if BALANCED && C==16 && TOKEN48 && padded==88 {
-                project_tile::<44,16,FUSED>(q,weights,scales,rows,t,r,&mut out);
-                t+=44;
-                continue;
-            }
-            // Reuse each expanded weight across 48 tokens. The original block
-            // scaling and each token's accumulation order remain unchanged.
-            #[cfg(feature="experimental-column16-token48")]
-            if TOKEN48 && C==16 && t+48<=padded {
-                project_tile::<48,16,FUSED>(q,weights,scales,rows,t,r,&mut out);
-                t+=48;
-                continue;
-            }
-            macro_rules! dispatch {
-                ($c:ident) => {
-                    if C==8 && t + 64 <= padded {
-                        project_tile::<64, $c,FUSED>(q, &weights, scales, rows, t, r, &mut out);
-                        t += 64;
-                    } else if t + 32 <= padded {
-                        project_tile::<32, $c,FUSED>(q, &weights, scales, rows, t, r, &mut out);
-                        t += 32;
-                    } else if t + 16 <= padded {
-                        project_tile::<16, $c,FUSED>(q, &weights, scales, rows, t, r, &mut out);
-                        t += 16;
-                    } else if t + 8 <= padded {
-                        project_tile::<8, $c,FUSED>(q, &weights, scales, rows, t, r, &mut out);
-                        t += 8;
-                    } else if t + 4 <= padded {
-                        project_tile::<4, $c,FUSED>(q, &weights, scales, rows, t, r, &mut out);
-                        t += 4;
-                    } else if t + 2 <= padded {
-                        project_tile::<2, $c,FUSED>(q, &weights, scales, rows, t, r, &mut out);
-                        t += 2;
-                    } else {
-                        project_tile::<1, $c,FUSED>(q, &weights, scales, rows, t, r, &mut out);
-                        t += 1;
-                    }
-                };
-            }
-            dispatch!(C);
+    let mut out=vec![0.;q.rows*rows];
+    #[cfg(not(target_arch="wasm32"))]
+    for token in 0..q.rows { for row in 0..rows { for block in 0..cols/256 {
+        let mut dot=0i32;
+        for c in block*256..(block+1)*256 {dot+=q.values[token*cols+c]as i32*w[row*cols+c]as i32;}
+        out[token*rows+row]+=(dot as f32*q.scales[token*(cols/256)+block])*scales[row];
+    } } }
+    #[cfg(target_arch="wasm32")]
+    for row in (0..rows).step_by(8) {
+        let mut token=0;
+        while token<q.rows {
+            let remaining=if q.rows<8 {q.rows}else{q.rows.div_ceil(8)*8}-token;
+            macro_rules! tile {($n:literal)=>{if remaining>=$n {project_tile::<$n>(q,w,scales,rows,token,row,&mut out);token+=$n;continue;}};}
+            tile!(64);tile!(32);tile!(16);tile!(8);tile!(4);tile!(2);tile!(1);
         }
-        r += C;
     }
-    if !out.iter().all(|v| v.is_finite()) {
-        return Err("integer projection output".into());
-    }
+    if !out.iter().all(|v|v.is_finite()) {return Err("integer projection output".into());}
     Ok(out)
 }
-#[cfg(not(all(target_arch="wasm32",feature="experimental-paired-only")))]
-fn project_tile<const R: usize, const C: usize, const FUSED:bool>(
-    q: &QuantizedRows,
-    weights: &[i8],
-    scales: &[f32],
-    rows: usize,
-    t: usize,
-    r: usize,
-    out: &mut [f32],
-) {
-    let cols = q.cols;
-    let mut sums = [[0f32; C]; R];
-    for block in 0..cols / 256 {
-        #[cfg(all(target_arch="wasm32",feature="experimental-dot-scale"))]
-        if FUSED && R>8 && R<=64 {
-            // Same integer reduction and (dot*sx)*sw+sum; no temporary dot array.
-            crate::profile::measure("integer_dot_scale",||unsafe {dot_scale::accumulate::<R,C>(q.values.as_ptr().add(t*cols),weights.as_ptr().add(r*cols),cols,block*256,q.scales.as_ptr().add(t*(cols/256)+block),cols/256,scales.as_ptr().add(r),&mut sums)});
-            continue;
-        }
-        #[cfg(target_arch = "wasm32")]
-        let dots = crate::profile::measure("integer_dot", || unsafe {
-            dot_tile::<R, C>(
-                q.values.as_ptr().add(t * cols),
-                weights.as_ptr().add(r * cols),
-                cols,
-                block * 256,
-            )
-        });
-        #[cfg(not(target_arch = "wasm32"))]
-        let dots = {
-            let mut d = [[0i32; C]; R];
-            for i in 0..R {
-                for j in 0..C {
-                    for c in block * 256..block * 256 + 256 {
-                        d[i][j] += q.values[(t + i) * cols + c] as i32
-                            * weights[(r + j) * cols + c] as i32;
-                    }
-                }
-            }
-            d
-        };
-        crate::profile::measure("integer_scale_sum", || {
-            #[cfg(target_arch = "wasm32")]
-            unsafe {
-                scale_tile::<R, C>(
-                    &dots,
-                    &mut sums,
-                    q.scales.as_ptr().add(t * (cols / 256) + block),
-                    cols / 256,
-                    scales.as_ptr().add(r),
-                );
-            }
-            #[cfg(not(target_arch = "wasm32"))]
-            for i in 0..R {
-                for j in 0..C {
-                    sums[i][j] += (dots[i][j] as f32 * q.scales[(t + i) * (cols / 256) + block])
-                        * scales[r + j];
-                }
-            }
+#[cfg(all(target_arch="wasm32",not(feature="experimental-paired-only")))]
+fn project_tile<const R:usize>(q:&QuantizedRows,w:&[i8],sw:&[f32],rows:usize,token:usize,row:usize,out:&mut[f32]) {
+    let cols=q.cols;let mut sums=[[0.;8];R];
+    for block in 0..cols/256 {
+        crate::profile::measure("integer_dot_scale",||unsafe {
+            crate::int8_tile::accumulate::<R>(q.values.as_ptr().add(token*cols),w.as_ptr().add(row*cols),cols,block*256,
+                q.scales.as_ptr().add(token*(cols/256)+block),cols/256,sw.as_ptr().add(row),&mut sums);
         });
     }
-    for i in 0..R {
-        if t + i < q.rows {
-            for j in 0..C {
-                out[(t + i) * rows + r + j] = sums[i][j];
-            }
-        }
-    }
-}
-// All dimensions and padded scale rows have been checked by project().
-#[cfg(target_arch = "wasm32")]
-#[target_feature(enable = "simd128")]
-#[cfg(not(all(target_arch="wasm32",feature="experimental-paired-only")))]
-unsafe fn scale_tile<const R: usize, const C: usize>(
-    dots: &[[i32; C]; R],
-    sums: &mut [[f32; C]; R],
-    sx: *const f32,
-    stride: usize,
-    sw: *const f32,
-) {
-    use core::arch::wasm32::*;
-    for i in 0..R {
-        let activation = f32x4_splat(*sx.add(i * stride));
-        for j in (0..C).step_by(4) {
-            let d = v128_load(dots.as_ptr().cast::<i32>().add(i * C + j).cast());
-            let w = v128_load(sw.add(j).cast());
-            let value = f32x4_mul(f32x4_mul(f32x4_convert_i32x4(d), activation), w);
-            let p = sums.as_mut_ptr().cast::<f32>().add(i * C + j);
-            v128_store(p.cast(), f32x4_add(v128_load(p.cast()), value));
-        }
-    }
-}
-// Shared exact integer-block implementation; callers retain their F32 scale order.
-#[cfg(target_arch = "wasm32")]
-#[target_feature(enable = "simd128")]
-#[cfg(not(feature = "experimental-paired-only"))]
-unsafe fn dot_tile<const R: usize, const C: usize>(
-    q: *const i16, w: *const i8, cols: usize, start: usize,
-) -> [[i32; C]; R] {
-    crate::int8_tile::block::<R, C>(q, w, cols, start)
+    for i in 0..R {if token+i<q.rows {out[(token+i)*rows+row..(token+i)*rows+row+8].copy_from_slice(&sums[i]);}}
 }
 
 #[cfg(test)]
@@ -615,7 +372,7 @@ mod invariant_tests {
     }
 }
 
-#[cfg(all(test, feature = "experimental-wide-token-tiles"))]
+#[cfg(test)]
 mod whole_token_tests {
     use super::*;
     #[test]

@@ -6,7 +6,7 @@ edition="2021"
 [lib]
 crate-type=["cdylib","rlib"]
 [dependencies]
-imajev-runtime={path="../../crates/imajev-runtime",features=["experimental-column32"]}
+imajev-runtime={path="../../crates/imajev-runtime",features=[]}
 ic-cdk="=0.20.3"
 candid="=0.10.35"
 serde={version="1",features=["derive"]}

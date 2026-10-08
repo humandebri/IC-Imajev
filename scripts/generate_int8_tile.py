@@ -20,45 +20,26 @@ def generate():
              '//! Integer reassociation is exact. F32 scales/addition keep block order.',
              'use core::arch::wasm32::*;',
              ]
-    for fused in (False,True):
-        name = 'accumulate' if fused else 'block'
-        extra = ', sx: *const f32, stride: usize, sw: *const f32, out: &mut [[f32; C]; R]' if fused else ''
-        result = '' if fused else ' -> [[i32; C]; R]'
-        lines += ['#[target_feature(enable="simd128")]',
-                  f'pub(super) unsafe fn {name}<const R: usize, const C: usize>(q: *const i16, w: *const i8, cols: usize, start: usize{extra}){result} {{',
-                  '    const { assert!(C == 8 || C == 16 || C == 32); }']
-        if not fused:
-            lines.append('    let mut out = core::mem::MaybeUninit::<[[i32; C]; R]>::uninit();')
-        for columns in (8,16,32):
-            lines.append(f'    if C == {columns} {{')
-            for c in range(columns):
-                lines.append(f'        let row{c} = w.add({c} * cols + start);')
-                lines += [f'        let w{c}_{i} = i16x8_extend_low_i8x16(v128_load64_zero(row{c}.add({i*8}).cast()));' for i in range(32)]
-            if fused:
-                lines += [f'        let scale{c} = v128_load(sw.add({c}).cast());' for c in range(0,columns,4)]
-            lines += ['        for token in 0..R {','            let input = q.add(token * cols + start);']
-            lines += [f'            let x{i} = v128_load(input.add({i*8}).cast());' for i in range(32)]
-            if fused:
-                lines.append('            let activation = f32x4_splat(*sx.add(token * stride));')
-            for c in range(columns):
-                lines.append(f'            let d{c} = {dot(c)};')
-                if c%4==3:
-                    first=c-3
-                    # Sum adjacent lanes within each output, then join outputs.
-                    lines += [f'            let left = i32x4_add(i32x4_shuffle::<0,2,4,6>(d{first},d{first+1}),i32x4_shuffle::<1,3,5,7>(d{first},d{first+1}));',
-                              f'            let right = i32x4_add(i32x4_shuffle::<0,2,4,6>(d{first+2},d{c}),i32x4_shuffle::<1,3,5,7>(d{first+2},d{c}));',
-                              '            let integer = i32x4_add(i32x4_shuffle::<0,2,4,6>(left,right),i32x4_shuffle::<1,3,5,7>(left,right));',
-                              f'            let output = out.as_mut_ptr().cast::<'+('f32' if fused else 'i32')+f'>().add(token * C + {first});']
-                    if fused:
-                        lines += [f'            let scaled = f32x4_mul(f32x4_mul(f32x4_convert_i32x4(integer),activation),scale{first});',
-                                  '            v128_store(output.cast(),f32x4_add(v128_load(output.cast()),scaled));']
-                    else:
-                        lines.append('            v128_store(output.cast(),integer);')
-            lines += ['        }','    }']
-        if not fused:
-            lines.append('    // SAFETY: C is 8, 16 or 32; its branch writes every lane of all R rows.')
-            lines.append('    out.assume_init()')
-        lines.append('}')
+    lines += ['#[target_feature(enable="simd128")]',
+              'pub(super) unsafe fn accumulate<const R: usize>(q: *const i16, w: *const i8, cols: usize, start: usize, sx: *const f32, stride: usize, sw: *const f32, out: &mut [[f32; 8]; R]) {']
+    for c in range(8):
+        lines.append(f'    let row{c} = w.add({c} * cols + start);')
+        lines += [f'    let w{c}_{i} = i16x8_extend_low_i8x16(v128_load64_zero(row{c}.add({i*8}).cast()));' for i in range(32)]
+    lines += [f'    let scale{c} = v128_load(sw.add({c}).cast());' for c in (0,4)]
+    lines += ['    for token in 0..R {','        let input = q.add(token * cols + start);']
+    lines += [f'        let x{i} = v128_load(input.add({i*8}).cast());' for i in range(32)]
+    lines.append('        let activation = f32x4_splat(*sx.add(token * stride));')
+    for c in range(8):
+        lines.append(f'        let d{c} = {dot(c)};')
+        if c%4==3:
+            first=c-3
+            lines += [f'        let left = i32x4_add(i32x4_shuffle::<0,2,4,6>(d{first},d{first+1}),i32x4_shuffle::<1,3,5,7>(d{first},d{first+1}));',
+                      f'        let right = i32x4_add(i32x4_shuffle::<0,2,4,6>(d{first+2},d{c}),i32x4_shuffle::<1,3,5,7>(d{first+2},d{c}));',
+                      '        let integer = i32x4_add(i32x4_shuffle::<0,2,4,6>(left,right),i32x4_shuffle::<1,3,5,7>(left,right));',
+                      f'        let output = out.as_mut_ptr().cast::<f32>().add(token * 8 + {first});',
+                      f'        let scaled = f32x4_mul(f32x4_mul(f32x4_convert_i32x4(integer),activation),scale{first});',
+                      '        v128_store(output.cast(),f32x4_add(v128_load(output.cast()),scaled));']
+    lines += ['    }','}']
     return '\n'.join(lines)+'\n'
 
 if __name__=='__main__':
