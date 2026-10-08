@@ -1030,6 +1030,26 @@ textarea::placeholder {
   padding: 0;
   list-style: none;
 }
+.result-percentage {
+  display: inline-block;
+  font-size: 0.65em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.result-meta {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 24px;
+  font-size: 14px;
+}
+.result-meta dt {
+  color: var(--muted);
+}
+.result-meta dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
 .probabilities li > div {
   display: flex;
   justify-content: space-between;
@@ -1039,6 +1059,8 @@ textarea::placeholder {
   overflow-wrap: anywhere;
 }
 .probabilities strong {
+  flex-shrink: 0;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 .probabilities meter {

@@ -18,6 +18,10 @@ mod query_mlp_delta;
 use query_mlp_delta::MlpDeltaMeasurement;
 #[cfg(feature="experimental-update-inference")]
 mod update_inference;
+#[cfg(feature="experimental-update-token-chunks")]
+mod chunked_update;
+#[cfg(feature="experimental-update-token-chunks")]
+mod token_plan;
 #[cfg(feature="experimental-update-inference")]
 use update_inference::UpdateProgress;
 #[derive(Default)]

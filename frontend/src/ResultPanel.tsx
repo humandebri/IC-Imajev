@@ -73,13 +73,23 @@ export function ResultPanel({
   result,
   options,
   progress = null,
+  elapsedMs,
 }: {
   result: DecisionResult | null;
   options: string[];
   /** Pass only real progress from in-flight calls; null when idle. */
   progress?: InferenceProgress | null;
+  /** End-to-end duration of this completed run, including preparation and network. */
+  elapsedMs?: number;
 }) {
   const running = result === null && progress !== null;
+  const selectedProbability = result === null ? undefined : result.abstained
+    ? result.unknown_probability
+    : result.probabilities[options.indexOf(result.value ?? "")];
+  const alternative = result === null ? undefined : options
+    .map((option, index) => ({ option, probability: result.probabilities[index] }))
+    .filter(candidate => result.abstained || candidate.option !== result.value)
+    .sort((a, b) => b.probability - a.probability)[0];
   return (
     <section
       className="result-panel"
@@ -108,7 +118,24 @@ export function ResultPanel({
           </p>
           <h3>
             {result.abstained ? "Not enough information" : (result.value ?? "No value")}
+            {selectedProbability !== undefined && (
+              <span className="result-percentage"> · {percent(selectedProbability)}</span>
+            )}
           </h3>
+          <dl className="result-meta">
+            {alternative && (
+              <div>
+                <dt>{result.abstained ? "Top option" : "Runner-up option"}</dt>
+                <dd>{alternative.option} · {percent(alternative.probability)}</dd>
+              </div>
+            )}
+            {elapsedMs !== undefined && (
+              <div>
+                <dt>Completed in</dt>
+                <dd>{(elapsedMs / 1000).toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} s</dd>
+              </div>
+            )}
+          </dl>
           <p className="muted">Model probabilities</p>
           <ul className="probabilities">
             {options.map((option, index) => (

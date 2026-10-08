@@ -21,6 +21,11 @@ where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
 /// A decoded exact packet can supply its state directly; no innovation replay.
 pub(super) fn evaluate_from_state<F,B>(r:&Request,x:&[f32],m:&Manifest,read:&mut F,initial:Option<InitialState>)->Result<(Vec<f32>,u64)>
 where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
+ evaluate_retaining_state(r,x,m,read,initial,None)
+}
+/// Server-only continuation retains the exact state after the last token.
+pub(super) fn evaluate_retaining_state<F,B>(r:&Request,x:&[f32],m:&Manifest,read:&mut F,initial:Option<InitialState>,retained:Option<&mut Option<InitialState>>)->Result<(Vec<f32>,u64)>
+where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
  if r.op!="delta_full_log_integer" || !crate::lossless_encoding(&r.encoding) || r.dims.len()!=4 || !r.aux.is_empty() || !r.scalars.is_empty() {return Err("full Delta metadata".into());}
  let(n,h,p,keep)=(r.dims[0],r.dims[1],r.dims[2],r.dims[3]);
  if n==0 || n>90 || h!=32 || p>132 || keep>1 || (keep==1 && p!=0) {return Err("full Delta shape".into());}
@@ -69,9 +74,9 @@ where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
   let vh=gather(4096+head*128);let gh:Vec<_>=(0..n).map(|t|gates[t*32+head]).collect();let bh:Vec<_>=(0..n).map(|t|gates[n*32+t*32+head]).collect();let state=&mut states[head*16384..(head+1)*16384];
   let mut values=if keep==1 {let(y,updates)=crate::delta_log::recorded_head(&qh,&kh,&vh,&gh,&bh,state)?;for t in 0..n {saved_updates[t*4096+head*128..t*4096+(head+1)*128].copy_from_slice(&updates[t*128..(t+1)*128]);}y}else{{
    #[cfg(feature="experimental-delta-state-layout")]
-   let y=if key_major {crate::delta_from_key_major(&qh,&kh,&vh,&gh,&bh,state,128,128)?}else{crate::delta_without_final_state(&qh,&kh,&vh,&gh,&bh,state,128,128)?};
+   let y=if key_major {crate::delta_from_key_major(&qh,&kh,&vh,&gh,&bh,state,128,128)?}else if retained.is_some(){crate::delta(&qh,&kh,&vh,&gh,&bh,state,128,128)?}else{crate::delta_without_final_state(&qh,&kh,&vh,&gh,&bh,state,128,128)?};
    #[cfg(all(feature="experimental-delta-no-writeback",not(feature="experimental-delta-state-layout")))]
-   let y=crate::delta_without_final_state(&qh,&kh,&vh,&gh,&bh,state,128,128)?;
+   let y=if retained.is_some(){crate::delta(&qh,&kh,&vh,&gh,&bh,state,128,128)?}else{crate::delta_without_final_state(&qh,&kh,&vh,&gh,&bh,state,128,128)?};
    #[cfg(not(feature="experimental-delta-no-writeback"))]
    let y=crate::delta(&qh,&kh,&vh,&gh,&bh,state,128,128)?;
    y
@@ -82,7 +87,14 @@ where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
  let mut op=r.clone();op.op="lora_integer".into();op.tensor=format!("{root}.out_proj.weight");op.dims=vec![n,2560,4096,0];op.scalars=vec![2.];op.aux=vec![format!("{root}.out_proj.lora_A.weight"),format!("{root}.out_proj.lora_B.weight")];
  let(mut out,used)=crate::evaluate_integer_with_ax(&op,&gated,m,read,None,None)?;bytes+=used;
  out.extend(final_history);if keep==1 {out.extend(saved_k);out.extend(saved_updates);out.extend_from_slice(&gates[..n*32]);}
- if out.len()!=output || !out.iter().all(|v|v.is_finite()) {return Err("full Delta output".into());}Ok((out,bytes))
+ if out.len()!=output || !out.iter().all(|v|v.is_finite()) {return Err("full Delta output".into());}
+ if let Some(slot)=retained {
+  #[cfg(feature="experimental-delta-state-layout")]
+  { *slot=Some(if key_major {InitialState::KeyMajor(states)} else {InitialState::ValueMajor(states)}); }
+  #[cfg(not(feature="experimental-delta-state-layout"))]
+  { *slot=Some(InitialState::ValueMajor(states)); }
+ }
+ Ok((out,bytes))
 }
 #[cfg(test)]
 mod tests {use super::*;
