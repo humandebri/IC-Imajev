@@ -1,3 +1,4 @@
+import { MAX_SUFFIX, MAX_TOKENS } from "../src/query-plan.ts";
 import { test, expect } from "@playwright/test";
 import { samples, realWorldSamples } from "../src/samples";
 
@@ -246,4 +247,22 @@ test("token details are available without cluttering the initial view", async ({
   await page.getByText("Count details", { exact: true }).click();
   await expect(page.locator(".token-breakdown")).toBeVisible();
   await expect(page.locator(".token-counter dd")).toHaveCount(3);
+});
+
+test("former voting prefix uses the verified common-prefix token limit", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Question").fill("Approve?");
+  await page.locator(".option-control input").nth(0).fill("no");
+  await page.locator(".option-control input").nth(1).fill("yes");
+  await page.getByText("Count details", { exact: true }).click();
+  const counter = page.getByRole("region", { name: "Tokens", exact: true });
+  const state = "Minimum voting dissolve delay changes from 1 day to 2 days.";
+  await page.getByLabel("Context").fill(state + " more".repeat(MAX_TOKENS - 69));
+  await expect(counter.locator(".token-counts dd")).toHaveText(String(MAX_TOKENS), { timeout: 15000 });
+  await expect(counter).toContainText(`Query limit: ${MAX_SUFFIX} / ${MAX_SUFFIX}`);
+  await expect(counter).not.toContainText("limit exceeded");
+  await page.getByLabel("Context").fill(state + " more".repeat(MAX_TOKENS - 68));
+  await expect(counter.locator(".token-counts dd")).toHaveText(String(MAX_TOKENS + 1));
+  await expect(counter).toContainText(`Query limit: ${MAX_SUFFIX + 1} / ${MAX_SUFFIX}`);
+  await expect(counter).toContainText("limit exceeded");
 });

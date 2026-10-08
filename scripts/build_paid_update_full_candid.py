@@ -6,7 +6,9 @@ ROOT=Path(__file__).resolve().parents[1]
 B=ROOT/'artifacts/update-templates-v1/build'
 D=ROOT/'artifacts/paid-update-v1/build-v3'
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
-def main():
+def main(*, directory=None, source_transform=None, extra_sources=(), scope=None):
+ global D
+ if directory is not None:D=Path(directory)
  D.mkdir(parents=True,exist_ok=False)
  base=json.loads((B/'report.json').read_text())
  assert sha(B/'full.wasm')==base['wasm_sha256']
@@ -26,6 +28,7 @@ def main():
  text=text.replace('serde_json::to_vec(&(s.owner.unwrap().to_text(), m, s.received, s.ready)).unwrap();','serde_json::to_vec(&(s.owner.unwrap().to_text(), m, s.received, s.ready, paid_inference::metadata())).unwrap();')
  text=text.replace('let (owner, manifest, received, ready): (String, Manifest, u64, bool) =\n        serde_json::from_slice(&bytes).unwrap();','let (owner, manifest, received, ready, extra): (String, Manifest, u64, bool, Vec<u8>) =\n        serde_json::from_slice(&bytes).unwrap_or_else(|_| {\n            let (o,m,r,v):(String,Manifest,u64,bool)=serde_json::from_slice(&bytes).unwrap();(o,m,r,v,vec![])\n        });\n    paid_inference::restore_metadata(&extra);')
  text=text.replace('ic_cdk::export_candid!();','mod paid_types;\nmod paid_inference;\nuse paid_types::*;\nic_cdk::export_candid!();');p.write_text(text)
+ if source_transform is not None:source_transform(D)
  command=base['command'][:]
  command+=['--cfg','feature="paid-update-inference"']
  if os.environ.get('PAID_DIAGNOSTICS')=='1':command+=['--cfg','feature="paid-update-diagnostics"']
@@ -35,7 +38,7 @@ def main():
  runtime=B/'libimajev_runtime_register.rlib'
  runtime=ROOT/'artifacts/voting-template-prefix-v1/full-build/libimajev_runtime_register.rlib'
  assert any(s=='imajev_runtime='+str(runtime) for s in command)
- refs=[Path(__file__),B/'report.json',B/'full.wasm',runtime,old/'provenance.json']+list(D.glob('*.rs'))
+ refs=[Path(__file__),*map(Path,extra_sources),B/'report.json',B/'full.wasm',runtime,old/'provenance.json']+list(D.glob('*.rs'))
  hashes={str(p.relative_to(ROOT)):sha(p) for p in refs}
  env=dict(os.environ,CARGO_MANIFEST_DIR=str(D),CARGO_PKG_NAME='imajev-inference',CARGO_PKG_VERSION='0.1.0',CARGO_PKG_VERSION_MAJOR='0',CARGO_PKG_VERSION_MINOR='1',CARGO_PKG_VERSION_PATCH='0',CARGO_PKG_VERSION_PRE='',CARGO_CRATE_NAME='imajev_inference')
  with (D/'compiler.log').open('w') as log:subprocess.run(command,cwd=ROOT,env=env,check=True,stdout=log,stderr=log)
@@ -53,7 +56,7 @@ def main():
   assert row['wasmparser_validation'];patches.append(row);previous=out
  assert len({p['function_index'] for p in patches})==6
  assert hashes=={p:sha(ROOT/p) for p in hashes}
- report=dict(baseline=base['baseline'],update_candidate=base['wasm_sha256'],wasm_sha256=sha(D/'full.wasm'),source_hashes=hashes,dependency_hashes=base['dependency_hashes'],command=command,patches=patches,scope=__doc__,runtime_rlib_sha256=sha(runtime),update_scheduler_sha256=sha(D/'update_inference.rs'),update_stop_instructions=34_000_000_000)
+ report=dict(baseline=base['baseline'],update_candidate=base['wasm_sha256'],wasm_sha256=sha(D/'full.wasm'),source_hashes=hashes,dependency_hashes=base['dependency_hashes'],command=command,patches=patches,scope=scope or __doc__,runtime_rlib_sha256=sha(runtime),update_scheduler_sha256=sha(D/'update_inference.rs'),update_stop_instructions=34_000_000_000)
  (D/'report.json').write_text(json.dumps(report,indent=2)+'\n')
  with zipfile.ZipFile(D/'source.zip','w',zipfile.ZIP_DEFLATED) as z:
   for p in refs:z.write(p,str(p.relative_to(ROOT)))

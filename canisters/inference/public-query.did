@@ -1,0 +1,12 @@
+// Public browser inference query subset; owner/update APIs are excluded.
+// Canister: xis3j-paaaa-aaaai-axumq-cai
+// Module hash: 3291a064976fb13df548582871ae96a3347f052569eceb7b9807dc23ec5b2495
+// Opaque blobs require the Prefix27 frame/carry protocol, not plain text.
+service : {
+  attention_mlp_front : (blob, nat32) -> (variant {Ok:record {kv:blob; instructions:nat64; spans:vec record {text; nat64}; state:blob; stable_read_bytes:nat64; previous_hidden:blob; stable_pages:nat64; heap_pages:nat64}; Err:text}) query;
+  mlp_delta_front : (blob, blob, nat32, nat32) -> (variant {Ok:record {conv:blob; instructions:nat64; spans:vec record {text; nat64}; state:blob; stable_read_bytes:nat64; previous_hidden:blob; stable_pages:nat64; heap_pages:nat64}; Err:text}) query;
+  pack_status : () -> (record {model:text; hashed:nat64; bytes:nat64; chunks:vec nat64; pack_hash:text; received:nat64; ready:bool}) query;
+  step : (blob) -> (variant {Ok:record {instructions:nat64; state:blob; stable_read_bytes:nat64; stable_pages:nat64; heap_pages:nat64}; Err:text}) query;
+  terminal_step_decision : (blob, vec text) -> (variant {Ok:record {decision:record {abstained:bool; unknown_probability:float32; probabilities:vec float32; value:opt text; calibration_version:text; instructions:nat64; raw_logits:vec float32}; measurement:record {instructions:nat64; state:blob; stable_read_bytes:nat64; stable_pages:nat64; heap_pages:nat64}}; Err:text}) query;
+  weight_cache_status : () -> (record {activation_bytes:opt nat64; rope_bytes:opt nat64; paired_weight_bytes:opt nat64; names:vec text; preparation_instructions:nat64; bytes:nat64}) query;
+}

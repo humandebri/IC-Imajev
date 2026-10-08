@@ -1,55 +1,30 @@
-import { useEffect, useRef, useState } from "react";
+import { MAX_SUFFIX, MAX_TOKENS } from "./query-plan.ts";
+import { useEffect, useState } from "react";
 import type { DecisionInput } from "./types";
 import type { TokenCounts } from "./tokenization";
+import { countTokens } from "./inference-client.ts";
 
-export function TokenCounter({ input }: { input: DecisionInput }) {
-  const worker = useRef<Worker | null>(null);
-  const latest = useRef(0);
+export function TokenCounter({ input, onCounts }: { input: DecisionInput; onCounts?: (key: string, counts: TokenCounts | null) => void }) {
   const [answer, setAnswer] = useState<{
     key: string;
     counts?: TokenCounts;
     error?: string;
   } | null>(null);
   const inputKey = JSON.stringify(input);
-  const requestKey = useRef("");
   useEffect(() => {
-    const instance = new Worker(
-      new URL("./tokenizer.worker.ts", import.meta.url),
-      { type: "module" },
-    );
-    worker.current = instance;
-    instance.onmessage = (event) => {
-      if (event.data.id === latest.current)
-        setAnswer({
-          key: requestKey.current,
-          counts: event.data.counts,
-          error: event.data.error,
-        });
-    };
-    instance.onerror = () =>
-      setAnswer({
-        key: requestKey.current,
-        error:
-          "Could not start the tokenizer. Reload the page.",
-      });
-    return () => {
-      worker.current = null;
-      instance.terminate();
-    };
-  }, []);
-  useEffect(() => {
-    requestKey.current = inputKey;
-    worker.current?.postMessage({
-      id: ++latest.current,
-      input: JSON.parse(inputKey),
-    });
-  }, [inputKey]);
+    let active = true;
+    onCounts?.(inputKey, null);
+    countTokens(JSON.parse(inputKey)).then(counts => {
+      if (active) { setAnswer({ key: inputKey, counts }); onCounts?.(inputKey, counts); }
+    }).catch(error => { if (active) setAnswer({ key: inputKey, error: error.message }); });
+    return () => { active = false; };
+  }, [inputKey, onCounts]);
   const current = answer?.key === inputKey ? answer : null;
   const counts = current?.counts;
   const overLimit =
     counts?.paidSuffix !== null &&
     counts?.paidSuffix !== undefined &&
-    counts.paidSuffix > 57;
+    counts.paidSuffix > MAX_SUFFIX;
   return (
     <section className="token-counter" aria-labelledby="tokens-heading">
       <h3 id="tokens-heading">Tokens</h3>
@@ -87,15 +62,13 @@ export function TokenCounter({ input }: { input: DecisionInput }) {
           <>
             {counts.paidPrefix === null ? (
               <p className="help">
-                This input does not match the paid update API's fixed prefix.
+                This input does not match the query API's fixed prefix.
               </p>
             ) : (
               <p className={overLimit ? "error" : "help"}>
-                Paid update API: {counts.paidSuffix} / 57 additional tokens
+                Query limit: {counts.paidSuffix} / {MAX_SUFFIX} additional tokens
                 {overLimit ? " (limit exceeded)" : ""}.
-                {counts.paidPrefix === 38
-                  ? " Prepare the 38-token prefix first."
-                  : ""}
+                {` Fixed prefix: 27 tokens; total limit: ${MAX_TOKENS} tokens.`}
               </p>
             )}
           </>
