@@ -12,12 +12,14 @@
     "test": "node --experimental-strip-types scripts/check-tokenizer.mjs && playwright test",
     "prepare:tokenizer": "node scripts/prepare-tokenizer.mjs",
     "prepare:inference": "../.venv/bin/python -B ../scripts/prepare_browser_prefix.py",
-    "predev": "node scripts/prepare-tokenizer.mjs && ../.venv/bin/python -B ../scripts/prepare_browser_prefix.py",
-    "prebuild": "node scripts/prepare-tokenizer.mjs && ../.venv/bin/python -B ../scripts/prepare_browser_prefix.py",
+    "predev": "node scripts/prepare-tokenizer.mjs && ../.venv/bin/python -B ../scripts/prepare_browser_prefix.py && node --experimental-strip-types scripts/prepare-public-candid.mjs",
+    "prebuild": "node scripts/prepare-tokenizer.mjs && ../.venv/bin/python -B ../scripts/prepare_browser_prefix.py && node --experimental-strip-types scripts/prepare-public-candid.mjs",
     "test:tokenizer": "node --experimental-strip-types scripts/check-tokenizer.mjs",
     "test:query": "node --experimental-strip-types scripts/check-query-runner.mjs",
     "test:live-query": "node scripts/check-live-query.mjs",
-    "pretest": "node scripts/prepare-tokenizer.mjs && ../.venv/bin/python -B ../scripts/prepare_browser_prefix.py"
+    "pretest": "node scripts/prepare-tokenizer.mjs && ../.venv/bin/python -B ../scripts/prepare_browser_prefix.py && node --experimental-strip-types scripts/prepare-public-candid.mjs",
+    "prepare:candid": "node --experimental-strip-types scripts/prepare-public-candid.mjs",
+    "test:candid": "node --experimental-strip-types scripts/prepare-public-candid.mjs --check"
   },
   "dependencies": {
     "@huggingface/tokenizers": "^0.2.0",
