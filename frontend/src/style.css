@@ -480,6 +480,24 @@ h2 {
   color: var(--accent-ink);
   text-underline-offset: 3px;
 }
+.sample-original {
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.sample-original > summary {
+  min-height: 32px;
+  font-size: 11px;
+}
+.sample-original pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: inherit;
+}
+.sample-original dd {
+  margin-left: 0;
+  overflow-wrap: anywhere;
+}
 .sample-title {
   display: flex;
   justify-content: space-between;

@@ -37,6 +37,8 @@ Worker内で保持する素材の上限は15,418,368 bytesです。manifestとag
 
 独立した入力・タブ・利用者の実行を直列化するqueueはありません。各実行がcarry・進捗・キャンセルを持ちます。モデル重み4.7GBをブラウザへ配布せず、ownerの秘密鍵やログインも必要ありません。IC agentのnode署名検証を有効にし、固定module/model/packとprefix素材のhashを確認します。host-checksum runtimeのzero footerは署名検証済み応答に限って受け入れ、全headerを送信条件に束縛した後、クライアントでchecksumを付けます。
 
+BOOM #620・#653・#617は `data/boom-examples.json` の原文からビルド時に機械的に短縮します。既存の単位変換で秒を正確な日数に変え、mint金額はmillion表記、同じprincipal/accountは同じ識別子に置き換えます。質問・選択肢は保持し、原文と識別子の対応表はフォーム内で展開できます。固定tokenizerで73・92・95 tokenを検証し、上限超過や未対応の原文は生成エラーにします。自由入力と基本例は変換しません。`npm run test:examples` で値の保存・対応表・原文hash・token数を確認できます。
+
 入力例ボタンはフォームへ入力するだけです。`Copy input` は `state`、`question`、`options` のJSONをコピーします。履歴は永続保存しません。基本例のBF16ネイティブ実測は `artifacts/ui-extreme-examples-20261007/attempt2/` にあり、ICのINT8推論結果とは別の測定です。
 
 ## 検証

@@ -113,7 +113,7 @@ test("choice limits, empty question and whitespace duplicate validation", async 
   ).toBeEnabled();
 });
 
-test("BOOM DAO excerpts include original values and a source link", async ({ page }) => {
+test("BOOM DAO examples fit the query budget and preserve original evidence", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/");
   await expect(page.getByRole("button", { name: "BOOM #620" })).not.toBeVisible();
@@ -123,19 +123,29 @@ test("BOOM DAO excerpts include original values and a source link", async ({ pag
     await expect(page.getByLabel("Context")).toHaveValue(sample.input.state);
     await expect(page.getByLabel("Question")).toHaveValue(sample.input.question);
     await expect(page.getByRole("link", { name: `View ${sample.sourceLabel}` })).toHaveAttribute("href", sample.sourceUrl);
-    await expect(page.locator(".sample-source")).toContainText("Original payload excerpt");
+    await expect(page.locator(".sample-source")).toContainText("Mechanically compacted input");
     await expect(page.locator(".sample-source")).toContainText("Question added for this demo");
+    await expect(page.locator(".token-counts dd")).toHaveText(String(sample.tokens));
+    await expect(page.getByRole("button", { name: "Run inference" })).toBeEnabled();
+    await page.getByText("Original payload and identifier mapping", { exact: true }).click();
+    await expect(page.locator(".sample-original pre")).toHaveText(sample.originalState);
+    for (const identifier of sample.audit.identifiers) {
+      await expect(page.locator(".sample-original dl")).toContainText(identifier.alias);
+      await expect(page.locator(".sample-original dl")).toContainText(identifier.value);
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   }
   await page.getByRole("button", { name: "BOOM #617" }).click();
-  await expect(page.getByLabel("Context")).toHaveValue(/86400[\s\S]*1728000000/);
+  await expect(page.getByLabel("Context")).toHaveValue(realWorldSamples.find(sample => sample.id === "boom-617")!.input.state);
   await page.getByRole("button", { name: "Value change" }).click();
   await expect(page.getByLabel("Context")).toHaveValue("The monthly subscription price changes from $10 to $10,000.");
   await expect(page.getByRole("button", { name: "BOOM #617" })).toHaveAttribute("aria-pressed", "false");
   await expect(page.locator(".sample-source")).toHaveCount(0);
   await page.getByRole("button", { name: "BOOM #617" }).click();
   await page.getByLabel("Context").fill("Edited context");
+  await expect(page.getByLabel("Context")).toHaveValue("Edited context");
   await expect(page.locator(".sample-source")).toHaveCount(0);
+  await expect(page.locator(".sample-original")).toHaveCount(0);
 });
 
 test("copy exports only UI input JSON", async ({ page, context }) => {

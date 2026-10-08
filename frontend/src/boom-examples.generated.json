@@ -1,0 +1,120 @@
+[
+  {
+    "id": "boom-620",
+    "label": "BOOM #620",
+    "description": "Compare the previous and proposed voting lock duration",
+    "sourceLabel": "BOOM DAO #620",
+    "sourceUrl": "https://sns-api.internetcomputer.org/api/v1/snses/xjngq-yaaaa-aaaaq-aabha-cai/proposals/620",
+    "input": {
+      "state": "days: min voting lock 1→2",
+      "question": "Does this proposal increase the minimum lock duration needed for voting?",
+      "options": [
+        "yes",
+        "no"
+      ]
+    },
+    "originalState": "SNS parameters adjustment\n\n# Proposal to change nervous system parameters:\n## Current nervous system parameters:\n    neuron_minimum_dissolve_delay_to_vote_seconds: Some(\n        86400,\n    ),\n## New nervous system parameters:\n    neuron_minimum_dissolve_delay_to_vote_seconds: Some(\n        172800,\n    ),",
+    "sourceStateSha256": "f06debf7c9cc4bfbc61da7f7d6bbe39c416d096f4f32c2afa596892198ae304d",
+    "tokens": 73,
+    "audit": {
+      "kind": "parameters",
+      "facts": [
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 86400,
+          "proposed": 172800,
+          "unit_group": "days",
+          "rendered_values": [
+            "1",
+            "2"
+          ]
+        }
+      ],
+      "identifiers": []
+    },
+    "compactionVersion": 1
+  },
+  {
+    "id": "boom-653",
+    "label": "BOOM #653",
+    "description": "A mint amount alone cannot establish the recipient's share of total supply",
+    "sourceLabel": "BOOM DAO #653",
+    "sourceUrl": "https://sns-api.internetcomputer.org/api/v1/snses/xjngq-yaaaa-aaaaq-aabha-cai/proposals/653",
+    "input": {
+      "state": "Mint 250M SNS tokens; principal/account P1; memo 0. Supply and prior holdings unknown.",
+      "question": "Will the recipient own more than half of the total token supply after this mint?",
+      "options": [
+        "yes",
+        "no"
+      ]
+    },
+    "originalState": "SNS Adjustment\n\n# Proposal to mint SNS Tokens:\n## Amount: 250000000.00000000 SNS Tokens\n## Amount (e8s): 25000000000000000\n## Target principal: 4mpab-ayg5c-m2frb-vjja5-b2qbe-5rxgv-33ova-ddjgm-egfav-br5hu-gqe\n## Target account: 4mpab-ayg5c-m2frb-vjja5-b2qbe-5rxgv-33ova-ddjgm-egfav-br5hu-gqe\n## Memo: 0",
+    "sourceStateSha256": "18f11a153a40f630a0114d7ed453f1ac7b65b262fcb0c52848290c370fbb3d89",
+    "tokens": 92,
+    "audit": {
+      "kind": "mint",
+      "amount_tokens": "250000000.00000000",
+      "amount_e8s": "25000000000000000",
+      "principal": "4mpab-ayg5c-m2frb-vjja5-b2qbe-5rxgv-33ova-ddjgm-egfav-br5hu-gqe",
+      "account": "4mpab-ayg5c-m2frb-vjja5-b2qbe-5rxgv-33ova-ddjgm-egfav-br5hu-gqe",
+      "memo": 0,
+      "identifiers": [
+        {
+          "alias": "P1",
+          "value": "4mpab-ayg5c-m2frb-vjja5-b2qbe-5rxgv-33ova-ddjgm-egfav-br5hu-gqe"
+        }
+      ],
+      "missing_from_excerpt": [
+        "total_supply",
+        "recipient_prior_holdings"
+      ]
+    },
+    "compactionVersion": 1
+  },
+  {
+    "id": "boom-617",
+    "label": "BOOM #617",
+    "description": "Classify the change in the minimum voting lock duration",
+    "sourceLabel": "BOOM DAO #617",
+    "sourceUrl": "https://sns-api.internetcomputer.org/api/v1/snses/xjngq-yaaaa-aaaaq-aabha-cai/proposals/617",
+    "input": {
+      "state": "days:max lock30.4375→30437.5 min voting lock1→20000",
+      "question": "How does the minimum lock duration needed for voting change?",
+      "options": [
+        "increases",
+        "decreases",
+        "unchanged"
+      ]
+    },
+    "originalState": "SNS parameters adjustment\n\n# Proposal to change nervous system parameters:\n## Current nervous system parameters:\n    neuron_minimum_dissolve_delay_to_vote_seconds: Some(\n        86400,\n    ),\n    max_dissolve_delay_seconds: Some(\n        2629800,\n    ),\n## New nervous system parameters:\n    neuron_minimum_dissolve_delay_to_vote_seconds: Some(\n        1728000000,\n    ),\n    max_dissolve_delay_seconds: Some(\n        2629800000,\n    ),",
+    "sourceStateSha256": "052e001fb9ebbfd03105f8f305f9351aa65ef7e7da4e3f4106a2fd3526a313db",
+    "tokens": 95,
+    "audit": {
+      "kind": "parameters",
+      "facts": [
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 2629800000,
+          "unit_group": "days",
+          "rendered_values": [
+            "30.4375",
+            "30437.5"
+          ]
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 86400,
+          "proposed": 1728000000,
+          "unit_group": "days",
+          "rendered_values": [
+            "1",
+            "20000"
+          ]
+        }
+      ],
+      "identifiers": []
+    },
+    "compactionVersion": 1
+  }
+]

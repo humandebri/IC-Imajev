@@ -1,0 +1,48 @@
+[
+  {
+    "id": "boom-620",
+    "label": "BOOM #620",
+    "description": "Compare the previous and proposed voting lock duration",
+    "sourceLabel": "BOOM DAO #620",
+    "sourceUrl": "https://sns-api.internetcomputer.org/api/v1/snses/xjngq-yaaaa-aaaaq-aabha-cai/proposals/620",
+    "input": {
+      "state": "SNS parameters adjustment\n\n# Proposal to change nervous system parameters:\n## Current nervous system parameters:\n    neuron_minimum_dissolve_delay_to_vote_seconds: Some(\n        86400,\n    ),\n## New nervous system parameters:\n    neuron_minimum_dissolve_delay_to_vote_seconds: Some(\n        172800,\n    ),",
+      "question": "Does this proposal increase the minimum lock duration needed for voting?",
+      "options": [
+        "yes",
+        "no"
+      ]
+    }
+  },
+  {
+    "id": "boom-653",
+    "label": "BOOM #653",
+    "description": "A mint amount alone cannot establish the recipient's share of total supply",
+    "sourceLabel": "BOOM DAO #653",
+    "sourceUrl": "https://sns-api.internetcomputer.org/api/v1/snses/xjngq-yaaaa-aaaaq-aabha-cai/proposals/653",
+    "input": {
+      "state": "SNS Adjustment\n\n# Proposal to mint SNS Tokens:\n## Amount: 250000000.00000000 SNS Tokens\n## Amount (e8s): 25000000000000000\n## Target principal: 4mpab-ayg5c-m2frb-vjja5-b2qbe-5rxgv-33ova-ddjgm-egfav-br5hu-gqe\n## Target account: 4mpab-ayg5c-m2frb-vjja5-b2qbe-5rxgv-33ova-ddjgm-egfav-br5hu-gqe\n## Memo: 0",
+      "question": "Will the recipient own more than half of the total token supply after this mint?",
+      "options": [
+        "yes",
+        "no"
+      ]
+    }
+  },
+  {
+    "id": "boom-617",
+    "label": "BOOM #617",
+    "description": "Classify the change in the minimum voting lock duration",
+    "sourceLabel": "BOOM DAO #617",
+    "sourceUrl": "https://sns-api.internetcomputer.org/api/v1/snses/xjngq-yaaaa-aaaaq-aabha-cai/proposals/617",
+    "input": {
+      "state": "SNS parameters adjustment\n\n# Proposal to change nervous system parameters:\n## Current nervous system parameters:\n    neuron_minimum_dissolve_delay_to_vote_seconds: Some(\n        86400,\n    ),\n    max_dissolve_delay_seconds: Some(\n        2629800,\n    ),\n## New nervous system parameters:\n    neuron_minimum_dissolve_delay_to_vote_seconds: Some(\n        1728000000,\n    ),\n    max_dissolve_delay_seconds: Some(\n        2629800000,\n    ),",
+      "question": "How does the minimum lock duration needed for voting change?",
+      "options": [
+        "increases",
+        "decreases",
+        "unchanged"
+      ]
+    }
+  }
+]
