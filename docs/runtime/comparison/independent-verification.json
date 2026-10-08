@@ -1329,8 +1329,911 @@
         84,
         86
       ],
-      "paid512_inference_rerun": false,
-      "reason": "Retain the prepared-pair path, delete unused alternatives. Both full-model fixtures are bit-identical; total handler instructions increase by 0.0093/0.0114 percent. Unit-kernel reductions are not whole-model performance guarantees."
+      "paid512_inference_rerun": true,
+      "reason": "Retain the prepared-pair path, delete unused alternatives. Both full-model fixtures are bit-identical; total handler instructions increase by 0.0093/0.0114 percent. Unit-kernel reductions are not whole-model performance guarantees.",
+      "paid_update_verified_token_counts": [
+        28,
+        84,
+        86,
+        116,
+        117,
+        256,
+        257,
+        512
+      ]
+    },
+    "paid_update": {
+      "report_sha256": "db27acdb34f20484d4ebe2ed837846de61f3e17449b83f9a49ed61e0a31374a6",
+      "source_hashes": {
+        "scripts/check_independent_update.py": "23c099ef0b90edea668803ef57e0845f23d141f88acfaa86c7601d7ffdba0ea3",
+        "scripts/paid_update_transport.py": "d918f0865088c33c7550b8a2239b2c60a77ee454335893f0e8062c71c2fc000a",
+        "scripts/prepare_weight_cache.py": "f08a99496e27ae3702c6dbda0d1c1850fc4b8e9d19a7dc69892d1664969068c8",
+        "scripts/register_common_update_prefix.py": "8bdb3142a597297aa5f86737c8dd1504d96b8aec6acd6f8c59d62e0eb2b94895",
+        "artifacts/text-short-v2/inputs.json": "adfc2f9185e0cd6f69b9fd201eff6278721da492cdc4349274e6d4b63708c612",
+        "artifacts/paid-update-v1/tools/args": "ffd2782bbd5811692a880aa74c626b9a04c3123b7f24241f8b817d0334d8d118",
+        "artifacts/paid-update-v1/tools/caller.wasm": "5fd3bf25bcb98fcb04807604e23c3aa933ad06bfe61f79fbd4f33ef969ba9c27",
+        "artifacts/query-packing-v3/build/imajev-client": "fa5656fce125f61585289fc996c3fcde0ece626bd7ed2a926d0b5b753ff4a9e5",
+        "client/adaptive_inference.py": "40b857c08ab428e050f7e63e2d3b0a89e9861ff6e0fddf8f815a0d90dbf7a55e",
+        "client/attention_mlp_stream_codec.py": "533733192f02e9321664c9188318dce8606e9a1feac56891879eb12713e726c9",
+        "client/decision_validation.py": "39e1fb445e345eb3ea8183d351addce37c319e64ad1ace233520bd1d54c5580e",
+        "client/delta_mlp_start_codec.py": "da3d54fc72fbe5b04248205034844cf40045298261e4705b29f65209faac6396",
+        "client/full_inference.py": "a7d3a6a33e788a343b51e3b69e19f3a679cecb560265780f39aac8835a89c150",
+        "client/joined_inference.py": "b4b393af9013cfbde9c57b7d3f1409fd66747f6e06d23353cdfb4ec862caccee",
+        "client/limit_fallback.py": "6705f5a1d8aeb9132e797476fc90924eaed9a29cb3d03965bfd7a4614a4451d1",
+        "client/mlp_attention_finish_codec.py": "036bcd7ba192726779e3321d7f1e4b9f2102d07bdcfa66dddce7acae0c29379a",
+        "client/mlp_codec.py": "4d1d0974bc3a2cc51a3f2b371c78582f6cb8390b2c91e73dd4e060b89988b309",
+        "client/mlp_delta_carry.py": "5bd3d6e08fc673981289996b9f43b02ff2511b6bc48ec4b3d721006fedfcf402",
+        "client/mlp_delta_stream_codec.py": "f7cdddaef344d2c1a8560954822a16797c00557258915e3d186a2d6bc4c5372d",
+        "client/mlp_stream_codec.py": "7046b0bf000caa35e8bab81402ae2bda325b58263a871b6af39d6445b12a4489",
+        "client/packed_inference.py": "d6fad9c91a81e46c3311bfc892455d841ec4c67c1394ac8704b09e531637c511",
+        "client/prefix_hybrid.py": "7cebabb6472a8278aa18e9312038c8a3391f81b4949bd9aa81cc207c32a0b829",
+        "client/prefix_inference.py": "5f99874bdc1ca1eff4939b48309f9570fc09c1f42a92284785589a9438c161c1",
+        "client/prefix_start.py": "894abf635f0df3f405fdbcdcd0dcc0a7237aeb902c04fc59fdebde0d4e8b95da",
+        "client/projection_codec.py": "bcb9cee4db4fa2d18b380c990b3fbde80c38b66b7e0a09b2d1ff76da65ef94ca",
+        "client/query32_balanced.py": "7a8f91509371d7c0fc246999802add1ec69f841758c682137c1c078c0168d50a",
+        "client/query32_inference.py": "90685cc597344abb2210e7a72488a663b881f27f647b1448bc3da4165812c62d",
+        "client/query32_templates.py": "4bb17a9ba63d9f0edc06392c13805027cd94af47b3c8dc47208b37db5d1d5b23",
+        "client/roll_inference.py": "2126d3cd1d22a18f57c32dcf90514beda783241af4e9c8a04dcffd76af5d7545",
+        "client/tail_inference.py": "3897bbc946bb97fd5877c41a517dabf1292706731ffe599cde1ad5845d1ba9d7",
+        "client/template_prefix.py": "d2a39e7c8f51dfd58f1b3c7d0fa7240fc11d8d12ffa8564250f48b97d5dc1239",
+        "client/transport.py": "d95b5769ade035d01c62a86140d12232371a2986009573875b1c065b70348f72"
+      },
+      "modules": {
+        "before": "01ff0fc501d42f36591ed6bda5f9f247e1c189558f87832230b1c3209b50cb9c",
+        "after": "bde6bf09d5389f68d5970543c644078b626c6df01c156308db8d2abc0063954c"
+      },
+      "conditions": 14,
+      "verified_token_counts": [
+        28,
+        84,
+        86,
+        116,
+        117,
+        256,
+        257,
+        512
+      ],
+      "option_counts_at_28_tokens": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "all32_hidden_state_and_final_decision_bitwise_equal": true,
+      "query_reference_token_counts": [
+        84,
+        86
+      ],
+      "query_reference_hidden_layers": 31,
+      "query_reference_state_layers": 32,
+      "query_reference_missing_hidden_layer": 30,
+      "query_reference_note": "Fused terminal query does not export layer30 hidden; update before/after comparisons include all32 hidden hashes.",
+      "metrics": {
+        "minimum_instruction_change_percent": -0.047994970757014865,
+        "maximum_instruction_change_percent": 0.012912887953797636,
+        "max_worker_instructions": 33524762342,
+        "max_heap_bytes": 4204855296
+      },
+      "receipt_replay_after_upgrade_without_rewarm": true,
+      "owner_update": {
+        "before": {
+          "tokens": 84,
+          "calls": 4,
+          "query_reference_bitwise_equal": true,
+          "all32_hidden_and_state_equal_to_paid": true,
+          "query_reference_coverage": {
+            "hidden_layers": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              31
+            ],
+            "state_layers": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31
+            ],
+            "fused_layer30_hidden_not_exported": true
+          },
+          "report_sha256": "8809e9ab1618670d6000905b447f6ea97927ff74eda088c92884e833b5d5b688",
+          "rejected": [
+            "session progress mismatch",
+            "suffix token bounds"
+          ],
+          "instructions": 121663432757
+        },
+        "after": {
+          "tokens": 84,
+          "calls": 4,
+          "query_reference_bitwise_equal": true,
+          "all32_hidden_and_state_equal_to_paid": true,
+          "query_reference_coverage": {
+            "hidden_layers": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              31
+            ],
+            "state_layers": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31
+            ],
+            "fused_layer30_hidden_not_exported": true
+          },
+          "report_sha256": "5094d739334e7ff9278b1cf7b98bc705ad86ddf193d579c0d279a59fe7b372af",
+          "rejected": [
+            "session progress mismatch",
+            "suffix token bounds"
+          ],
+          "instructions": 121653080111
+        }
+      },
+      "validation": {
+        "before": [
+          {
+            "label": "empty-suffix",
+            "expected": "Invalid",
+            "rejected_before_payment": true,
+            "all_attached_cycles_returned": true
+          },
+          {
+            "label": "prefix",
+            "expected": "Invalid",
+            "rejected_before_payment": true,
+            "all_attached_cycles_returned": true
+          },
+          {
+            "label": "limit513",
+            "expected": "Invalid",
+            "rejected_before_payment": true,
+            "all_attached_cycles_returned": true
+          },
+          {
+            "label": "quote",
+            "expected": "QuoteChanged",
+            "rejected_before_payment": true,
+            "all_attached_cycles_returned": true
+          },
+          {
+            "label": "funds",
+            "expected": "InsufficientCycles",
+            "rejected_before_payment": true,
+            "all_attached_cycles_returned": true
+          },
+          {
+            "label": "conflict",
+            "expected": "IdConflict",
+            "rejected_before_payment": true,
+            "all_attached_cycles_returned": true
+          }
+        ],
+        "after": [
+          {
+            "label": "empty-suffix",
+            "expected": "Invalid",
+            "rejected_before_payment": true,
+            "all_attached_cycles_returned": true
+          },
+          {
+            "label": "prefix",
+            "expected": "Invalid",
+            "rejected_before_payment": true,
+            "all_attached_cycles_returned": true
+          },
+          {
+            "label": "limit513",
+            "expected": "Invalid",
+            "rejected_before_payment": true,
+            "all_attached_cycles_returned": true
+          },
+          {
+            "label": "quote",
+            "expected": "QuoteChanged",
+            "rejected_before_payment": true,
+            "all_attached_cycles_returned": true
+          },
+          {
+            "label": "funds",
+            "expected": "InsufficientCycles",
+            "rejected_before_payment": true,
+            "all_attached_cycles_returned": true
+          },
+          {
+            "label": "conflict",
+            "expected": "IdConflict",
+            "rejected_before_payment": true,
+            "all_attached_cycles_returned": true
+          }
+        ]
+      },
+      "cases": [
+        {
+          "label": "tokens-28",
+          "tokens": 28,
+          "options": 3,
+          "variant": "after",
+          "metrics": {
+            "workers": 1,
+            "instructions": 5585578431,
+            "max_worker_instructions": 5585578431,
+            "max_heap_bytes": 4162256896,
+            "seconds": 1.8897506659850478,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "debug_sha256": "b2fd7cfc916099a9a8187000d3f66a29fe140c04bb07493ea1915d27f8c1ac6f",
+          "query_reference_bitwise_equal": false,
+          "query_reference_coverage": null,
+          "bitwise_equal": true,
+          "before": {
+            "workers": 1,
+            "instructions": 5588260515,
+            "max_worker_instructions": 5588260515,
+            "max_heap_bytes": 4161929216,
+            "seconds": 1.2991220420226455,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "instruction_ratio": 0.9995200502924299
+        },
+        {
+          "label": "tokens-84",
+          "tokens": 84,
+          "options": 3,
+          "variant": "after",
+          "metrics": {
+            "workers": 4,
+            "instructions": 121656736530,
+            "max_worker_instructions": 31325820772,
+            "max_heap_bytes": 4173201408,
+            "seconds": 28.086153209093027,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "debug_sha256": "e4bb6fdd11428c40db94473712ea5356b2feae502812eb371fa60a78605d1bb3",
+          "query_reference_bitwise_equal": true,
+          "query_reference_coverage": {
+            "hidden_layers": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              31
+            ],
+            "state_layers": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31
+            ],
+            "fused_layer30_hidden_not_exported": true
+          },
+          "bitwise_equal": true,
+          "before": {
+            "workers": 4,
+            "instructions": 121676975089,
+            "max_worker_instructions": 31331930304,
+            "max_heap_bytes": 4174774272,
+            "seconds": 27.04205908405129,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "instruction_ratio": 0.9998336697720732
+        },
+        {
+          "label": "tokens-86",
+          "tokens": 86,
+          "options": 3,
+          "variant": "after",
+          "metrics": {
+            "workers": 4,
+            "instructions": 125512454798,
+            "max_worker_instructions": 32300474062,
+            "max_heap_bytes": 4177133568,
+            "seconds": 46.63002050004434,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "debug_sha256": "c1b0bcc8ba7e3a92f318e0e8d7f8b05600ec83e9e7e426cd3eee3e1d0881d0b6",
+          "query_reference_bitwise_equal": true,
+          "query_reference_coverage": {
+            "hidden_layers": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              31
+            ],
+            "state_layers": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              25,
+              26,
+              27,
+              28,
+              29,
+              30,
+              31
+            ],
+            "fused_layer30_hidden_not_exported": true
+          },
+          "bitwise_equal": true,
+          "before": {
+            "workers": 4,
+            "instructions": 125525986235,
+            "max_worker_instructions": 32304121436,
+            "max_heap_bytes": 4174774272,
+            "seconds": 29.612139499979094,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "instruction_ratio": 0.9998922021056686
+        },
+        {
+          "label": "tokens-116",
+          "tokens": 116,
+          "options": 3,
+          "variant": "after",
+          "metrics": {
+            "workers": 7,
+            "instructions": 187071786097,
+            "max_worker_instructions": 33524762342,
+            "max_heap_bytes": 4183031808,
+            "seconds": 43.33512579090893,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "debug_sha256": "39d167a37cbbf4141e1b78ac00d65e61a9a6c72526eb1893f3f5b62d356a978a",
+          "query_reference_bitwise_equal": false,
+          "query_reference_coverage": null,
+          "bitwise_equal": true,
+          "before": {
+            "workers": 7,
+            "instructions": 187067725637,
+            "max_worker_instructions": 33524234237,
+            "max_heap_bytes": 4184014848,
+            "seconds": 47.73341695801355,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "instruction_ratio": 1.0000217058286573
+        },
+        {
+          "label": "tokens-117",
+          "tokens": 117,
+          "options": 3,
+          "variant": "after",
+          "metrics": {
+            "workers": 7,
+            "instructions": 191875822938,
+            "max_worker_instructions": 31016627466,
+            "max_heap_bytes": 4183031808,
+            "seconds": 44.20300858397968,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "debug_sha256": "a75fbda2232dc0549fae3629018e6141d635f80f85f058e3369e0072c3ae072c",
+          "query_reference_bitwise_equal": false,
+          "query_reference_coverage": null,
+          "bitwise_equal": true,
+          "before": {
+            "workers": 7,
+            "instructions": 191858627629,
+            "max_worker_instructions": 31014986003,
+            "max_heap_bytes": 4184014848,
+            "seconds": 47.43349579104688,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "instruction_ratio": 1.000089624893144
+        },
+        {
+          "label": "tokens-256",
+          "tokens": 256,
+          "options": 3,
+          "variant": "after",
+          "metrics": {
+            "workers": 16,
+            "instructions": 490577027128,
+            "max_worker_instructions": 32188047930,
+            "max_heap_bytes": 4192272384,
+            "seconds": 115.77972841600422,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "debug_sha256": "b450a40c8c00bc2b2331648ddd9c6e6e5936ae33b7d878541ebebfb9abe6ee9f",
+          "query_reference_bitwise_equal": false,
+          "query_reference_coverage": null,
+          "bitwise_equal": true,
+          "before": {
+            "workers": 16,
+            "instructions": 490641289236,
+            "max_worker_instructions": 32189944478,
+            "max_heap_bytes": 4187357184,
+            "seconds": 120.50050445809029,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "instruction_ratio": 0.9998690242557856
+        },
+        {
+          "label": "tokens-257",
+          "tokens": 257,
+          "options": 3,
+          "variant": "after",
+          "metrics": {
+            "workers": 16,
+            "instructions": 492591828398,
+            "max_worker_instructions": 32327194488,
+            "max_heap_bytes": 4192272384,
+            "seconds": 114.85400158306584,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "debug_sha256": "6999c3bfec4d2dafaa0a26d9675edce0bfe8b4e3206a46825e36bf60068a178a",
+          "query_reference_bitwise_equal": false,
+          "query_reference_coverage": null,
+          "bitwise_equal": true,
+          "before": {
+            "workers": 16,
+            "instructions": 492539857184,
+            "max_worker_instructions": 32325529936,
+            "max_heap_bytes": 4187357184,
+            "seconds": 143.0822958749486,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "instruction_ratio": 1.0001055167683224
+        },
+        {
+          "label": "tokens-512",
+          "tokens": 512,
+          "options": 3,
+          "variant": "after",
+          "metrics": {
+            "workers": 34,
+            "instructions": 1064471179649,
+            "max_worker_instructions": 33421772450,
+            "max_heap_bytes": 4204855296,
+            "seconds": 283.6076301250141,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "debug_sha256": "0d79d403d14ae92a0bdc43ee00ded9247a5175f799c8f25f68cc1b3cedbdbb82",
+          "query_reference_bitwise_equal": false,
+          "query_reference_coverage": null,
+          "bitwise_equal": true,
+          "before": {
+            "workers": 34,
+            "instructions": 1064467417839,
+            "max_worker_instructions": 33420544382,
+            "max_heap_bytes": 4205838336,
+            "seconds": 253.52305970806628,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "instruction_ratio": 1.0000035339832267
+        },
+        {
+          "label": "options-2",
+          "tokens": 28,
+          "options": 2,
+          "variant": "after",
+          "metrics": {
+            "workers": 1,
+            "instructions": 5588759407,
+            "max_worker_instructions": 5588759407,
+            "max_heap_bytes": 4204855296,
+            "seconds": 1.4786995419999585,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "debug_sha256": "e7e63f207d6b6a7bd83cce6400dd0df68b981d1d232d9d9c9ac4eec59453ade4",
+          "query_reference_bitwise_equal": false,
+          "query_reference_coverage": null,
+          "bitwise_equal": true,
+          "before": {
+            "workers": 1,
+            "instructions": 5588752568,
+            "max_worker_instructions": 5588752568,
+            "max_heap_bytes": 4205838336,
+            "seconds": 1.2342800840269774,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "instruction_ratio": 1.0000012237077804
+        },
+        {
+          "label": "options-3",
+          "tokens": 28,
+          "options": 3,
+          "variant": "after",
+          "metrics": {
+            "workers": 1,
+            "instructions": 5587292372,
+            "max_worker_instructions": 5587292372,
+            "max_heap_bytes": 4204855296,
+            "seconds": 1.2993127920199186,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "debug_sha256": "0cf8cdde0f70a73a5c1f966b61274ff834b37860ca267323a14452d80a4af668",
+          "query_reference_bitwise_equal": false,
+          "query_reference_coverage": null,
+          "bitwise_equal": true,
+          "before": {
+            "workers": 1,
+            "instructions": 5588604271,
+            "max_worker_instructions": 5588604271,
+            "max_heap_bytes": 4205838336,
+            "seconds": 1.2847539590438828,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "instruction_ratio": 0.9997652546259523
+        },
+        {
+          "label": "options-4",
+          "tokens": 28,
+          "options": 4,
+          "variant": "after",
+          "metrics": {
+            "workers": 1,
+            "instructions": 5586900106,
+            "max_worker_instructions": 5586900106,
+            "max_heap_bytes": 4204855296,
+            "seconds": 1.305900833918713,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "debug_sha256": "29c706ded9e0bd47afd313d99187a0d88fb5bf583e1acdaece29a2c2d6304b71",
+          "query_reference_bitwise_equal": false,
+          "query_reference_coverage": null,
+          "bitwise_equal": true,
+          "before": {
+            "workers": 1,
+            "instructions": 5588960567,
+            "max_worker_instructions": 5588960567,
+            "max_heap_bytes": 4205838336,
+            "seconds": 1.323445999994874,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "instruction_ratio": 0.9996313337739103
+        },
+        {
+          "label": "options-5",
+          "tokens": 28,
+          "options": 5,
+          "variant": "after",
+          "metrics": {
+            "workers": 1,
+            "instructions": 5587503849,
+            "max_worker_instructions": 5587503849,
+            "max_heap_bytes": 4204855296,
+            "seconds": 1.2990208748960868,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "debug_sha256": "b91a10b858c3cf168cfb24508eb0424e54cad70bf0b7b48e03f0c43028d39aac",
+          "query_reference_bitwise_equal": false,
+          "query_reference_coverage": null,
+          "bitwise_equal": true,
+          "before": {
+            "workers": 1,
+            "instructions": 5588758984,
+            "max_worker_instructions": 5588758984,
+            "max_heap_bytes": 4205838336,
+            "seconds": 1.2634321249788627,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "instruction_ratio": 0.9997754179409788
+        },
+        {
+          "label": "options-6",
+          "tokens": 28,
+          "options": 6,
+          "variant": "after",
+          "metrics": {
+            "workers": 1,
+            "instructions": 5588073534,
+            "max_worker_instructions": 5588073534,
+            "max_heap_bytes": 4204855296,
+            "seconds": 1.2914441250031814,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "debug_sha256": "c8709d91ce673f2a8492418b34b455fbdd6d0839499f040f40f37d09ff3c662e",
+          "query_reference_bitwise_equal": false,
+          "query_reference_coverage": null,
+          "bitwise_equal": true,
+          "before": {
+            "workers": 1,
+            "instructions": 5588824898,
+            "max_worker_instructions": 5588824898,
+            "max_heap_bytes": 4205838336,
+            "seconds": 1.2582040420966223,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "instruction_ratio": 0.9998655595740227
+        },
+        {
+          "label": "options-7",
+          "tokens": 28,
+          "options": 7,
+          "variant": "after",
+          "metrics": {
+            "workers": 1,
+            "instructions": 5589610885,
+            "max_worker_instructions": 5589610885,
+            "max_heap_bytes": 4204855296,
+            "seconds": 1.2938616659957916,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "debug_sha256": "c5d1cdfd5bfea3c1350b918de9b6665ecf9b22a0700e07f9c3c94ed08e82ae75",
+          "query_reference_bitwise_equal": false,
+          "query_reference_coverage": null,
+          "bitwise_equal": true,
+          "before": {
+            "workers": 1,
+            "instructions": 5588889198,
+            "max_worker_instructions": 5588889198,
+            "max_heap_bytes": 4205838336,
+            "seconds": 1.25232650001999,
+            "returned_unused_cycles": 12345,
+            "duplicate_no_charge": true
+          },
+          "instruction_ratio": 1.000129128879538
+        }
+      ],
+      "cleanup": {
+        "target": {
+          "stop": {
+            "returncode": 0,
+            "stderr": ""
+          },
+          "delete": {
+            "returncode": 0,
+            "stderr": ""
+          }
+        },
+        "relay": {
+          "stop": {
+            "returncode": 0,
+            "stderr": ""
+          },
+          "delete": {
+            "returncode": 0,
+            "stderr": ""
+          }
+        }
+      },
+      "native_tests": {
+        "report_sha256": "53cdb832722583f4ab6ea7353b19bf0709f74290e8c5f278e89714c8f1c40319",
+        "passed": 22
+      },
+      "limits": "Selected input lengths; not every token count. Instruction checkpoints exclude the reply tail. After-upgrade receipt history differs from before; timing and tiny instruction differences are not isolated performance guarantees."
     }
   },
   "historical_before_cleanup": {
