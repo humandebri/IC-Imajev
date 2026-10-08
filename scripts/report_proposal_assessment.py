@@ -32,12 +32,10 @@ reference_labels = json.loads((source / 'reviewed-text-labels.json').read_text()
 eligible_labels = {'schema_version': 1, 'snapshots': {
     e['snapshot_sha256']: reference_labels['snapshots'][e['snapshot_sha256']]
     for e in prepared['proposals'] if int(e['proposal_id']) != 660}}
-prior = json.loads((source / 'comparison.json').read_text())
-prior_eligible = evaluate(prior, eligible_labels)['models']
 current_eligible = evaluate(text, eligible_labels)['models']['imajev-canister-int8']
 lines = [
     '# Canister上のImajev：proposal_assessmentベンチ', '',
-    '2026-10-05（日本時間）。IC-Laya-Standalone/tools/proposal_assessment のBOOM DAO 600〜660全61件を、稼働中のローカルImajev canisterで評価した。GPT APIの予測は使用していない。', '',
+    '2026-10-05（日本時間）。保存済みBOOM DAO 600〜660全61件を、稼働中のローカルImajev canisterで評価した。GPT APIの予測は使用していない。', '',
     f'接続先は `{r["model"]["url"]}`、canisterは `{r["model"]["canister"]}`。Wasm hashは `{r["model"]["wasm_sha256"]}`。基盤は固定Qwen3.5-4B＋Imajev adapter、INT8 base・F32 LoRA/readout・BF16/F32中間演算。', '',
     f'本文説明3問×61件と採否1問×61件の計244問。task JSONが完全一致するものをまとめると44種類で、うち30種類を通常queryによる全32層推論で実行した。14種類は512-token入力上限により拒否した。要約・切り詰め・正解ラベルによる入力修正はしていない。', '',
     '## 本文説明', '',
@@ -45,11 +43,10 @@ lines = [
     f'| 選択肢を回答できた数 | {stats["predicted"]}/{stats["expected"]} | {unique["predicted"]}/{unique["expected"]} |',
     f'| 暫定ラベルとの一致 | {stats["correct"]}/{stats["expected"]}（{stats["correct_over_all_labeled_tasks"]:.2%}） | {unique["correct"]}/{unique["expected"]}（{unique["correct_over_all_labeled_tasks"]:.2%}） |',
     f'| 回答できた問の一致率 | {stats["accuracy_on_predictions"]:.2%} | {unique["accuracy_on_predictions"]:.2%} |', '',
-    '参照ラベルは既存のassistantによる暫定ラベル。独立した人間の正解検証を受けていない。元のLaya実測（183問）はtyped-decisions 9/183、english 20/183、multilingual 13/183。常にabsentの基準は173/183。今回の入力形式と上限・unknown候補はLayaと異なるため、同条件の一般性能順位ではない。', '',
+    '参照ラベルは既存のassistantによる暫定ラベル。独立した人間の正解検証を受けていない。常にabsentの基準は173/183。', '',
     '今回の入力上限に収まる180問（660を除く）に参照ラベルを揃えた比較：', '',
     '| モデル・基準 | 一致/180問 |', '|---|---:|',
     f'| Imajev canister | {current_eligible["correct"]}/180 |',
-    *[f'| Laya {name}（既存実測） | {s["correct"]}/180 |' for name, s in prior_eligible.items()],
     '| 常にabsent | 173/180 |', '',
     '## 承認・否決・保留', '', '| 選択 | 件数 |', '|---|---:|',
 ]
@@ -65,7 +62,7 @@ lines += ['', '512 tokensを超える採否入力は、根拠や判定方針を�
           '- 既存の26-token共通prefix状態を再利用。推論の中間状態はclient-held。各推論の入力依存の数値計算はcanister上で実行した。',
           '- 各実行でmodule hash・token hash・typed response・全queryの実行数を検査した。実行済み応答のjournal replayは0。',
           f'- 並行実行を打ち切った補助実行は採点と上記合計に含まない。その完了query metricは{len(aborted)}件をaborted/に保存し、同じtaskを後で最初から実行した。',
-          '- 同じcanister上の別ベンチと一時的に競合したため、所要時間にはその影響がある。一般的な推論速度やLayaとの速度比較には使用しない。',
+          '- 同じcanister上の別ベンチと一時的に競合したため、所要時間にはその影響がある。一般的な推論速度の評価には使用しない。',
           '- 重みのupload・prepare・canisterのupgrade・投票は行っていない。', '',
           '## 全61件', '', '| ID | action | 理由説明 | 影響利用者 | 移行・緩和 | 採否 |', '|---|---|---|---|---|---|']
 votes = {x['proposal_id']: x for x in r['votes']}
@@ -77,7 +74,7 @@ for e in text['proposals']:
     lines.append(f'| {pid} | {e["facts"]["action"]} | {labels[0]} | {labels[1]} | {labels[2]} | {words[vote]} |')
 lines += ['', '## 入力形式と保存', '',
           r['model']['adaptation'], '',
-          '質問・instructionと選択肢の説明を保持した。Imajevの固定short promptと最後のunknown候補で符号化するため、Layaのclassifier用promptとtoken数は同一ではない。採点ラベル・過去モデルの予測・採決結果は推論へ渡さない。', '',
+          '質問・instructionと選択肢の説明を保持した。Imajevの固定short promptと最後のunknown候補で符号化するため、別のclassifier用promptとのtoken数の同一性は保証しない。採点ラベル・過去モデルの予測・採決結果は推論へ渡さない。', '',
           '同一taskは1回だけ推論して該当proposalへ展開した。244回の独立反復ではなく、反復分散や選択肢順序の感度も測っていない。', '',
           '生の確率・logits・unknown・token数・全queryの計測は[report.json](report.json)、本文の暫定ラベル比較は[text-comparison.json](text-comparison.json)。個別実行のcommandとrun.log、report、query metricをruns/に保存した。成功した実行の中間binary stateはhash・byte数を記録して削除し、ディスク使用量を抑えた。', '',
           '再現コマンド：', '', '```sh',

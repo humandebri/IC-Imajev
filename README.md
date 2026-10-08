@@ -78,7 +78,6 @@ holdは危険の確定ではなく、低スコア・証拠不足・判定範囲�
 - [32-query経路の配分と検証](docs/QUERY32_PROGRESS.md)
 - [ランタイムの構成と再利用知見](docs/runtime/README.md)
 - [初期の最適化記録](docs/EXACT_OPTIMIZATION.md)
-- [Layaとの比較分析](docs/LAYA_COST_ANALYSIS.md)
 
 以下は環境構築・基礎検証の手順です。個別の最適化経路は、対応する文書のmodule・feature・準備条件を確認してください。
 
@@ -92,11 +91,10 @@ python3 scripts/bootstrap.py
 UV_CACHE_DIR="$PWD/.cache/uv" uv venv --python 3.12 .venv
 UV_CACHE_DIR="$PWD/.cache/uv" uv pip install --python .venv/bin/python -r requirements.lock
 python3 scripts/acquire.py --weights
-.venv/bin/python scripts/make_benchmark.py --source ../IC-Laya-Standalone/artifacts/boomdao_query_benchmark/summary.json
 .venv/bin/python scripts/inventory.py
 ```
 
-`acquire.py` は既存のMODEL_LOCKを書き換えません。約10 GBを取得します。`make_benchmark.py --source`にはLayaの保存済み結果を指定します。上の例は隣に参照用checkoutを置いた配置で、参照元を読み取るだけです。別マシンではベンチ入力をリポジトリに保存したまま使い、このコマンドを省略してください。
+`acquire.py` は既存のMODEL_LOCKを書き換えません。約10 GBを取得します。検証入力は`benchmarks/cases.json`に保存しており、外部の比較用checkoutは不要です。
 
 ## 公式ホスト推論
 

@@ -1,42 +1,34 @@
-"""Offline scoring against explicit human labels bound to frozen snapshot hashes."""
-TASK_IDS = {'rationale', 'affected_users', 'mitigation'}
-LABELS = {'present', 'absent', 'unclear'}
-
+"""Score explicit labels tied to snapshot hashes; missing predictions reduce coverage."""
 
 def evaluate(comparison, labels):
-    """Unavailable predictions stay in coverage and the overall denominator."""
-    if labels.get('schema_version') != 1 or not isinstance(labels.get('snapshots'), dict) or not labels['snapshots']:
+    gold = labels.get('snapshots')
+    if labels.get('schema_version')!=1 or not isinstance(gold,dict) or not gold:
         raise ValueError('labels require schema_version=1 and nonempty snapshots')
-    snapshots = {p['snapshot_sha256']: p for p in comparison['proposals']}
-    gold = labels['snapshots']
-    for snapshot, tasks in gold.items():
-        if snapshot not in snapshots:
+    inputs = {p['snapshot_sha256']:p for p in comparison['proposals']}
+    for digest,tasks in gold.items():
+        if digest not in inputs:
             raise ValueError('label snapshot hash does not match an input')
-        if (not isinstance(tasks, dict) or not tasks or set(tasks) - TASK_IDS
-                or any(not isinstance(v, str) or v not in LABELS for v in tasks.values())):
+        if not isinstance(tasks,dict) or not tasks or not set(tasks)<={'rationale','affected_users','mitigation'} or any(type(label) is not str or label not in {'present','absent','unclear'} for label in tasks.values()):
             raise ValueError('invalid task labels')
-    expected = sum(len(tasks) for tasks in gold.values())
+    total = sum(map(len,gold.values()))
     counters = {}
-    for snapshot, tasks in gold.items():
-        for trial in snapshots[snapshot]['model_assessments']:
+    for digest,tasks in gold.items():
+        for trial in inputs[digest]['model_assessments']:
             name = trial['model']['name']
-            counter = counters.setdefault(name, {'expected': expected, 'predicted': 0, 'correct': 0,
-                                                  'errors': [], 'unavailable': []})
-            rows = {r['task_id']: r for r in trial['advisory']}
-            for task, label in tasks.items():
-                row = rows.get(task, {})
-                if row.get('status') != 'model_prediction':
-                    counter['unavailable'].append({'snapshot': snapshot, 'task_id': task})
-                    continue
-                counter['predicted'] += 1
-                if row['label'] == label:
-                    counter['correct'] += 1
+            counter = counters.setdefault(name,dict(expected=total,predicted=0,correct=0,errors=[],unavailable=[]))
+            rows = {row['task_id']:row for row in trial['advisory']}
+            for task,expected in tasks.items():
+                prediction = rows.get(task,{})
+                if prediction.get('status')!='model_prediction':
+                    counter['unavailable'].append(dict(snapshot=digest,task_id=task))
                 else:
-                    counter['errors'].append({'snapshot': snapshot, 'task_id': task,
-                                              'expected': label, 'predicted': row['label']})
+                    counter['predicted'] += 1
+                    if prediction['label']==expected:
+                        counter['correct'] += 1
+                    else:
+                        counter['errors'].append(dict(snapshot=digest,task_id=task,expected=expected,predicted=prediction['label']))
     for counter in counters.values():
-        counter['coverage'] = counter['predicted'] / expected
-        counter['accuracy_on_predictions'] = (counter['correct'] / counter['predicted']
-                                               if counter['predicted'] else None)
-        counter['correct_over_all_labeled_tasks'] = counter['correct'] / expected
-    return {'scope': 'explicitly labeled text tasks only; not proposal safety accuracy', 'models': counters}
+        counter.update(coverage=counter['predicted']/total,
+                       accuracy_on_predictions=counter['correct']/counter['predicted'] if counter['predicted'] else None,
+                       correct_over_all_labeled_tasks=counter['correct']/total)
+    return dict(scope='explicitly labeled text tasks only; not proposal safety accuracy',models=counters)

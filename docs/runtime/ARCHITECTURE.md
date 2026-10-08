@@ -25,22 +25,10 @@ INT8 kernelのfeature群はprepared配置と演算方式に結び付いている
 
 ## 現在の優先事項
 
-目的はLaya側の命令数削減。共通runtimeへの移植は保留し、個別の演算最適化を検証する。[探索と実測結果](comparison/LAYA_INSTRUCTION_SEARCH.md)。以下の二モデル対応は設計候補で、現在の実装目標ではない。
-
-## 第二モデルはLayaで検証する
-
-共通runtimeの第二モデルには既存のLayaを使う。固定pack・参照結果・IC実装があり、Imajevのdecoderとは異なるencoder構成なので、モデル固有の前提を見つける対象になる。既存Layaのソース・Git・network・canisterは変更せず、このリポジトリ内のadapterと診断用環境で検証する。
-
-Layaの既存INT8演算は出力行単位の重みscaleとtoken単位の入力scaleを使う。Imajevのblock256入力契約へ無条件に変換せず、整数dot、scale適用、出力の再量子化を分けて契約を定義する。入力幅2624は256の倍数ではないため、端数列・paddingの扱いも検証対象になる。[既存の比較分析](../LAYA_COST_ANALYSIS.md)。
-
-実重みの先頭512出力行を使った初回投影比較は完了し、全10条件でLaya側が少ない命令数だった。[条件と結果](comparison/LAYA_RUNTIME.md)。今回の候補は実験用token-scale kernelで、採用済みblock256/S1の比較ではない。
-
-次は実activationと出力再量子化を含めて参照出力を照合し、その後にモデルadapter・重み読込・schedulerを接続してLayaの全推論を再現する。命令数・通信・準備費用と判定出力を記録する。この節は検証対象の決定であり、Layaの共通runtime接続が完了したという記録ではない。
-
-Layaでの二モデル対応と、llama_cpp_canisterとの同一モデルA/Bは別の検証になる。Layaを相手側でも実行するにはモデルarchitectureとdecision headの対応を確認する必要がある。
+現在はImajevの数値契約と検証済みPrefix27経路を対象にする。別モデルのadapter・classifier・比較実装はこのリポジトリでは管理しない。INT8互換経路の置き換えは、同一入力のbit一致とローカルIC命令数で検証する。
 
 ## 完成条件と今回の検証範囲
 
 共通演算crateの抽出は実装済み。モデル読込から推論完走まで扱う汎用ランタイムの完成には、第二モデル、モデル仕様の表現、重み読込、scheduler、異常系、同一条件のWasm実測が必要となる。GGUF loader・汎用tokenizer・自由生成は未実装。
 
-共通crate抽出時の検証はworkspaceの標準/全featureテスト、共通crateの公開API契約試験、Wasmビルド、Python構文確認を対象とする。共通crateのWasm契約試験を実行し、24形状の投影/codec bit一致と全65,536 BF16 bitパターンの有限性分類も確認する。共通crate抽出後の本番推論用canisterはinstallしていない。後続のLaya投影比較は別の診断専用canisterで実施し、全モデルの命令数は再測定していない。crate境界変更は最終Wasmの最適化に影響し得るため、過去の性能値を新moduleの実測値には読み替えない。
+共通crate抽出時の検証はworkspaceの標準/全featureテスト、共通crateの公開API契約試験、Wasmビルド、Python構文確認を対象とする。共通crateのWasm契約試験を実行し、24形状の投影/codec bit一致と全65,536 BF16 bitパターンの有限性分類も確認する。共通crate抽出後の本番推論用canisterはinstallしていない。過去の別モデル投影比較は診断専用canisterでの記録であり、全モデルの命令数の証拠には使わない。crate境界変更は最終Wasmの最適化に影響し得るため、過去の性能値を新moduleの実測値には読み替えない。
