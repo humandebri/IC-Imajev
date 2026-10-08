@@ -43,7 +43,9 @@ test("run displays real progress and preserves submitted option labels while edi
   await expect(page.getByRole("button", { name: "Run inference" })).toBeDisabled();
   await page.locator(".option-control input").first().fill("edited option");
   await expect(page.locator(".result-panel")).toHaveAttribute("data-state", "done");
-  await expect(page.locator(".actual-result h3")).toHaveText("yes");
+  await expect(page.locator(".actual-result h3")).toHaveText("yes · 80%");
+  await expect(page.locator(".result-meta")).toContainText("Runner-up optionno · 10%");
+  await expect(page.locator(".result-meta")).toContainText(/Completed in\d+\.\d s/);
   await expect(page.locator(".probabilities li").first()).toContainText("yes");
   await expect(page.locator(".probabilities")).not.toContainText("edited option");
   await expect(page.getByRole("button", { name: "Run inference" })).toBeEnabled();
@@ -59,7 +61,8 @@ test("cancel and rerun discard the previous late completion", async ({ page }) =
   await expect(page.getByRole("alert")).toHaveText("Inference cancelled.");
   await page.locator(".option-control input").first().fill("new option");
   await page.getByRole("button", { name: "Run inference" }).click();
-  await expect(page.locator(".actual-result h3")).toHaveText("new option");
+  await expect(page.locator(".actual-result h3")).toHaveText("new option · 80%");
+  await expect(page.locator(".result-meta")).toContainText("Runner-up optionno · 10%");
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
 

@@ -40,8 +40,9 @@ test("measured abstention renders friendly wording separate from answer probabil
     }));
   });
   const component = page.locator("#component-test");
-  await expect(component.getByRole("heading", { name: "Not enough information" })).toBeVisible();
+  await expect(component.getByRole("heading", { name: "Not enough information · 99.3%" })).toBeVisible();
   await expect(component.locator(".result-label")).toHaveText("Abstained");
+  await expect(component.locator(".result-meta")).toHaveText("Top optionno · 0.4%");
   await expect(component.locator(".abstention-probability")).toContainText("Not enough information");
   await expect(component.getByRole("meter", { name: "Model probability for not enough information" })).toHaveAttribute("value", "0.9931984645420425");
   await expect(component).not.toContainText("unknown");

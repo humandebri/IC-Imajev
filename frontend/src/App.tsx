@@ -45,7 +45,7 @@ export default function App() {
   const onCounts = useCallback((key: string, counts: TokenCounts | null) => setTokenAnswer({ key, counts }), []);
   const counts = tokenAnswer?.key === inputKey ? tokenAnswer.counts : null;
   const canRun = valid && counts?.paidPrefix === 27 && counts.paidSuffix !== null && counts.paidSuffix >= 1 && counts.paidSuffix <= MAX_SUFFIX;
-  const [result, setResult] = useState<DecisionResult | null>(null);
+  const [result, setResult] = useState<(DecisionResult & { elapsedMs: number }) | null>(null);
   const [resultOptions, setResultOptions] = useState<string[]>([]);
   const [progress, setProgress] = useState<InferenceProgress | null>(null);
   const [inferenceError, setInferenceError] = useState("");
@@ -59,6 +59,7 @@ export default function App() {
   async function runInference() {
     if (!canRun || activeRun.current) return;
     const id = ++generation.current, startedAt = Date.now();
+    const startedTick = performance.now();
     const snapshot = structuredClone(input);
     setResult(null); setResultOptions(snapshot.options); setInferenceError("");
     setProgress({ kind: "waiting", startedAt, phase: "Preparing" });
@@ -66,7 +67,10 @@ export default function App() {
       if (generation.current === id) setProgress({ kind: "steps", completed, total, startedAt, phase: "Running" });
     });
     activeRun.current = run;
-    try { const answer = await run.promise; if (generation.current === id) setResult(answer); }
+    try {
+      const answer = await run.promise;
+      if (generation.current === id) setResult({ ...answer, elapsedMs: performance.now() - startedTick });
+    }
     catch (error) { if (generation.current === id) setInferenceError(error instanceof Error ? error.message : "Inference failed."); }
     finally { if (generation.current === id) { activeRun.current = null; setProgress(null); } }
   }
@@ -362,6 +366,7 @@ export default function App() {
           <div className="output-column">
             <ResultPanel
               result={result}
+              elapsedMs={result?.elapsedMs}
               progress={progress}
               options={result || progress ? resultOptions : input.options}
             />
