@@ -191,42 +191,20 @@ unsafe fn quantize_simd(x: *const f32, q: *mut i16, cols: usize) -> f32 {
     }
     scale
 }
-// Load sharing follows the MIT-licensed Laya tile; full-column token scaling is
-// evaluated separately from Imajev's adopted block256 arithmetic.
+// Whole-row integer accumulation has no intermediate F32 scaling.
 #[cfg(target_arch = "wasm32")]
 #[target_feature(enable = "simd128")]
 unsafe fn dot_tile<const R: usize, const C: usize>(
-    q: *const i16,
-    w: *const i8,
-    cols: usize,
+    q: *const i16, w: *const i8, cols: usize,
 ) -> [[i32; C]; R] {
-    use core::arch::wasm32::*;
-    let mut acc = [[i32x4_splat(0); C]; R];
-    let qp: [*const i16; R] = core::array::from_fn(|i| q.add(i * cols));
-    let wp: [*const i8; C] = core::array::from_fn(|j| w.add(j * cols));
-    for c in (0..cols).step_by(256) {
-        let weights: [[v128; 32]; C] = core::array::from_fn(|j| {
-            core::array::from_fn(|g| {
-                i16x8_extend_low_i8x16(v128_load64_zero(wp[j].add(c + g * 8).cast()))
-            })
-        });
-        macro_rules! columns {($i:literal,$input:ident;$($j:literal),*)=>{$(if C>$j {acc[$i][$j]=i32x4_add(acc[$i][$j],i32x4_add(i32x4_add(i32x4_add(i32x4_add(i32x4_add(i32x4_dot_i16x8($input[0],weights[$j][0]),i32x4_dot_i16x8($input[1],weights[$j][1])),i32x4_add(i32x4_dot_i16x8($input[2],weights[$j][2]),i32x4_dot_i16x8($input[3],weights[$j][3]))),i32x4_add(i32x4_add(i32x4_dot_i16x8($input[4],weights[$j][4]),i32x4_dot_i16x8($input[5],weights[$j][5])),i32x4_add(i32x4_dot_i16x8($input[6],weights[$j][6]),i32x4_dot_i16x8($input[7],weights[$j][7])))),i32x4_add(i32x4_add(i32x4_add(i32x4_dot_i16x8($input[8],weights[$j][8]),i32x4_dot_i16x8($input[9],weights[$j][9])),i32x4_add(i32x4_dot_i16x8($input[10],weights[$j][10]),i32x4_dot_i16x8($input[11],weights[$j][11]))),i32x4_add(i32x4_add(i32x4_dot_i16x8($input[12],weights[$j][12]),i32x4_dot_i16x8($input[13],weights[$j][13])),i32x4_add(i32x4_dot_i16x8($input[14],weights[$j][14]),i32x4_dot_i16x8($input[15],weights[$j][15]))))),i32x4_add(i32x4_add(i32x4_add(i32x4_add(i32x4_dot_i16x8($input[16],weights[$j][16]),i32x4_dot_i16x8($input[17],weights[$j][17])),i32x4_add(i32x4_dot_i16x8($input[18],weights[$j][18]),i32x4_dot_i16x8($input[19],weights[$j][19]))),i32x4_add(i32x4_add(i32x4_dot_i16x8($input[20],weights[$j][20]),i32x4_dot_i16x8($input[21],weights[$j][21])),i32x4_add(i32x4_dot_i16x8($input[22],weights[$j][22]),i32x4_dot_i16x8($input[23],weights[$j][23])))),i32x4_add(i32x4_add(i32x4_add(i32x4_dot_i16x8($input[24],weights[$j][24]),i32x4_dot_i16x8($input[25],weights[$j][25])),i32x4_add(i32x4_dot_i16x8($input[26],weights[$j][26]),i32x4_dot_i16x8($input[27],weights[$j][27]))),i32x4_add(i32x4_add(i32x4_dot_i16x8($input[28],weights[$j][28]),i32x4_dot_i16x8($input[29],weights[$j][29])),i32x4_add(i32x4_dot_i16x8($input[30],weights[$j][30]),i32x4_dot_i16x8($input[31],weights[$j][31])))))));})*};}
-        macro_rules! rows {($($i:literal),*)=>{$(if R>$i {let input:[v128;32]=core::array::from_fn(|g|v128_load(qp[$i].add(c+g*8).cast()));columns!($i,input;0,1,2,3,4,5,6,7);})*};}
-        rows!(
-            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
-            24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45,
-            46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63
-        );
+    let mut result = [[0i32; C]; R];
+    for start in (0..cols).step_by(256) {
+        let part = crate::int8_tile::block::<R, C>(q, w, cols, start);
+        for row in 0..R { for column in 0..C {
+            result[row][column] = result[row][column].wrapping_add(part[row][column]);
+        } }
     }
-    let mut out = [[0i32; C]; R];
-    macro_rules! cols {($i:literal;$($j:literal),*)=>{$(if C>$j {let v=acc[$i][$j];let h=i32x4_add(v,i32x4_shuffle::<2,3,0,1>(v,v));let s=i32x4_add(h,i32x4_shuffle::<1,0,3,2>(h,h));out[$i][$j]=i32x4_extract_lane::<0>(s);})*};}
-    macro_rules! rows {($($i:literal),*)=>{$(if R>$i {cols!($i;0,1,2,3,4,5,6,7);})*};}
-    rows!(
-        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
-        25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
-        48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63
-    );
-    out
+    result
 }
 
 #[cfg(test)]

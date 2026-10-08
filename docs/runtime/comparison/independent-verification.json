@@ -1,0 +1,3751 @@
+{
+  "scope": "Synthetic projection A/B and frozen proposal input conformance; not whole-model inference",
+  "baseline_commit": "ede51e051f689bf08918843cf34a54563b5afbda",
+  "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+  "harness_sha256": "02ecf55ce5829118ab7f1241fb4c2b6cdc63050c9501bf006ff72cd7e2b83e24",
+  "cargo_lock_sha256": "f3c62da675df920d0ccdd9e0f2a818585e33d0d8fcf3085aa4fdff19f849a738",
+  "node": {
+    "sha256": "53e102bce4bfd03dd9a9e7f40a044d282f37876457724d42a94c07e7c6883e81",
+    "cases": 22176,
+    "bitwise_equal": true,
+    "baseline_sha256": "d4875d0a26a8ef293a53e864670dfc0d3ab4d83f31566aea867b913ed7a6fbc9",
+    "candidate_sha256": "2bfe7f3b6d70a37d05198d2bece82cc42afb7d4bdbf710c402c3f52ade5ae72f"
+  },
+  "ic": {
+    "sha256": "c8cbcbf237921ab8c1382f14f3c13190f5a4a7f4fe2d7e1f7c7cc4b1eb56311a",
+    "cases": 84,
+    "repeats": 3,
+    "output_equal": true,
+    "cleanup": {
+      "before": {
+        "stop": {
+          "returncode": 0,
+          "stderr": ""
+        },
+        "delete": {
+          "returncode": 0,
+          "stderr": ""
+        }
+      },
+      "after": {
+        "stop": {
+          "returncode": 0,
+          "stderr": ""
+        },
+        "delete": {
+          "returncode": 0,
+          "stderr": ""
+        }
+      }
+    }
+  },
+  "proposal": {
+    "sha256": "385974b55bf9505a42e423a37acd1338b992e125aff10b7c985936964d96f068",
+    "snapshots": 161,
+    "facts_tasks_routes_encodings_equal": true,
+    "range_token_inputs_equal": 18,
+    "binary600_token_inputs_equal": 6,
+    "implementation_sha256": {
+      "tools/proposal_assessment/PROVENANCE.json": "8d384cef0a9ff3133c3b663d1e0bd916aa325f4cd17de1299ee5dfc5b791a911",
+      "tools/proposal_assessment/__init__.py": "4337a3be7ac58c4dc9ea68e19c05e419fe85f916fc53fe74b3dac154a1de367a",
+      "tools/proposal_assessment/adapters.py": "cede22c31cd963df3cdd6e60ff99e60193bc507011792f044d736cb0b62c551b",
+      "tools/proposal_assessment/benchmark_600_660_binary.py": "6b5aaccaa3fe86672907bafdc92ab9261b6f3648d108035c35b5185983be194c",
+      "tools/proposal_assessment/binary_benchmark.py": "ea2fc0060676c0f41f3a9d8a14e3805d0854c59fbfe782e6bc6b6c7c42f1afd1",
+      "tools/proposal_assessment/budget_policy.py": "7258d65236f817203857b4ec62fe7f218629892c9750d8ecbb516175aead9d6b",
+      "tools/proposal_assessment/compact_units.py": "2ea6302c81c2251768727db9db647e6abd7fe233b25ccff926caf1444b244259",
+      "tools/proposal_assessment/core.py": "c18a1f0610850c6a27c8427b06bf72cecc4d6de14032119f01e7fed154069bc6",
+      "tools/proposal_assessment/evaluation.py": "f7a324024556e4269b80407d97ea740355072214a5a47cf56be3a3903bc4803b",
+      "tools/proposal_assessment/extensions.py": "15fb5f36e1d3bcc852c2f4bbb156c256f50dc6db7313eee397665e272f197a50",
+      "tools/proposal_assessment/improve_binary.py": "747ea248a84f6a326aff095dfc9c182747d308acac8c4fac7c37e73a26665d66",
+      "tools/proposal_assessment/million_notation.py": "675bc8522b931d698f50ef6708e9ae513bc466d5f4841b33c69b69ab6638fc93",
+      "tools/proposal_assessment/prompt_contract.json": "66b32eb6ffa9c0d66ef5a3ca1d28c885b1c6b8015228112895e1f90d488e4e32",
+      "tools/proposal_assessment/routing.py": "e0ef4ec59efd3e4c7983ea5930d6366f4c8ee16bc94b3685967d0bc756bfd774",
+      "tools/proposal_assessment/token_sweep.py": "e5d9d1d7edd17604af13dba19d1788c6a258d6ebf72e2b83d62d493bedf3b042",
+      "tools/proposal_assessment/validate_binary_improvement.py": "684ec161d4bbf5d9520378efe486daa9a29e3e30268cb7a77823fdc19e704c2a",
+      "tools/proposal_assessment/verify_local_copy.py": "e88176f03c79a1e8a685158eff59648bc45b4af7d1c38192749c0be4c374a130",
+      "tools/proposal_assessment/vote.py": "371a020e6eff8acdb3ec92b0564188570d54cca7962883b5c097802b387d015d"
+    }
+  },
+  "checks": {
+    "rust_unit_tests_passed": 49,
+    "python_tests_passed": 35,
+    "canister_wasm_check_passed": true
+  },
+  "modes": [
+    {
+      "mode": 0,
+      "min_instruction_ratio": 0.7469610860653121,
+      "max_instruction_ratio": 1.003103556950283,
+      "heap_pages_equal": true
+    },
+    {
+      "mode": 1,
+      "min_instruction_ratio": 0.6999108469539376,
+      "max_instruction_ratio": 1.0023861634268723,
+      "heap_pages_equal": true
+    },
+    {
+      "mode": 2,
+      "min_instruction_ratio": 0.6999356479637177,
+      "max_instruction_ratio": 1.0019652939755792,
+      "heap_pages_equal": true
+    },
+    {
+      "mode": 3,
+      "min_instruction_ratio": 0.6999153058646974,
+      "max_instruction_ratio": 0.9953280310416399,
+      "heap_pages_equal": true
+    },
+    {
+      "mode": 4,
+      "min_instruction_ratio": 0.6999270098750253,
+      "max_instruction_ratio": 1.0019655070710949,
+      "heap_pages_equal": true
+    },
+    {
+      "mode": 5,
+      "min_instruction_ratio": 0.6999395488730182,
+      "max_instruction_ratio": 1.0016498478265357,
+      "heap_pages_equal": true
+    },
+    {
+      "mode": 6,
+      "min_instruction_ratio": 0.9869998004902241,
+      "max_instruction_ratio": 1.0146348109076477,
+      "heap_pages_equal": true
+    }
+  ],
+  "adoption": {
+    "production_upgraded": false,
+    "whole_model_equivalence_verified": false,
+    "reason": "Compatibility paths include measured instruction regressions; do not change deployed canister before whole-model validation."
+  },
+  "measurements": [
+    {
+      "mode": 0,
+      "tokens": 1,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 79275,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 18
+          },
+          {
+            "instructions": 79275,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 18
+          },
+          {
+            "instructions": 79275,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 18
+          }
+        ],
+        "after": [
+          {
+            "instructions": 79107,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 18
+          },
+          {
+            "instructions": 79107,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 18
+          },
+          {
+            "instructions": 79107,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 18
+          }
+        ]
+      },
+      "instruction_ratio": 0.9978807947019868
+    },
+    {
+      "mode": 0,
+      "tokens": 1,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 250522,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 20
+          },
+          {
+            "instructions": 250522,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 20
+          },
+          {
+            "instructions": 250522,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 20
+          }
+        ],
+        "after": [
+          {
+            "instructions": 248842,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 20
+          },
+          {
+            "instructions": 248842,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 20
+          },
+          {
+            "instructions": 248842,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 20
+          }
+        ]
+      },
+      "instruction_ratio": 0.993294002123566
+    },
+    {
+      "mode": 0,
+      "tokens": 1,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 769091,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 28
+          },
+          {
+            "instructions": 769091,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 28
+          },
+          {
+            "instructions": 769091,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 28
+          }
+        ],
+        "after": [
+          {
+            "instructions": 763043,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 28
+          },
+          {
+            "instructions": 763043,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 28
+          },
+          {
+            "instructions": 763043,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 28
+          }
+        ]
+      },
+      "instruction_ratio": 0.9921361711422966
+    },
+    {
+      "mode": 0,
+      "tokens": 69,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 799679,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 25
+          },
+          {
+            "instructions": 799679,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 25
+          },
+          {
+            "instructions": 799679,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 25
+          }
+        ],
+        "after": [
+          {
+            "instructions": 801651,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 25
+          },
+          {
+            "instructions": 801651,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 25
+          },
+          {
+            "instructions": 801651,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 25
+          }
+        ]
+      },
+      "instruction_ratio": 1.0024659894782781
+    },
+    {
+      "mode": 0,
+      "tokens": 69,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 6487236,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 36
+          },
+          {
+            "instructions": 6487236,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 36
+          },
+          {
+            "instructions": 6487236,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 36
+          }
+        ],
+        "after": [
+          {
+            "instructions": 6506956,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 36
+          },
+          {
+            "instructions": 6506956,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 36
+          },
+          {
+            "instructions": 6506956,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 36
+          }
+        ]
+      },
+      "instruction_ratio": 1.0030398154159954
+    },
+    {
+      "mode": 0,
+      "tokens": 69,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 22874399,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 96
+          },
+          {
+            "instructions": 22874399,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 96
+          },
+          {
+            "instructions": 22874399,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 96
+          }
+        ],
+        "after": [
+          {
+            "instructions": 22945391,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 96
+          },
+          {
+            "instructions": 22945391,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 96
+          },
+          {
+            "instructions": 22945391,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 96
+          }
+        ]
+      },
+      "instruction_ratio": 1.003103556950283
+    },
+    {
+      "mode": 0,
+      "tokens": 87,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 1247733,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 75
+          },
+          {
+            "instructions": 1247733,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 75
+          },
+          {
+            "instructions": 1247733,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 75
+          }
+        ],
+        "after": [
+          {
+            "instructions": 983557,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 75
+          },
+          {
+            "instructions": 983557,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 75
+          },
+          {
+            "instructions": 983557,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 75
+          }
+        ]
+      },
+      "instruction_ratio": 0.7882752159316135
+    },
+    {
+      "mode": 0,
+      "tokens": 87,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 10615776,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 75
+          },
+          {
+            "instructions": 10615776,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 75
+          },
+          {
+            "instructions": 10615776,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 75
+          }
+        ],
+        "after": [
+          {
+            "instructions": 7974016,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 75
+          },
+          {
+            "instructions": 7974016,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 75
+          },
+          {
+            "instructions": 7974016,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 75
+          }
+        ]
+      },
+      "instruction_ratio": 0.7511477257997908
+    },
+    {
+      "mode": 0,
+      "tokens": 87,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 37584480,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 37584480,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 37584480,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 28074144,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 28074144,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 28074144,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.7469610860653121
+    },
+    {
+      "mode": 0,
+      "tokens": 132,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 1869662,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1869662,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1869662,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 1470858,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1470858,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1470858,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.7866972746945705
+    },
+    {
+      "mode": 0,
+      "tokens": 132,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 16133066,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 16133066,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 16133066,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 12145026,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 12145026,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 12145026,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.7528033419066159
+    },
+    {
+      "mode": 0,
+      "tokens": 132,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 57323837,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 57323837,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 57323837,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          }
+        ],
+        "after": [
+          {
+            "instructions": 42966893,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 42966893,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 42966893,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          }
+        ]
+      },
+      "instruction_ratio": 0.7495467025349333
+    },
+    {
+      "mode": 1,
+      "tokens": 1,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 88357,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 88357,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 88357,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 79381,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 79381,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 79381,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.8984121235442579
+    },
+    {
+      "mode": 1,
+      "tokens": 1,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 341665,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 341665,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 341665,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 251905,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 251905,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 251905,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.7372865233488944
+    },
+    {
+      "mode": 1,
+      "tokens": 1,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 1076800,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1076800,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1076800,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 753664,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 753664,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 753664,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.6999108469539376
+    },
+    {
+      "mode": 1,
+      "tokens": 69,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 786886,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 786886,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 786886,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 783888,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 783888,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 783888,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9961900453178733
+    },
+    {
+      "mode": 1,
+      "tokens": 69,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 6411137,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 6411137,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 6411137,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 6381157,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 6381157,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 6381157,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9953237623841138
+    },
+    {
+      "mode": 1,
+      "tokens": 69,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 22594910,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 22594910,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 22594910,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 22486982,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 22486982,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 22486982,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9952233489754994
+    },
+    {
+      "mode": 1,
+      "tokens": 87,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 972398,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 972398,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 972398,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 972176,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 972176,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 972176,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9997716984197829
+    },
+    {
+      "mode": 1,
+      "tokens": 87,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 7895159,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 7895159,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 7895159,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 7892939,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 7892939,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 7892939,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9997188150358973
+    },
+    {
+      "mode": 1,
+      "tokens": 87,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 27799665,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 27799665,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 27799665,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 27791673,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 27791673,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 27791673,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.999712514521308
+    },
+    {
+      "mode": 1,
+      "tokens": 132,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 1447661,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1447661,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1447661,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 1450467,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1450467,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1450467,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 1.0019382990907402
+    },
+    {
+      "mode": 1,
+      "tokens": 132,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 11965067,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 11965067,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 11965067,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 11993127,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 11993127,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 11993127,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 1.0023451602903686
+    },
+    {
+      "mode": 1,
+      "tokens": 132,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 42334066,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 42334066,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 42334066,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          }
+        ],
+        "after": [
+          {
+            "instructions": 42435082,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 42435082,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 42435082,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          }
+        ]
+      },
+      "instruction_ratio": 1.0023861634268723
+    },
+    {
+      "mode": 2,
+      "tokens": 1,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 88446,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 88446,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 88446,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 79470,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 79470,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 79470,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.8985143477376026
+    },
+    {
+      "mode": 2,
+      "tokens": 1,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 341754,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 341754,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 341754,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 251994,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 251994,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 251994,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.7373549395178989
+    },
+    {
+      "mode": 2,
+      "tokens": 1,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 1076889,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1076889,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1076889,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 753753,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 753753,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 753753,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.6999356479637177
+    },
+    {
+      "mode": 2,
+      "tokens": 69,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 785611,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 785611,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 785611,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 783687,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 783687,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 783687,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9975509507886219
+    },
+    {
+      "mode": 2,
+      "tokens": 69,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 6400196,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 6400196,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 6400196,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 6380956,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 6380956,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 6380956,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9969938420635868
+    },
+    {
+      "mode": 2,
+      "tokens": 69,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 22556045,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 22556045,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 22556045,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 22486781,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 22486781,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 22486781,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9969292488997961
+    },
+    {
+      "mode": 2,
+      "tokens": 87,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 969175,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 969175,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 969175,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 967377,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 967377,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 967377,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9981448138881007
+    },
+    {
+      "mode": 2,
+      "tokens": 87,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 7869436,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 7869436,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 7869436,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 7851456,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 7851456,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 7851456,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9977152111028033
+    },
+    {
+      "mode": 2,
+      "tokens": 87,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 27708942,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 27708942,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 27708942,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 27644214,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 27644214,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 27644214,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9976640031943479
+    },
+    {
+      "mode": 2,
+      "tokens": 132,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 1443058,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1443058,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1443058,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 1445362,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1445362,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1445362,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 1.0015966094224904
+    },
+    {
+      "mode": 2,
+      "tokens": 132,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 11928298,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 11928298,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 11928298,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 11951338,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 11951338,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 11951338,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 1.001931541281078
+    },
+    {
+      "mode": 2,
+      "tokens": 132,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 42204373,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 42204373,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 42204373,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          }
+        ],
+        "after": [
+          {
+            "instructions": 42287317,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 42287317,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 42287317,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          }
+        ]
+      },
+      "instruction_ratio": 1.0019652939755792
+    },
+    {
+      "mode": 3,
+      "tokens": 1,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 88373,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 88373,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 88373,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 79397,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 79397,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 79397,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.898430516107861
+    },
+    {
+      "mode": 3,
+      "tokens": 1,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 341681,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 341681,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 341681,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 251921,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 251921,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 251921,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.7372988255126858
+    },
+    {
+      "mode": 3,
+      "tokens": 1,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 1076816,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1076816,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1076816,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 753680,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 753680,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 753680,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.6999153058646974
+    },
+    {
+      "mode": 3,
+      "tokens": 69,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 776344,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 776344,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 776344,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 769844,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 769844,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 769844,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9916274228950053
+    },
+    {
+      "mode": 3,
+      "tokens": 69,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 6305285,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 6305285,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 6305285,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 6240285,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 6240285,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 6240285,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.989691187630694
+    },
+    {
+      "mode": 3,
+      "tokens": 69,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 22213718,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 22213718,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 22213718,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 21979718,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 21979718,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 21979718,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9894659687315739
+    },
+    {
+      "mode": 3,
+      "tokens": 87,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 957572,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 957572,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 957572,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 950142,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 950142,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 950142,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9922407923372863
+    },
+    {
+      "mode": 3,
+      "tokens": 87,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 7751165,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 7751165,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 7751165,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 7676865,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 7676865,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 7676865,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9904143441663286
+    },
+    {
+      "mode": 3,
+      "tokens": 87,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 27282519,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 27282519,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 27282519,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 27015039,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 27015039,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 27015039,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9901959199588571
+    },
+    {
+      "mode": 3,
+      "tokens": 132,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 1424667,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1424667,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1424667,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 1418011,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1418011,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1418011,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9953280310416399
+    },
+    {
+      "mode": 3,
+      "tokens": 132,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 11739249,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 11739249,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 11739249,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 11672689,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 11672689,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 11672689,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9943301313397476
+    },
+    {
+      "mode": 3,
+      "tokens": 132,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 41522312,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 41522312,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 41522312,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          }
+        ],
+        "after": [
+          {
+            "instructions": 41282696,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 41282696,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 41282696,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          }
+        ]
+      },
+      "instruction_ratio": 0.9942292230740909
+    },
+    {
+      "mode": 4,
+      "tokens": 1,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 88415,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 88415,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 88415,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 79439,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 79439,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 79439,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.8984787649154555
+    },
+    {
+      "mode": 4,
+      "tokens": 1,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 341723,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 341723,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 341723,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 251963,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 251963,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 251963,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.7373311132115778
+    },
+    {
+      "mode": 4,
+      "tokens": 1,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 1076858,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1076858,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1076858,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 753722,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 753722,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 753722,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.6999270098750253
+    },
+    {
+      "mode": 4,
+      "tokens": 69,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 776386,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 776386,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 776386,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 769886,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 769886,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 769886,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9916278758246543
+    },
+    {
+      "mode": 4,
+      "tokens": 69,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 6305327,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 6305327,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 6305327,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 6240327,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 6240327,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 6240327,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9896912562980477
+    },
+    {
+      "mode": 4,
+      "tokens": 69,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 22213760,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 22213760,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 22213760,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 21979760,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 21979760,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 21979760,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9894659886484773
+    },
+    {
+      "mode": 4,
+      "tokens": 87,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 941454,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 941454,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 941454,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 942914,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 942914,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 942914,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 1.0015507927099996
+    },
+    {
+      "mode": 4,
+      "tokens": 87,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 7599993,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 7599993,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 7599993,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 7614593,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 7614593,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 7614593,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 1.0019210544009711
+    },
+    {
+      "mode": 4,
+      "tokens": 87,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 26741191,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 26741191,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 26741191,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 26793751,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 26793751,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 26793751,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 1.0019655070710949
+    },
+    {
+      "mode": 4,
+      "tokens": 132,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 1424709,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1424709,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1424709,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 1418053,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1418053,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1418053,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9953281687699032
+    },
+    {
+      "mode": 4,
+      "tokens": 132,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 11739291,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 11739291,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 11739291,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 11672731,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 11672731,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 11672731,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9943301516250002
+    },
+    {
+      "mode": 4,
+      "tokens": 132,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 41522354,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 41522354,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 41522354,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          }
+        ],
+        "after": [
+          {
+            "instructions": 41282738,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 41282738,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 41282738,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          }
+        ]
+      },
+      "instruction_ratio": 0.994229228911251
+    },
+    {
+      "mode": 5,
+      "tokens": 1,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 88460,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 88460,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 88460,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 79484,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 79484,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 79484,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.8985304092245082
+    },
+    {
+      "mode": 5,
+      "tokens": 1,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 341768,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 341768,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 341768,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 252008,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 252008,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 252008,
+            "output_fnv64": "6c63763cf2315df5",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.7373656983684839
+    },
+    {
+      "mode": 5,
+      "tokens": 1,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 1076903,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1076903,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1076903,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 753767,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 753767,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 753767,
+            "output_fnv64": "1c12911ab8ca5a80",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.6999395488730182
+    },
+    {
+      "mode": 5,
+      "tokens": 69,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 776431,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 776431,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 776431,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 769931,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 769931,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 769931,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9916283610520445
+    },
+    {
+      "mode": 5,
+      "tokens": 69,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 6305372,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 6305372,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 6305372,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 6240372,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 6240372,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 6240372,
+            "output_fnv64": "b0819e19a49a2cfb",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9896913298691973
+    },
+    {
+      "mode": 5,
+      "tokens": 69,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 22213805,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 22213805,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 22213805,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 21979805,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 21979805,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 21979805,
+            "output_fnv64": "a35cc604b63caa34",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9894660099879332
+    },
+    {
+      "mode": 5,
+      "tokens": 87,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 901178,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 901178,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 901178,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 902388,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 902388,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 902388,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 1.0013426870163276
+    },
+    {
+      "mode": 5,
+      "tokens": 87,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 7482965,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 7482965,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 7482965,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 7495065,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 7495065,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 7495065,
+            "output_fnv64": "1c3e4891fd94a617",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 1.001617006093173
+    },
+    {
+      "mode": 5,
+      "tokens": 87,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 26402435,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 26402435,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 26402435,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 26445995,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 26445995,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 26445995,
+            "output_fnv64": "496f3bf74bdf54ca",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 1.0016498478265357
+    },
+    {
+      "mode": 5,
+      "tokens": 132,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 1424754,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1424754,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1424754,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 1418098,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1418098,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1418098,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9953283163268887
+    },
+    {
+      "mode": 5,
+      "tokens": 132,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 11739336,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 11739336,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 11739336,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 11672776,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 11672776,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 11672776,
+            "output_fnv64": "81fa63a995647f37",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9943301733590384
+    },
+    {
+      "mode": 5,
+      "tokens": 132,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 41522399,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 41522399,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 41522399,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          }
+        ],
+        "after": [
+          {
+            "instructions": 41282783,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 41282783,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 41282783,
+            "output_fnv64": "c5b4ba8c811d3c39",
+            "heap_pages": 163
+          }
+        ]
+      },
+      "instruction_ratio": 0.9942292351653381
+    },
+    {
+      "mode": 6,
+      "tokens": 1,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 141873,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 141873,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 141873,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 140661,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 140661,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 140661,
+            "output_fnv64": "8e57cbf65a04fdad",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9914571482946015
+    },
+    {
+      "mode": 6,
+      "tokens": 1,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 853434,
+            "output_fnv64": "d24509903f2e090f",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 853434,
+            "output_fnv64": "d24509903f2e090f",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 853434,
+            "output_fnv64": "d24509903f2e090f",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 848010,
+            "output_fnv64": "d24509903f2e090f",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 848010,
+            "output_fnv64": "d24509903f2e090f",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 848010,
+            "output_fnv64": "d24509903f2e090f",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.99364449975042
+    },
+    {
+      "mode": 6,
+      "tokens": 1,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 2912803,
+            "output_fnv64": "ed6a5cfbec35ec56",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 2912803,
+            "output_fnv64": "ed6a5cfbec35ec56",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 2912803,
+            "output_fnv64": "ed6a5cfbec35ec56",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 2895211,
+            "output_fnv64": "ed6a5cfbec35ec56",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 2895211,
+            "output_fnv64": "ed6a5cfbec35ec56",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 2895211,
+            "output_fnv64": "ed6a5cfbec35ec56",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9939604566460554
+    },
+    {
+      "mode": 6,
+      "tokens": 69,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 1792673,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1792673,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1792673,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 1770261,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1770261,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 1770261,
+            "output_fnv64": "617752504d7f5db7",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9874979987984424
+    },
+    {
+      "mode": 6,
+      "tokens": 69,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 15735561,
+            "output_fnv64": "f33f06d8c34655a9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 15735561,
+            "output_fnv64": "f33f06d8c34655a9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 15735561,
+            "output_fnv64": "f33f06d8c34655a9",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 15927349,
+            "output_fnv64": "f33f06d8c34655a9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 15927349,
+            "output_fnv64": "f33f06d8c34655a9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 15927349,
+            "output_fnv64": "f33f06d8c34655a9",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 1.0121881895408749
+    },
+    {
+      "mode": 6,
+      "tokens": 69,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 55950952,
+            "output_fnv64": "656686b02a00a839",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 55950952,
+            "output_fnv64": "656686b02a00a839",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 55950952,
+            "output_fnv64": "656686b02a00a839",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 56761540,
+            "output_fnv64": "656686b02a00a839",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 56761540,
+            "output_fnv64": "656686b02a00a839",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 56761540,
+            "output_fnv64": "656686b02a00a839",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 1.0144874746724595
+    },
+    {
+      "mode": 6,
+      "tokens": 87,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 2225419,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 2225419,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 2225419,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 2199395,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 2199395,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 2199395,
+            "output_fnv64": "4d929846d17d79d9",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9883060223715174
+    },
+    {
+      "mode": 6,
+      "tokens": 87,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 19518151,
+            "output_fnv64": "4eac13c415ceebe1",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 19518151,
+            "output_fnv64": "4eac13c415ceebe1",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 19518151,
+            "output_fnv64": "4eac13c415ceebe1",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 19742255,
+            "output_fnv64": "4eac13c415ceebe1",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 19742255,
+            "output_fnv64": "4eac13c415ceebe1",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 19742255,
+            "output_fnv64": "4eac13c415ceebe1",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 1.011481825301997
+    },
+    {
+      "mode": 6,
+      "tokens": 87,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 69380351,
+            "output_fnv64": "ad7552ff0e17a582",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 69380351,
+            "output_fnv64": "ad7552ff0e17a582",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 69380351,
+            "output_fnv64": "ad7552ff0e17a582",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 70327047,
+            "output_fnv64": "ad7552ff0e17a582",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 70327047,
+            "output_fnv64": "ad7552ff0e17a582",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 70327047,
+            "output_fnv64": "ad7552ff0e17a582",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 1.0136450160074861
+    },
+    {
+      "mode": 6,
+      "tokens": 132,
+      "cols": 256,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 3368256,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 3368256,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 3368256,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 3324468,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 3324468,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 3324468,
+            "output_fnv64": "45ee67d59a73e02c",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 0.9869998004902241
+    },
+    {
+      "mode": 6,
+      "tokens": 132,
+      "cols": 2560,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 29774316,
+            "output_fnv64": "743ca7adffb6d95f",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 29774316,
+            "output_fnv64": "743ca7adffb6d95f",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 29774316,
+            "output_fnv64": "743ca7adffb6d95f",
+            "heap_pages": 124
+          }
+        ],
+        "after": [
+          {
+            "instructions": 30140856,
+            "output_fnv64": "743ca7adffb6d95f",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 30140856,
+            "output_fnv64": "743ca7adffb6d95f",
+            "heap_pages": 124
+          },
+          {
+            "instructions": 30140856,
+            "output_fnv64": "743ca7adffb6d95f",
+            "heap_pages": 124
+          }
+        ]
+      },
+      "instruction_ratio": 1.0123106102588553
+    },
+    {
+      "mode": 6,
+      "tokens": 132,
+      "cols": 9216,
+      "pattern": 0,
+      "measurements": {
+        "before": [
+          {
+            "instructions": 106043871,
+            "output_fnv64": "7cfa9329e7e24056",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 106043871,
+            "output_fnv64": "7cfa9329e7e24056",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 106043871,
+            "output_fnv64": "7cfa9329e7e24056",
+            "heap_pages": 163
+          }
+        ],
+        "after": [
+          {
+            "instructions": 107595803,
+            "output_fnv64": "7cfa9329e7e24056",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 107595803,
+            "output_fnv64": "7cfa9329e7e24056",
+            "heap_pages": 163
+          },
+          {
+            "instructions": 107595803,
+            "output_fnv64": "7cfa9329e7e24056",
+            "heap_pages": 163
+          }
+        ]
+      },
+      "instruction_ratio": 1.0146348109076477
+    }
+  ],
+  "prefix27_build": {
+    "report_sha256": "8b824b98945f8e79abc5e293ad259eb84cc6a1d8585d468dead64b8097cda9e3",
+    "baseline_wasm_sha256": "41e2f750963d6b52b04e3e3a8a7c59fd84aa49807ce1221762f5eea33815676d",
+    "candidate_wasm_sha256": "820ff705c28ecda48cdb6c713a70a54a8c35831153671de1991426a122a0597a",
+    "projection_bodies_unchanged": 34,
+    "full_inference_verified": false,
+    "deployed": false
+  },
+  "verification_tools_sha256": {
+    "scripts/check_independent_int8.mjs": "ea86c2755feada2dffc21c682b8e1f9d0783af83d84593cdb8606cc2bba5b43f",
+    "scripts/measure_independent_int8.py": "394e4ccf054b4d5ad8a9535127f10c9a42f898662e1b9f6eab189ee5e01e82e6",
+    "scripts/check_proposal_replacement.py": "3736d161e9cdf6802b66535ae56489c874c405e1e32ea22bc17fa9ce460e8396",
+    "scripts/generate_int8_tile.py": "b863d10ed34301e2e27c201c70fbd2626e47578088939baff6c416358a683559"
+  }
+}

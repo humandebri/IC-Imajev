@@ -65,6 +65,8 @@ mod delta_stage;
 #[cfg(feature="experimental-delta-projected")]
 mod delta_projected;
 mod mlp_norm;
+#[cfg(target_arch = "wasm32")]
+mod int8_tile;
 pub mod int8_kernel;
 pub mod int8_token_kernel;
 pub mod profile;

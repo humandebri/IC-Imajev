@@ -159,7 +159,7 @@ def main():
                              'aggregation': 'Raw window outputs only; multi-window results are not a holistic proposal recommendation.',
                              'proposals': proposals})
     paths = [ROOT / 'scripts/proposal_snapshots.py', Path(__file__), ROOT / 'scripts/prepare_text.py', ROOT / 'MODEL_LOCK.json',
-             TOOLS / 'proposal_assessment/core.py', TOOLS / 'proposal_assessment/extensions.py',
+             TOOLS / 'proposal_assessment/prompt_contract.json', TOOLS / 'proposal_assessment/token_sweep.py', TOOLS / 'proposal_assessment/core.py', TOOLS / 'proposal_assessment/extensions.py',
              OLD / 'snapshots/manifest.json', OLD / 'evaluation/report.json', D / 'inputs.json', D / 'prepared.json']
     save(D / 'preparation-identities.json', {str(x): sha(x) for x in paths})
     summary = {'proposals': len(proposals), 'distinct_inputs': len(records),

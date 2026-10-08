@@ -10,24 +10,11 @@
 
 |スクリプト|指定する引数|入力|
 |---|---|---|
-|`analyze_laya_cost.py`|`--laya-root`|比較用Laya checkout|
-|`summarize_optimizations.py`|`--laya-root`|参照ソースを持つLaya checkout|
-|`benchmark_laya_kernels.py` / `benchmark_laya_peak.py`|`--laya-root`|Layaの固定ソース・重み。`--directory`で新しい出力先も指定|
-|`make_benchmark.py`|`--source`|保存済み`boomdao_query_benchmark/summary.json`|
 |`report_proposal_assessment.py`|`--source`|保存済み`boomdao-600-660/v1`ディレクトリ|
 |`benchmark_proposal_assessment.py`|`--source-root`|旧benchmark archiveを持つroot。既定値はこのcheckout|
 |`assess_proposal_range.py` / `run_fresh_proposal_assessment.py`|`--snapshot-archive`|`manifest.json`と`snapshots/`を持つ参照元archive|
 |`prepare_all_proposal_windows.py` / `prepare_all_proposal_query32.py` / `prepare_all_proposal_compact86.py`|`--source-directory`|`snapshots/manifest.json`と`evaluation/report.json`を持つ保存済みrun|
 |`checkpoint_goal_recovery_baseline.py`|`--backup`|snapshotを書き出す新しいディレクトリ。親ディレクトリは既存であること|
-
-たとえば隣に読み取り用Laya checkoutがある場合、次のように指定する。
-
-```sh
-python3 scripts/analyze_laya_cost.py --laya-root ../IC-Laya-Standalone
-python3 scripts/make_benchmark.py --source ../IC-Laya-Standalone/artifacts/boomdao_query_benchmark/summary.json
-```
-
-復旧用snapshotの保存先は自動選択しない。上表は指定方法の説明であり、snapshot操作や推論を今回実行したものではない。
 
 `benchmark_proposal_assessment.py`は、manifestに旧絶対パスが残っていても、`--source-root`で選んだarchive内の`snapshots/proposal-ID.json`を読む。移動先にファイルがなければ停止し、元の絶対パスには戻らない。archive外への参照を拒否し、内容のSHA-256・proposal ID・SNS rootを検証する。凍結manifest自体は書き換えない。
 
@@ -44,7 +31,7 @@ python3 scripts/make_benchmark.py --source ../IC-Laya-Standalone/artifacts/boomd
 
 ## 原本と現在のソース
 
-取り込み元は`tools/proposal_assessment/UPSTREAM.json`にリポジトリ名・相対パス・原本hashで記録する。`local_sha256`は現在のコピーを識別する。変更したCLI既定値と、原本のままの判定コードを`adapted`で区別する。
+2026-10-08にproposal評価実装を置き換えた。保持するprompt/fieldデータの出所は`tools/proposal_assessment/PROVENANCE.json`に記録する。過去の取り込み元hashは当時の凍結ソースに残す。
 
 変更前の33ファイルはローカルの`artifacts/path-portability-20261007/frozen/`へ保存し、`original-sources.json`に原本hashと保存先を記録した。過去実験の凍結manifestやsource hashを書き換えて、現行ソースを当時のものと扱うことはしていない。過去driverのsource照合が現行ファイルで停止する場合は、当時のソースで検証する必要がある。新規実験には新しい出力先と現行ソースのhashを使う。
 
