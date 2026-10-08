@@ -14,8 +14,10 @@ const first = { state: "This proposal mints 250,000,000 tokens to one account.",
 const second = { state: "The limit changes from 5 to 10.", question: "Does the limit increase?", options: ["yes", "no"] };
 const third = JSON.parse(await readFile(new URL("artifacts/adaptive-query-20261008/real-input-n69.json", root), "utf8"));
 const expandedReport = JSON.parse(await readFile(new URL("artifacts/adaptive-query-20261008/real-n69-verified.json", root), "utf8"));
+const optimizedInput=JSON.parse(await readFile(new URL("artifacts/adaptive-query-20261008/real-input-n58.json",root),"utf8"));
+const optimizedReport=JSON.parse(await readFile(new URL("artifacts/adaptive-query-20261008/real-balanced-n58-verified.json",root),"utf8"));
 try {
-  const results = await Promise.all([first, second, third].map(async (input, index) => {
+  const results = await Promise.all([first, second, third, optimizedInput].map(async (input, index) => {
     const context = await browser.newContext();
     const page = await context.newPage();
     let queries = 0;
@@ -51,11 +53,14 @@ try {
     if (index === 2 && (selected !== expandedReport.reference.result.value || JSON.stringify(probabilities) !== JSON.stringify([...expandedReport.reference.result.probabilities, expandedReport.reference.result.unknown_probability]))) {
       throw new Error("Expanded browser result differs from independently verified reference.");
     }
+    if(index===3 && (selected!==optimizedReport.reference.result.value || JSON.stringify(probabilities)!==JSON.stringify([...optimizedReport.reference.result.probabilities,optimizedReport.reference.result.unknown_probability]))) {
+      throw new Error("Optimized browser result differs from independently verified reference.");
+    }
     await page.screenshot({ path: new URL(`run-${index}.png`, output).pathname, fullPage: true });
     const result = { input, selected, probabilities, queries, writes, errors, seconds: (Date.now() - started) / 1000 };
     console.log(JSON.stringify(result));
     await context.close();
     return result;
   }));
-  await writeFile(new URL("report.json", output), JSON.stringify({ complete: true, independentConcurrentBrowsers: 3, results }, null, 2));
+  await writeFile(new URL("report.json", output), JSON.stringify({ complete: true, independentConcurrentBrowsers: results.length, results }, null, 2));
 } finally { await browser.close(); }

@@ -8,7 +8,8 @@ import { IDL } from "@icp-sdk/core/candid";
 import { createQueryClient, methods } from "../src/inference-agent.ts";
 import release from "../src/inference-release.json" with { type: "json" };
 import { runQueryGraph } from "../src/query-runner.ts";
-import { baselinePlan, queryCount } from "../src/query-plan.ts";
+import { baselinePlan, queryCount, selectPlan } from "../src/query-plan.ts";
+import { optimizeQueryPlan } from "./optimize-query-plan.mjs";
 const root = new URL("../../", import.meta.url);
 const output = new URL("artifacts/adaptive-query-20261008/", root);
 const record = JSON.parse(await readFile(new URL("artifacts/text-short-v2/inputs.json", root), "utf8")).records[2];
@@ -86,7 +87,10 @@ async function run(n, label, plan, ids, options) {
 }
 await mkdir(output, { recursive: true });
 const optimize = process.argv.includes("--optimize");
+const balanced = process.argv.includes("--balanced");
+const published = process.argv.includes("--published");
 const real = process.argv.includes("--real");
+assert([optimize, balanced, published].filter(Boolean).length <= 1, "Choose one candidate strategy");
 async function optimizedPlan(n) {
   assert(n>=56 && n<=69, "Optimization requires paired measurements");
   const stem=`n${String(n).padStart(2,"0")}`;
@@ -95,6 +99,11 @@ async function optimizedPlan(n) {
   assert.equal(split.count,63);
   const probeBase=JSON.parse(await readFile(new URL("n57-reference/report.json", output),"utf8"));
   const probeSplit=JSON.parse(await readFile(new URL("n57-candidate/report.json", output),"utf8"));
+  if (balanced) {
+    const plan=optimizeQueryPlan(baseline,split,probeBase,probeSplit,baselinePlan);
+    console.log(JSON.stringify({n,label:"balanced-plan",count:queryCount(plan),plan}));
+    return plan;
+  }
   const plan=baselinePlan(n), target=3_850_000_000;
   const unit0=(probeBase.queries[0].instructions-probeSplit.queries[0].instructions)/(probeBase.plan.fronts[0]-probeSplit.plan.fronts[0])*n/57;
   plan.fronts[0]=Math.min(8960,Math.floor((baseline.plan.fronts[0]+(target-baseline.queries[0].instructions)/unit0)/256)*256);
@@ -133,7 +142,8 @@ for (const n of ns) {
     ids=tokenizeInput(tokenizer,input,readout.codes.map(e=>e.code)).tokenIds;
     assert.equal(ids.length,n+27);
   }
-  const candidate = await run(n, real ? "real-optimized" : optimize ? "optimized" : "candidate", optimize ? await optimizedPlan(n) : candidatePlan(n), ids, options);
+  const label = `${real ? "real-" : ""}${published ? "published" : balanced ? "balanced" : optimize ? "optimized" : "candidate"}`;
+  const candidate = await run(n, label, published ? selectPlan(n) : optimize || balanced ? await optimizedPlan(n) : candidatePlan(n), ids, options);
   const reference = JSON.stringify(candidate.plan) === JSON.stringify(referencePlan(n)) ? candidate : await run(n, real ? "real-reference" : "reference", referencePlan(n), ids, options);
   assert.equal(candidate.finalPayloadHash, reference.finalPayloadHash, `final hidden/KV bits n=${n}`);
   assert.deepEqual(candidate.result, reference.result, `decision bits n=${n}`);
@@ -141,5 +151,5 @@ for (const n of ns) {
   assert(candidate.maxInstructions <= 4_000_000_000, `handler budget n=${n}: ${candidate.maxInstructions}`);
   assert(candidate.maxRequestBytes < 1_990_000 && candidate.maxReplyBytes < 1_990_000);
   assert(candidate.queries.every(q=>q.heapPages*65536<2**32), `heap budget n=${n}`);
-  await writeFile(new URL(`${real?"real-":""}n${String(n).padStart(2,"0")}-verified.json`, output), JSON.stringify({ n, candidate, reference, referenceKind: candidate === reference ? "unchanged-baseline" : "separate-query-schedule", bitwiseEqual:true }, null,2)+"\n");
+  await writeFile(new URL(`${real?"real-":""}${published?"published-":balanced?"balanced-":""}n${String(n).padStart(2,"0")}-verified.json`, output), JSON.stringify({ n, candidate, reference, referenceKind: candidate === reference ? "unchanged-baseline" : "separate-query-schedule", bitwiseEqual:true }, null,2)+"\n");
 }
