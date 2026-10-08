@@ -37,7 +37,7 @@ node --experimental-strip-types scripts/check-query-calibration-policy.mjs
 
 `--resume` を明示した場合だけ、元のarchiveの数値検証を再開できる。キャッシュの再利用時はその旨を出力し、module hash・plan・入力hash・選択肢・完了状態が一致した証跡だけを使う。これは新しい速度測定ではない。`--published --resume` の併用は測定開始前に拒否する。`--published` はその時点のフロント設定を使う比較測定なので、設定を切り替える前に実行する。
 
-公開設定には測定を自動反映しない。`frontend/scripts/query-plan-decisions.json` にmodule hashと全採用証跡のSHA256、却下済み証跡と理由を記録する。設定生成は、flagの有無にかかわらず未レビュー・却下済みの証跡を拒否する。ビルド前の設定チェックも採用記録との一致を要求する。新しい候補を採用する場合はbit一致・予算・通信量・応答時間をレビューし、対象のverified JSONをarchiveへ保存したうえで、採用記録と設定を同じ変更に含める。新しい測定のhashが異なれば、以前と同じplanでも自動では採用しない。
+公開設定には測定を自動反映しない。`frontend/scripts/query-plan-decisions.json` にmodule hashと全採用証跡のSHA256、公開する計画・測定根拠をまとめたSHA256、却下済み証跡と理由を記録する。設定生成は、flagの有無にかかわらず未レビュー・却下済みの証跡を拒否する。ビルド前の設定チェックも採用記録との一致を要求する。公開profileのhashにはmodule hash・suffix長・fronts・completions・query数・最大命令数・最大要求／返信サイズ・参照種別・最終payload hash・測定レポートhashを含める。JSONのプロパティ順には依存せず、レポートhashやquery数を変えずに分割位置だけ編集した場合も拒否する。新しい候補を採用する場合はbit一致・予算・通信量・応答時間をレビューし、対象のverified JSONをarchiveへ保存したうえで、採用記録と設定を同じ変更に含める。新しい測定のhashが異なれば、以前と同じplanでも自動では採用しない。
 
 `prepare-query-profiles.mjs --balanced --through=68` は全69種類のsuffix長の証跡を必須にし、suffix68（合計95token）までの採用済み最適化だけを組み込む。最適化した範囲では以前の63query経路と比べて実測query数とCandid総通信量の両方が減ったことも要求し、残りの長さでは既存の採用済み計画を維持する。`--balanced` だけの実行は、却下済みの96token候補を含むため拒否され、設定ファイルを変更しない。
 
