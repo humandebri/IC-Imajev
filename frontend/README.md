@@ -59,6 +59,8 @@ npx vlmkit check copy http://127.0.0.1:5173 --manifest verification/copy.txt
 
 ## 公開
 
+公開queryのCandid定義と接続条件は `../docs/PUBLIC_QUERY_API.md` にまとめています。ビルド時に `/api/public-query.did` の配信素材を生成します。
+
 公開先は https://imajev.kinic.xyz です。`cloudflare.config.ts` にCustom Domainを設定しています。Cloudflareの認証済みプロファイルとzone権限を確認して公開します。
 
 ```sh

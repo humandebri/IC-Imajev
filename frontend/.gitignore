@@ -7,3 +7,4 @@ playwright-report/
 .wrangler/
 /public/tokenizer/
 /public/inference/
+/public/api/
