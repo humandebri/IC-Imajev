@@ -2590,3 +2590,17 @@ SHA256候補は専用小型Canister `4zfnl-5t777-77775-aaadq-cai` の所有者�
 外側からの費用計測も調査した。PocketICのライブtopologyにはApplication/Normal/Production設定があるが、使用中サーバーは16.0.0を表示する一方、公式16.0.0配布物のバイナリと一致しない。公式配布assetのSHA256を検証した上で解凍後のハッシュを比較し、公式 `781f643d…` に対して使用中 `7386b4cf…` だった。固定コミットの公式費用設定だけから使用中サーバーのCycles→命令数換算を証明したとは扱わない。調査資料は `artifacts/whole-message-accounting-research-v1/`。ネットワークやランタイムの再起動・置換は行っていない。
 
 残る順序は、全workerラッパーと返却末尾を含む計測／保守的上限の検証、現在の候補で3入力の内訳を再計測、主要なINT8投影の削減、SHA256組み込みの全費用・全32層一致検証、最後に全3入力のAPI・復元・達成判定。現時点ではSHA256を全推論へ採用していない。検証済みの従来チェックポイント合計は617/620/653で119,517,490,136 / 102,784,672,347 / 121,665,718,770のまま。全範囲の1000億目標は未達成。
+
+### CDK返却後のworkerチェックポイント（2026-10-07、次のgoalターン）
+
+前ターンは開始点修正とSHA256の実IC実測によるprogress。現在のファイル・固定CDK 0.20.3マクロを再確認し、同期workerのCDKラッパーがCandid返却を終えて戻った後にPC0を保存する診断を実装した。
+
+`wasm_worker_checkpoint.rs` は新しいvoidラッパーを追加し、workerのexport参照だけをラッパーへ向ける。元workerの関数本体はそのまま保持する。Rust側では成功した正規workerだけが記録をarmし、infer callbackで保存済み値をworkerメトリクスへ移す。未arm呼び出しでは前の値を保持する。型が固定されたarm/getterの2つの診断stub以外の既存関数本体を保持し、全Wasmをwasmparserで検証する。公開paid Candidのフィールド・メソッド型は変えていない。
+
+`build_paid_wrapper_checkpoint.py` による診断候補は `artifacts/paid-wrapper-checkpoint-v1/build/full.wasm`、SHA256 `35e2a2597ea50526b94950c5e64762ba2e668352447c7f05110dcb180857640e`。34投影カーネルの本体は検証済み親と一致し、Nodeエンジンの全Wasm検証も通過した。診断候補自体は未インストールであり、paid全3入力・全32層・API・復元の検証はまだない。
+
+`check_worker_wrapper_checkpoint.cjs` は実Wasmを実行し、返却後の保存、未arm呼び出しでの保存値維持、次workerでの更新を確認した。さらに `prove_worker_wrapper_checkpoint.py` が所有者・停止状態・旧SHA256診断モジュールをガードした専用小型Canisterだけで実ICテストを実行した。初期値0、返却後21,559、未arm update後も21,559、10,000回の追加loopを入れた次worker後81,561を確認した。全9応答の生Candidを保存し、`audit_worker_checkpoint.py` が再デコード、カウンタ一致、元workerと他の関数本体保持を独立監査した。
+
+小型Canister `4zfnl-5t777-77775-aaadq-cai` は `423f27d23fdbede36f3d74f345b015d7172c311b60667728aa01209421f2e5a4` の返却後計測probeで停止。主Canisterは前後とも元6052cc94…モジュールでRunning。全ネットワークの再起動・ランタイム交換・mainnet変更なし。
+
+この値は元の同期workerの引数デコード・実行・メトリクス更新・Candid返却を含むが、記録wrapper自身にはカウンタ取得後の3つのstore/constant命令と構造終端が残る。これらの費用の上限をまだ証明していない。またinfer入口・helper・callback等の費用も全範囲の判定で別途必要。全1000億目標を達成したとは扱わず、既存検証ポインタは維持する。次はこの診断候補の全3入力のpaid proofと末尾・補助費用の計上を進める。
