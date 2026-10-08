@@ -41,10 +41,25 @@ def main():
         for name,digest in frozen[group].items():
             if sha(ROOT/name)!=digest:
                 raise ValueError('frozen runtime source/dependency mismatch: '+name)
-    expected = before['dependency_hashes'].get(str((RUNTIME/'libimajev_runtime.rlib').relative_to(ROOT)))
-    if expected!=sha(RUNTIME/'libimajev_runtime.rlib'):
-        raise ValueError('production runtime provenance mismatch')
-    shutil.copytree(RUNTIME/'runtime',directory/'runtime')
+    baseline_hash = before.get('wasm_sha256',before.get('module'))
+    if baseline_hash != sha(directory/'baseline/full.wasm'):
+        raise ValueError('baseline module provenance mismatch')
+    if 'runtime_command' in before:
+        # The current builder also inserts typed token carry and adaptive tiles.
+        # Preserve its compiled runtime rather than falling back to the old one.
+        for group in ('sources','dependencies'):
+            for name,digest in before[group].items():
+                if sha(ROOT/name)!=digest:
+                    raise ValueError('baseline source/dependency mismatch: '+name)
+        runtime_source = directory/'baseline/runtime'
+        runtime_command = before['runtime_command'][:]
+    else:
+        expected = before['dependency_hashes'].get(str((RUNTIME/'libimajev_runtime.rlib').relative_to(ROOT)))
+        if expected!=sha(RUNTIME/'libimajev_runtime.rlib'):
+            raise ValueError('production runtime provenance mismatch')
+        runtime_source = RUNTIME/'runtime'
+        runtime_command = frozen['runtime_command'][:]
+    shutil.copytree(runtime_source,directory/'runtime')
     owned = ROOT/'crates/imajev-runtime/src'
     for name,marker in (('int8_kernel.rs','// The loop-unrolled load-sharing layout'),
                         ('int8_token_kernel.rs','// Load sharing follows')):
@@ -61,7 +76,7 @@ def main():
     lib.write_text(text.replace('pub mod int8_kernel;','#[cfg(target_arch="wasm32")]\nmod int8_tile;\npub mod int8_kernel;',1))
     sources = list((directory/'runtime').rglob('*.rs'))+[Path(__file__),ROOT/'scripts/generate_int8_tile.py']+[owned/name for name in ('int8_kernel.rs','int8_token_kernel.rs','int8_dot_scale.rs','int8_column32.rs','int8_tile.rs')]
     source_hashes = {str(p.relative_to(ROOT)):sha(p) for p in sources}
-    command = frozen['runtime_command'][:]
+    command = runtime_command
     command[command.index('--edition=2021')+1] = str(lib)
     command[command.index('-o')+1] = str(directory/'libimajev_runtime.rlib')
     with (directory/'runtime-compiler.log').open('w') as log:
@@ -91,8 +106,11 @@ def main():
     if source_hashes!={str(p.relative_to(ROOT)):sha(p) for p in sources}:
         raise ValueError('replacement sources changed during compilation')
     report = dict(complete=True,scope='Build only; no new full-model inference or deployment',
-                  baseline_wasm_sha256=before['wasm_sha256'],wasm_sha256=sha(directory/'full.wasm'),
-                  identical_module=before['wasm_sha256']==sha(directory/'full.wasm'),
+                  baseline_wasm_sha256=baseline_hash,wasm_sha256=sha(directory/'full.wasm'),
+                  identical_module=baseline_hash==sha(directory/'full.wasm'),
+                  baseline_report_sha256=sha(directory/'baseline/report.json'),
+                  input_limit=before.get('input_limit',116),
+                  adaptive_token_tiles=before.get('adaptive_token_tiles',False),
                   runtime_command=command,command=wrapper,source_hashes=source_hashes,
                   frozen_runtime_report_sha256=sha(RUNTIME/'report.json'),dependency_hashes=frozen['dependency_hashes'],
                   patches=applied,all34_projection_bodies_equal_to_validated_parent=len(applied)==34,
