@@ -46,7 +46,7 @@ PLAYGROUND_URL=http://127.0.0.1:4173 npm run test:live-query
 
 `test:query` はローカルの本番証跡 `artifacts/mainnet-prefix27-upgrade-20261007/anonymous-query-653/` と `artifacts/text-short-v2/inputs.json` を使います。32回のCandid送信byte、frame、中間返信、最終結果を照合し、破損・header不一致・キャンセルを検証します。
 
-`test:live-query` は起動済みのサイトから本番へ読み取りqueryを送る明示的な試験です。独立した3ブラウザで短文・84token・96tokenの異なる入力を同時実行し、update呼び出しがないこと、選択した計画の推論query数＋2readiness queryで完了することを確認します。84-token入力は既存の本番結果とも一致を確認します。2026-10-07のproduction build試験は両方成功し、87.346秒と67.498秒でした。証跡は `artifacts/browser-query-test-20261007/report.json` です。
+`test:live-query` は起動済みのサイトから本番へ読み取りqueryを送る明示的な試験です。独立した4ブラウザで短文・84token・85token・96tokenの異なる入力を同時実行し、update呼び出しがないこと、選択した計画の推論query数＋2readiness queryで完了することを確認します。84-token入力は既存の本番結果とも一致を確認します。2026-10-07のproduction build試験は両方成功し、87.346秒と67.498秒でした。証跡は `artifacts/browser-query-test-20261007/report.json` です。
 
 全ての入力で命令数上限に収まることを保証する試験ではありません。instruction limit等で失敗した場合は結果を作らずエラーを表示します。低速回線・実スマートフォン・多数同時実行での性能は未測定です。
 
