@@ -110,11 +110,14 @@ def main():
     snapshot = None
     caller = None
     restored = False
+    stop_attempted = False
     report = dict(complete=False, local_only=True, target=TARGET, endpoint='http://localhost:8001/',
                   module=module, cases=[], query_comparisons=[],
                   network_storage=str(network_storage), free_bytes_before=free_bytes,
                   instruction_scope='Counter zero checkpoint; small recording/reply tail excluded. Actual replicated message success separately checked.')
     try:
+        # A failed CLI response may still have stopped the canister.
+        stop_attempted = True
         icp('stop', TARGET)
         snapshot = icp('snapshot', 'create', TARGET, '--quiet')
         write(d / 'snapshot.json', dict(id=snapshot, target=TARGET, baseline=BASELINE))
@@ -357,11 +360,12 @@ def main():
         raise
     finally:
         restoration_error = None
-        if snapshot:
-            print('restoring baseline snapshot', flush=True)
+        if snapshot or stop_attempted:
+            print('restoring baseline snapshot' if snapshot else 'restarting unchanged baseline', flush=True)
             try:
-                icp('stop', TARGET)
-                icp('snapshot', 'restore', TARGET, snapshot)
+                if snapshot:
+                    icp('stop', TARGET)
+                    icp('snapshot', 'restore', TARGET, snapshot)
                 icp('start', TARGET)
                 t = bridge(d / 'restored')
                 try:
@@ -371,7 +375,7 @@ def main():
                     restored = True
                 finally:
                     t.close()
-                if restored:
+                if restored and snapshot:
                     icp('snapshot', 'delete', TARGET, snapshot)
                     report['snapshot_deleted'] = True
             except Exception as error:
@@ -389,7 +393,7 @@ def main():
         write(d / 'report.json', report)
         print(json.dumps(dict(complete=report['complete'], baseline_restored=restored)), flush=True)
         if restoration_error:
-            raise RuntimeError('baseline restoration failed; protected snapshot and failure details retained') from restoration_error
+            raise RuntimeError('baseline restoration failed; available snapshot and failure details retained') from restoration_error
 
 
 
