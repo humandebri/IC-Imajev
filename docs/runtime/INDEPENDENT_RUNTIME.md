@@ -18,8 +18,8 @@ proposal評価は型検査・rendering解析・証拠gate・exactな単位変換
 
 - Wasm/V8で22,176ケースの出力F32 bytesが完全一致した。
 - ローカルICで84条件を各3回測定し、V8で確認した出力hashとも一致した。handler内のquantize＋projectionを`performance_counter(0)`で測る。測定84条件のheap page数は旧・新で同じ。診断replyは両版24bytes。
-- 161件のsnapshotでfacts・task JSON bytes・処理経路・圧縮結果が一致した。161件用の18種類と600〜660用の6種類のモデル入力token列も完全一致。新規のモデル推論は実行していない。
-- Rust 49テスト、Python 35テスト、canisterのWasm target checkが通った。
+- 161件のsnapshotでfacts・task JSON bytes・処理経路・圧縮結果が一致した。161件用の18種類と600〜660用の6種類のモデル入力token列も完全一致。このsnapshot比較は入力の一致までを対象とする。
+- Rust 49テスト、main統合後のPython 37テスト、canisterのWasm target checkが通った。
 
 |互換・実験経路|測定範囲の命令数変化|
 |---|---:|
@@ -39,9 +39,22 @@ proposal評価は型検査・rendering解析・証拠gate・exactな単位変換
 
 `scripts/build_independent_prefix27.py`は検証済みの凍結optimized runtimeを新しいartifactへコピーし、由来kernel部分だけ置き換えてruntimeを再コンパイルする。quantizerの最適化やrank49等の既存変更を維持し、34個の投影bodyは検証済みparentとhash一致を確認して適用する。元artifactは変更しない。source/dependencyのhash検証と、ビルド中のsource変更検出を行う。
 
-ビルドは成功し、34bodyの一致を確認した。Wasm全体のhashは変わる。出力先のsource pathもWasmへ含まれるため、ビルド先を固定して証拠を作る。ビルド成功と投影body一致は、32層の最終hidden・判定・確率や全query命令数の実測一致を証明しない。`full_inference_verified`はfalseのままとする。
+mainへ統合された512token対応についても、比較元builderが生成したruntimeとcompile設定をそのまま引き継ぐ。typed token carry・adaptive token tilesを失わず、INT8 kernel部分だけ差し替える。古いbuilderのreport形式にも対応する。
 
-公開前には新しいWasmで同一pack/cache/inputを使う全層A/Bを行い、最終hidden・判定・確率のbit一致、各query命令数、通信量、メモリ、経過時間を確認する。module hashに結びつくfrontend実行計画も再検証が必要。この条件を満たすまで公開版は更新しない。
+ビルドは成功し、34bodyの一致を確認した。Wasm全体のhashは変わる。出力先のsource pathもWasmへ含まれるため、ビルド先を固定して証拠を作る。build reportの`full_inference_verified: false`はビルド時点の記録として保持し、追加の全層比較を別の証拠へ記録する。
+
+## 全32層の追加検証
+
+`artifacts/laya-removal-20261008/prefix27-current`の変更前・変更後を専用ローカルcanisterで比較した。同じ4.7GB pack、重み721個、固定prefix27、同じ入力を使い、各版で84tokenと86tokenを最後の判定まで32queryで新規実行した。queryのreplayは0。最終hidden・保存した途中hidden/state・判定・logits・確率はbit一致した。保存した138個の応答frame・attention hidden・KVのbytesも一致した。
+
+|入力|総命令数の変化|Candid通信量|観測した最大heapの増分|
+|---|---:|---|---:|
+|84token|−0.0040%|一致|655,360 bytes|
+|86token|+0.0157%|一致|851,968 bytes|
+
+各queryの命令数比も測定表へ記録した。最大query命令数は両版とも5B未満で、実際のIC queryも成功した。命令数はhandler counterでCDKのdecode/encodeを含まない。経過時間は各入力・各版1回の観測値で、latencyの改善保証としては扱わない。全層の計算量が完全に同じ、または全経路で減るという結果ではない。
+
+証拠は`artifacts/laya-removal-20261008/full-model-proof-4gib/comparison.json`と`raw-output-comparison.json`。専用canisterはstop/delete済み。共有ローカルcanisterと公開canisterは変更していない。この追加検証は84/86tokenのquery経路を対象とし、512tokenのpaid推論は再実行していない。新しいmoduleへ公開版を切り替える場合はfrontend実行計画のmodule確認と対象経路の再検証を別途行う。
 
 ## 再現
 
@@ -62,7 +75,9 @@ node scripts/check_independent_int8.mjs \
 
 ```sh
 python3 -B scripts/build_independent_prefix27.py \
-  --directory artifacts/laya-removal-20261008/prefix27-verified
+  --directory artifacts/laya-removal-20261008/prefix27-current
 ```
 
 このbuild directoryは実測済みのため、再ビルド時は新しい出力先を指定する。
+
+全層比較用の`scripts/check_independent_full_model.py`は、作成receiptを持つ専用ローカルcanisterでのみ実行する。4.7GB packをupload/hash検証し、比較元moduleをinstallしておく。既存の基準canisterと同じWasm memory limit 4GiBが必要で、開始前に検査する。共有canisterとmainnet targetを拒否し、選択されたlocal endpointとreceiptの一致も確認する。初回の3GiB設定では比較元の重み準備中にIC0539となった。その専用canisterはstop/delete済みで、失敗は`artifacts/laya-removal-20261008/full-model-proof/comparison.json`に保存した。
