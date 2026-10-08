@@ -23,3 +23,20 @@ for (const fixture of fixtures) {
 console.log(
   `Python TextPreparer parity: ${fixtures.length} full token-ID sequences matched.`,
 );
+
+const votingInput = {
+  state: "Minimum voting dissolve delay changes from 1 day to 2 days.",
+  question: "Approve?",
+  options: ["no", "yes"],
+};
+for (const [extra, total] of [[15, 84], [16, 85]]) {
+  const result = tokenizeInput(tokenizer, {
+    ...votingInput, state: votingInput.state + " more".repeat(extra),
+  }, readout.codes.map((entry) => entry.code));
+  assert.deepEqual(result.tokenIds.slice(27, 38),
+    [27756,15209,70173,7383,4203,494,220,16,1834,310,220]);
+  assert.equal(result.counts.total, total);
+  assert.equal(result.counts.paidPrefix, 27);
+  assert.equal(result.counts.paidSuffix, total - 27);
+}
+console.log("Former voting prefix counts as suffix; 84/85-token boundaries matched.");

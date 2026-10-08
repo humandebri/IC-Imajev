@@ -6,3 +6,5 @@ playwright-report/
 .cloudflare/
 .wrangler/
 /public/tokenizer/
+/public/inference/
+/public/api/

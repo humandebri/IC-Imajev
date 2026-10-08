@@ -10,7 +10,7 @@ pub(super) struct AttentionMlpFrontMeasurement {
 fn bf16_bytes(x:&[f32])->Vec<u8>{x.iter().flat_map(|x|((x.to_bits()>>16)as u16).to_le_bytes()).collect()}
 #[ic_cdk::query]
 fn attention_mlp_front(state:StateBytes,front:u32)->Result<AttentionMlpFrontMeasurement,String>{
- owner();let start=ic_cdk::api::performance_counter(0);
+ query_access();let start=ic_cdk::api::performance_counter(0);
  if state.len()>1_990_000||front==0||front>=9216||front%256!=0{return Err("attention front input bounds".into());}
  let(r,input)=decode_query(&state)?;
  let text=r.tensor.strip_prefix("model.language_model.layers.").and_then(|s|s.strip_suffix(".post_attention_layernorm.weight")).ok_or("attention front layer")?;

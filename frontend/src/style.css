@@ -1168,6 +1168,9 @@ summary::after {
 details[open] > summary::after {
   transform: rotate(90deg);
 }
+.token-details:not([open]) > :not(summary) {
+  display: none;
+}
 .token-breakdown {
   display: flex;
   gap: 10px;

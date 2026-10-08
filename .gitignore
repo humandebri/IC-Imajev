@@ -40,3 +40,7 @@ __pycache__/
 /scripts/wat_pair_bench/kernel.wat
 
 /scripts/wat_s1_bench/kernel.wat
+
+# Local frontend quality-gate and Cloudflare CLI state.
+/.vlmkit/
+/.cloudflare/
