@@ -1,29 +1,30 @@
+import { MAX_TOKENS } from "../src/query-plan.ts";
 import { test, expect } from "@playwright/test";
 
 // UI lifecycle tests inject the client boundary; protocol and real browser
 // networking are verified separately against actual mainnet evidence.
 async function clientFixture(page: import("@playwright/test").Page) {
-  await page.route("**/src/inference-client.ts", route => route.fulfill({
+  await page.route("**/src/inference-client.ts*", route => route.fulfill({
     contentType: "text/javascript", body: `
       export async function countTokens(input) {
-        const total = input.state.length > 200 ? 85 : 64;
+        const total = input.state.length > 200 ? ${MAX_TOKENS + 1} : 64;
         return {total, prefix:27, suffix:total-27, paidPrefix:27, paidSuffix:total-27};
       }
       export function infer(input, progress) {
         const promise = new Promise((resolve, reject) => {
           let completed = 0;
           const timer = setInterval(() => {
-            progress(++completed);
+            progress(++completed, 63);
             if (input.question === "gateway unavailable") {
               clearInterval(timer);
               reject(new Error("IC gateway busy (503). Please try again."));
               return;
             }
-            if(completed===32) {
+            if(completed===63) {
               clearInterval(timer);
               resolve({ value:input.options[0], probabilities:input.options.map((_,i)=>i===0?0.8:0.1/(input.options.length-1)), unknown_probability:0.1, abstained:false });
             }
-          }, 80);
+          }, 40);
         });
         // Deliberately allow an old completion after cancellation. The UI
         // must fence its result even if an underlying request cannot stop.
@@ -38,7 +39,7 @@ test("run displays real progress and preserves submitted option labels while edi
   await page.getByRole("button", { name: "Value change" }).click();
   await expect(page.getByRole("button", { name: "Run inference" })).toBeEnabled();
   await page.getByRole("button", { name: "Run inference" }).click();
-  await expect(page.getByRole("progressbar")).toHaveAttribute("aria-valuemax", "32");
+  await expect(page.getByRole("progressbar")).toHaveAttribute("aria-valuemax", "63");
   await expect(page.getByRole("button", { name: "Run inference" })).toBeDisabled();
   await page.locator(".option-control input").first().fill("edited option");
   await expect(page.locator(".result-panel")).toHaveAttribute("data-state", "done");
