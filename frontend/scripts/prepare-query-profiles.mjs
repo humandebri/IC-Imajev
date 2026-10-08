@@ -1,9 +1,10 @@
 /** Publish only a continuous, measured range pinned to this exact module. */
 import assert from "node:assert/strict";
 import { readFile, writeFile } from "node:fs/promises";
-import { createHash } from "node:crypto";
 import release from "../src/inference-release.json" with { type: "json" };
 import { baselinePlan, queryCount, validatePlan } from "../src/query-plan.ts";
+import decisions from "./query-plan-decisions.json" with { type: "json" };
+import { assertApprovedReport } from "./query-calibration-policy.mjs";
 const root = new URL("../../", import.meta.url);
 const plans = {}, evidence = {};
 const balanced = process.argv.includes("--balanced");
@@ -16,6 +17,7 @@ for (let n=1;n<=69;n++) {
   const reportURL=new URL(`artifacts/adaptive-query-20261008/${optimized ? "balanced-" : ""}${stem}-verified.json`,root);
   let bytes;
   try {bytes=await readFile(reportURL);} catch(e) {if(e.code==="ENOENT" && !balanced)break;throw e;}
+  const approvedDigest=assertApprovedReport(decisions,release.module_hash,n,bytes);
   const {candidate:c,reference:r,bitwiseEqual}=JSON.parse(bytes);
   assert(c.complete && r.complete && bitwiseEqual && c.moduleHash===release.module_hash && r.moduleHash===release.module_hash);
   validatePlan(c.plan,n);assert.equal(c.count,queryCount(c.plan));
@@ -33,7 +35,7 @@ for (let n=1;n<=69;n++) {
   plans[n]={fronts:c.plan.fronts,completions:c.plan.completions};
   evidence[n]={queries:c.count,maxInstructions:c.maxInstructions,maxRequestBytes:c.maxRequestBytes,maxReplyBytes:c.maxReplyBytes,
     reference:unchanged?"unchanged-baseline":"separate-query-schedule",finalPayloadHash:c.finalPayloadHash,
-    reportSHA256:createHash("sha256").update(bytes).digest("hex")};
+    reportSHA256:approvedDigest};
 }
 const maxSuffix=Object.keys(plans).length;
 assert(maxSuffix>=57,"Never regress the existing input range because calibration is incomplete");

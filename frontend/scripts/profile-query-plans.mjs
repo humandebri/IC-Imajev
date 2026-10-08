@@ -10,8 +10,17 @@ import release from "../src/inference-release.json" with { type: "json" };
 import { runQueryGraph } from "../src/query-runner.ts";
 import { baselinePlan, queryCount, selectPlan } from "../src/query-plan.ts";
 import { optimizeQueryPlan } from "./optimize-query-plan.mjs";
+import { measurementOutput, readReusableMeasurement } from "./query-calibration-policy.mjs";
 const root = new URL("../../", import.meta.url);
-const output = new URL("artifacts/adaptive-query-20261008/", root);
+const calibration = new URL("artifacts/adaptive-query-20261008/", root);
+const optimize = process.argv.includes("--optimize");
+const balanced = process.argv.includes("--balanced");
+const published = process.argv.includes("--published");
+const real = process.argv.includes("--real");
+const resume = process.argv.includes("--resume");
+assert([optimize, balanced, published].filter(Boolean).length <= 1, "Choose one candidate strategy");
+const output = measurementOutput(calibration, { resume, published });
+console.log(JSON.stringify({measurementDirectory:output.pathname,resume}));
 const record = JSON.parse(await readFile(new URL("artifacts/text-short-v2/inputs.json", root), "utf8")).records[2];
 const manifestBytes=await readFile(new URL("frontend/public/inference/prefix27-v1/manifest.json", root));
 assert.equal(createHash("sha256").update(manifestBytes).digest("hex"),release.manifest_sha256);
@@ -37,9 +46,11 @@ async function run(n, label, plan, ids, options) {
   const dir = new URL(`n${String(n).padStart(2, "0")}-${label}/`, output);
   await mkdir(dir, { recursive: true });
   const file = new URL("report.json", dir);
-  try { const old = JSON.parse(await readFile(file, "utf8"));
-    if (old.complete && JSON.stringify(old.plan) === JSON.stringify(plan) && old.inputHash === hash(Buffer.from(JSON.stringify(ids))) && JSON.stringify(old.options) === JSON.stringify(options)) return old;
-  } catch (e) { if (e.code !== "ENOENT") throw e; }
+  const old=await readReusableMeasurement(file,{moduleHash:release.module_hash,plan,inputHash:hash(Buffer.from(JSON.stringify(ids))),options},{resume,published});
+  if(old) {
+    console.log(JSON.stringify({n,label,reusedCalibration:file.pathname,note:"Cached timings are not a new performance measurement"}));
+    return old;
+  }
   const signal = AbortSignal.timeout(600_000);
   const client = await createQueryClient(signal);
   await client.checkModule();
@@ -86,19 +97,14 @@ async function run(n, label, plan, ids, options) {
   }
 }
 await mkdir(output, { recursive: true });
-const optimize = process.argv.includes("--optimize");
-const balanced = process.argv.includes("--balanced");
-const published = process.argv.includes("--published");
-const real = process.argv.includes("--real");
-assert([optimize, balanced, published].filter(Boolean).length <= 1, "Choose one candidate strategy");
 async function optimizedPlan(n) {
   assert(n>=56 && n<=69, "Optimization requires paired measurements");
   const stem=`n${String(n).padStart(2,"0")}`;
-  const baseline=JSON.parse(await readFile(new URL(`${stem}-reference/report.json`, output),"utf8"));
-  const split=JSON.parse(await readFile(new URL(`${stem}-candidate/report.json`, output),"utf8"));
+  const baseline=JSON.parse(await readFile(new URL(`${stem}-reference/report.json`, calibration),"utf8"));
+  const split=JSON.parse(await readFile(new URL(`${stem}-candidate/report.json`, calibration),"utf8"));
   assert.equal(split.count,63);
-  const probeBase=JSON.parse(await readFile(new URL("n57-reference/report.json", output),"utf8"));
-  const probeSplit=JSON.parse(await readFile(new URL("n57-candidate/report.json", output),"utf8"));
+  const probeBase=JSON.parse(await readFile(new URL("n57-reference/report.json", calibration),"utf8"));
+  const probeSplit=JSON.parse(await readFile(new URL("n57-candidate/report.json", calibration),"utf8"));
   if (balanced) {
     const plan=optimizeQueryPlan(baseline,split,probeBase,probeSplit,baselinePlan);
     console.log(JSON.stringify({n,label:"balanced-plan",count:queryCount(plan),plan}));
