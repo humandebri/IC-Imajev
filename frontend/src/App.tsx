@@ -200,13 +200,29 @@ export default function App() {
                 </div>
               </details>
               {activeSample && (
-                <p className="sample-source">
-                  Original payload excerpt · Question added for this demo.
-                  {" "}
-                  <a href={activeSample.sourceUrl} target="_blank" rel="noopener noreferrer">
-                    View {activeSample.sourceLabel} ↗
-                  </a>
-                </p>
+                <div key={activeSample.id} className="sample-provenance">
+                  <p className="sample-source">
+                    Mechanically compacted input · Question added for this demo.
+                    {" "}
+                    <a href={activeSample.sourceUrl} target="_blank" rel="noopener noreferrer">
+                      View {activeSample.sourceLabel} ↗
+                    </a>
+                  </p>
+                  <details className="sample-original">
+                    <summary>Original payload and identifier mapping</summary>
+                    <pre>{activeSample.originalState}</pre>
+                    {activeSample.audit.identifiers.length > 0 && (
+                      <dl>
+                        {activeSample.audit.identifiers.map(identifier => (
+                          <div key={identifier.alias}>
+                            <dt>{identifier.alias}</dt>
+                            <dd>{identifier.value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    )}
+                  </details>
+                </div>
               )}
             </div>
             <form onSubmit={(event) => { event.preventDefault(); void runInference(); }} noValidate>

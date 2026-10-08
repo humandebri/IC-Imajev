@@ -6,6 +6,7 @@ import { prepareQueryRun } from "./prepare-query-run.ts";
 import { runQueryGraph } from "./query-runner.ts";
 import { MAX_TOKENS } from "./query-plan.ts";
 import { timed, type TimingObserver, type TimingEvent } from "./inference-diagnostics.ts";
+import release from "./inference-release.json" with { type: "json" };
 
 async function loadTokenizer() {
   const base = `${import.meta.env.BASE_URL}tokenizer/`;
@@ -66,7 +67,7 @@ self.onmessage = async (
     if (!input.question.trim()) throw new Error("Enter a question.");
     if (tokenized.counts.total > MAX_TOKENS) throw new Error(`Input exceeds ${MAX_TOKENS} tokens. Shorten the context, question or options.`);
     const { prefix, client } = await timed(observe, "preparation", () =>
-      prepareQueryRun(`${import.meta.env.BASE_URL}inference/prefix27-v1/`, tokenized.tokenIds, input.options, signal, observe));
+      prepareQueryRun(`${import.meta.env.BASE_URL}inference/immutable/${release.manifest_sha256}/`, tokenized.tokenIds, input.options, signal, observe));
     const result = await runQueryGraph(tokenized.tokenIds, input.options, {
       ...prefix, asset: layer => timed(observe, "prefix-wait", () => prefix.asset(layer), { layer }),
       client, signal, progress: (completed, total) => self.postMessage({ id, completed, total }),

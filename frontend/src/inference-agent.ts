@@ -3,7 +3,8 @@ import { Principal } from "@icp-sdk/core/principal";
 import { IDL } from "@icp-sdk/core/candid";
 import release from "./inference-release.json" with { type: "json" };
 import { timed, type TimingObserver } from "./inference-diagnostics.ts";
-import { createPrefixLoader } from "./prefix-loader.ts";
+export { loadPrefix, prefixCacheBytes } from "./prefix-assets.ts";
+export type { PrefixManifest } from "./prefix-assets.ts";
 
 const blob = IDL.Vec(IDL.Nat8);
 const measurementFields = { state: blob, instructions: IDL.Nat64,
@@ -72,11 +73,3 @@ export async function createQueryClient(signal: AbortSignal, observe?: TimingObs
     },
   };
 }
-
-export interface PrefixManifest {
-  model: string; pack_hash: string; model_bytes: number; prefix: number[];
-  assets: Record<string, { file: string; bytes: number; sha256: string }>;
-}
-const prefixes = createPrefixLoader(release.manifest_sha256);
-export const loadPrefix = prefixes.load;
-export const prefixCacheBytes = prefixes.cachedBytes;

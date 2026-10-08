@@ -12,7 +12,7 @@ Not enough information
 → Abstain
 Run inference
 Copy input
-Up to 84 tokens. No login required.
+Up to 96 tokens. No login required.
 Result
 Results appear here.
 Tokens
