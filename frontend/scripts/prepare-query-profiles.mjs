@@ -4,7 +4,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import release from "../src/inference-release.json" with { type: "json" };
 import { baselinePlan, queryCount, validatePlan } from "../src/query-plan.ts";
 import decisions from "./query-plan-decisions.json" with { type: "json" };
-import { assertApprovedReport } from "./query-calibration-policy.mjs";
+import { assertApprovedReport, assertApprovedProfile } from "./query-calibration-policy.mjs";
 const root = new URL("../../", import.meta.url);
 const plans = {}, evidence = {};
 const balanced = process.argv.includes("--balanced");
@@ -36,6 +36,7 @@ for (let n=1;n<=69;n++) {
   evidence[n]={queries:c.count,maxInstructions:c.maxInstructions,maxRequestBytes:c.maxRequestBytes,maxReplyBytes:c.maxReplyBytes,
     reference:unchanged?"unchanged-baseline":"separate-query-schedule",finalPayloadHash:c.finalPayloadHash,
     reportSHA256:approvedDigest};
+  assertApprovedProfile(decisions,release.module_hash,n,plans[n],evidence[n]);
 }
 const maxSuffix=Object.keys(plans).length;
 assert(maxSuffix>=57,"Never regress the existing input range because calibration is incomplete");

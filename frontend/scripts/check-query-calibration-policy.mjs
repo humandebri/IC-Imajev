@@ -4,12 +4,34 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import decisions from "./query-plan-decisions.json" with { type: "json" };
-import { assertApprovedReport, measurementOutput, readReusableMeasurement } from "./query-calibration-policy.mjs";
+import { assertApprovedReport, assertApprovedProfile, profileDigest, measurementOutput, readReusableMeasurement } from "./query-calibration-policy.mjs";
+import { queryCount, validatePlan } from "../src/query-plan.ts";
 
 const cwd = new URL("../", import.meta.url);
 const cli = (...args) => spawnSync(process.execPath, ["--experimental-strip-types", ...args], {cwd, encoding:"utf8"});
 const catalogURL = new URL("../src/query-profiles.json", import.meta.url);
 const before = await readFile(catalogURL);
+const catalog = JSON.parse(before);
+const suffix = 69, plan = catalog.plans[suffix], evidence = catalog.evidence[suffix];
+assertApprovedProfile(decisions, catalog.moduleHash, suffix, plan, evidence);
+// Retain the approved report hash and query count while changing only the schedule.
+for (const edit of [p => p.fronts[0] = 5120, p => p.completions[0] -= 256]) {
+  const changed = structuredClone(plan); edit(changed);
+  const full = { ...changed, moduleHash: catalog.moduleHash, suffix };
+  validatePlan(full, suffix);
+  assert.equal(queryCount(full), evidence.queries);
+  assert.throws(() => assertApprovedProfile(decisions, catalog.moduleHash, suffix, changed, evidence), /differs from the approved profile/);
+}
+for (const edit of [e => e.maxInstructions--, e => e.maxRequestBytes--,
+  e => e.maxReplyBytes--, e => e.finalPayloadHash = "0".repeat(64),
+  e => e.reference = "unchanged-baseline"]) {
+  const changed = structuredClone(evidence); edit(changed);
+  assert.throws(() => assertApprovedProfile(decisions, catalog.moduleHash, suffix, plan, changed), /differs from the approved profile/);
+}
+assert.throws(() => assertApprovedProfile({ ...decisions, approvedProfiles: {} }, catalog.moduleHash, suffix, plan, evidence), /Missing approved profile/);
+assert.equal(profileDigest(catalog.moduleHash, suffix, plan, evidence),
+  profileDigest(catalog.moduleHash, suffix, { completions: plan.completions, fronts: plan.fronts },
+    Object.fromEntries(Object.entries(evidence).reverse())), "Object property order must not change approval");
 const accepted = cli("scripts/prepare-query-profiles.mjs", "--balanced", "--through=68", "--check");
 assert.equal(accepted.status, 0, accepted.stderr);
 const rejected = cli("scripts/prepare-query-profiles.mjs", "--balanced");
@@ -45,4 +67,4 @@ try {
   assert.equal(measurementOutput(base,{resume:true}).href,base.href);
   assert.throws(()=>measurementOutput(base,{published:true,resume:true}),/fresh measurements/);
 } finally { await rm(dir,{recursive:true,force:true}); }
-console.log("Rejected/unreviewed plans cannot be published; fresh comparisons ignore caches; explicit resumption checks all bindings.");
+console.log("Published schedules and evidence match approved profiles; altered plans with unchanged report hashes/counts are rejected; fresh comparisons ignore caches.");
