@@ -44,7 +44,21 @@ mainへ統合された512token対応についても、比較元builderが生成�
 
 各queryの命令数比も測定表へ記録した。最大query命令数は両版とも5B未満で、実際のIC queryも成功した。命令数はhandler counterでCDKのdecode/encodeを含まない。経過時間は各入力・各版1回の観測値で、latencyの改善保証としては扱わない。全層の計算量の評価はこの2入力に限る。
 
-証拠は`artifacts/laya-removal-20261008/pruned-full-model-proof/comparison.json`と`raw-output-comparison.json`。専用canisterはstop/delete済み。共有ローカルcanisterと公開canisterは変更していない。この追加検証は84/86tokenのquery経路を対象とし、512tokenのpaid推論は再実行していない。新しいmoduleへ公開版を切り替える場合はfrontend実行計画のmodule確認と対象経路の再検証を別途行う。
+証拠は`artifacts/laya-removal-20261008/pruned-full-model-proof/comparison.json`と`raw-output-comparison.json`。専用canisterはstop/delete済み。共有ローカルcanisterと公開canisterは変更していない。この追加検証は84/86tokenのquery経路を対象とし、512tokenのpaid推論は下記の追加検証で再実行した。新しいmoduleへ公開版を切り替える場合はfrontend実行計画のmodule確認と対象経路の再検証を別途行う。
+
+## update経路の追加検証
+
+削除前後の同じmoduleを専用ローカルcanisterで比較し、`infer`の課金付きupdateを各版14条件で実行した。合計token数28・84・86・116・117・256・257・512の8点でbulk/分割・Attention分割の境界と上限を検証した。選択肢数2〜7は28tokenの入力で確認した。全条件で32層のhidden/state hash、最終hidden、判定・logits・確率のF32 bitsが一致した。各条件のworker数も一致し、512tokenは34回で完了した。
+
+命令数の観測差は-0.0480%〜+0.0129%。削除後の最大worker checkpointは33,524,762,342命令、最大heapは4,204,855,296bytesで、すべて実際のreplicated updateが成功した。各版・各入力1回の測定で、upgrade後には旧receiptを保持している。小さな差を純粋なkernel性能の差やlatency改善と解釈しない。checkpointはCDKの前処理を含み、記録・返信の末尾を除く。
+
+84・86tokenのupdateは保存済みquery参照とも照合した。query参照が保存するhiddenは31層（融合された30層目を未出力）、stateは32層で、最終hidden・判定・確率も一致した。updateの削除前後の比較は30層目を含む全32層を対象とする。owner用`update_infer_start`/`update_infer_continue`も84tokenで実行し、paid/queryと照合した。完了後の不正continueと空suffixは拒否された。
+
+quoteどおりのcycles受領、余剰返却、同じID/入力の再送での再課金なし、upgrade直後の512token receipt再送を確認した。空suffix・prefix不一致・513token・古いquote・不足cycles・ID競合は課金前に拒否され、添付cyclesがすべて返った。外部からの`inference_step`はself-onlyで拒否された。canisterのdefault-feature Rustテスト22件も通った。公開moduleにないfault注入によるworker trap/返金は、この実行比較では試していない。
+
+証拠は`artifacts/laya-removal-20261008/update-proof-reference-v2/comparison.json`。専用canisterとrelayはstop/delete済みで、共有・公開canisterを変更していない。最初のrelay作成時のローカルcycles不足と、融合queryの未出力hiddenを参照した検証スクリプトの失敗はそれぞれ`update-proof`/`update-proof-funded`に保存した。両方とも専用canisterの後始末済みで、ランタイムの推論失敗ではない。ローカルのテストICPだけでcyclesを補充し、参照範囲を修正して再実行した。
+
+ローカル保存の検証スクリプト（実行時のパスは`scripts/check_independent_update.py`、source hashは測定表に記録）はdedicated receipt、local endpoint、module/tool/source hashを検査する。比較元moduleをinstallし、4GiBのWasm limitとupload済みpackを用意してから、新しいevidence directoryで実行する。query参照は今回の保存済み84/86token fixturesを使う。未測定のtoken数や新しいfrontend query実行計画の合格を、このupdate検証から推定しない。
 
 ## 再現
 
