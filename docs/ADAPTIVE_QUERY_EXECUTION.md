@@ -24,6 +24,7 @@ node --experimental-strip-types scripts/profile-query-plans.mjs --real --balance
 node --experimental-strip-types scripts/profile-query-plans.mjs --real --published 58 64 69
 node --experimental-strip-types scripts/prepare-query-profiles.mjs --balanced --through=68
 node --experimental-strip-types scripts/prepare-query-profiles.mjs --balanced --through=68 --check
+node --experimental-strip-types scripts/check-query-calibration-policy.mjs
 ```
 
 範囲の測定では、共通prefixと有効なtoken IDを用いて正確なsuffix長を作る。短いものは完全なユーザーpromptとは限らないため、token長のプロトコル検証と扱う。既存32queryを変更しない範囲ではその同じ経路を測定し、全入力を独立した数値計算で再検証したとは扱わない。変更した範囲では別の分割位置による新規query実行と比較し、terminalの全payload（最終hidden・norm・KV）、raw logits、判定、確率のbit一致を必須にする。84tokenでは既存32query、拡大範囲では256から8960までMLP生成を別queryで済ませる63query経路を参照にする。
@@ -32,7 +33,13 @@ node --experimental-strip-types scripts/prepare-query-profiles.mjs --balanced --
 
 `--balanced` は層ごとのfrontとcompletionを256〜8960の256刻みで探索する。各層のfrontを状態として、予測したhandler命令数が3.85B以下の経路からquery数が最小のものを動的計画法で選び、同じquery数ならcarryを含むCandid通信量の予測値で選ぶ。初期query、追加のMLP生成query、橋渡し、terminalをすべて計上する。予測は候補の生成だけに使い、公開設定には実際のqueryのcounterとサイズを記録する。推定式の誤差もあるため、予測上の3.85Bと採用条件の4Bは区別する。
 
-候補の証跡は `balanced-nNN-verified.json` に保存し、公開設定には自動反映しない。`prepare-query-profiles.mjs --balanced` は全69種類のsuffix長の証跡を必須にし、以前の63query経路と比べて実測query数とCandid総通信量の両方が減った候補のみを組み込む。応答時間は別途比較する。`--through=68` はsuffix68（合計95token）までの最適化だけを採用し、残りの長さの既存検証済み計画を維持する。`--published` はその時点のフロント設定を使う比較測定なので、設定を切り替える前に実行する。
+新しい測定は毎回 `artifacts/adaptive-query-20261008/measurements/<時刻>-<UUID>/` に保存する。開始時に保存先を出力し、同じ入力でもcanisterへのqueryと前後のmodule確認を新しく実行する。候補と参照の両方をこの保存先で測定するため、過去の所要時間を速度比較へ流用しない。候補生成に使う以前の層別の測定表は、元のarchiveから読み取る。
+
+`--resume` を明示した場合だけ、元のarchiveの数値検証を再開できる。キャッシュの再利用時はその旨を出力し、module hash・plan・入力hash・選択肢・完了状態が一致した証跡だけを使う。これは新しい速度測定ではない。`--published --resume` の併用は測定開始前に拒否する。`--published` はその時点のフロント設定を使う比較測定なので、設定を切り替える前に実行する。
+
+公開設定には測定を自動反映しない。`frontend/scripts/query-plan-decisions.json` にmodule hashと全採用証跡のSHA256、却下済み証跡と理由を記録する。設定生成は、flagの有無にかかわらず未レビュー・却下済みの証跡を拒否する。ビルド前の設定チェックも採用記録との一致を要求する。新しい候補を採用する場合はbit一致・予算・通信量・応答時間をレビューし、対象のverified JSONをarchiveへ保存したうえで、採用記録と設定を同じ変更に含める。新しい測定のhashが異なれば、以前と同じplanでも自動では採用しない。
+
+`prepare-query-profiles.mjs --balanced --through=68` は全69種類のsuffix長の証跡を必須にし、suffix68（合計95token）までの採用済み最適化だけを組み込む。最適化した範囲では以前の63query経路と比べて実測query数とCandid総通信量の両方が減ったことも要求し、残りの長さでは既存の採用済み計画を維持する。`--balanced` だけの実行は、却下済みの96token候補を含むため拒否され、設定ファイルを変更しない。
 
 測定済みという意味は記録した入力と実行環境で成功したことであり、すべてのtoken内容や混雑時の応答時間を保証するものではない。大きい入力の回数を減らしても、carryの通信量増加で遅くなる場合がある。最初の貪欲な探索による96tokenの61query候補は、同じ実入力の63query参照より通信・応答時間が増えたため採用しなかった。今回の動的計画法による候補は、その候補と分割位置が異なる。回数が同じでも通信量と応答時間を改めて検証する。
 
