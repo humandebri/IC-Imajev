@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from build_paid_message_checkpoint import projection_bodies, sha
@@ -28,8 +29,16 @@ def prefix27_scheduler(text):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--directory', required=True)
+    parser.add_argument('--source-root', type=Path, default=ROOT,
+                        help='Checkout containing the frozen runtime and dependency artifacts')
+    parser.add_argument('--legacy-116', action='store_true', help='Build the compatibility 116-token version')
     args = parser.parse_args()
-    parent = ROOT / 'artifacts/paid-stack-carry-projection-v1/build'
+    artifact_root = args.source_root.resolve()
+    if not args.legacy_116:
+        subprocess.run([sys.executable, str(ROOT / 'scripts/build_paid_token_chunks.py'),
+                        '--source-root', str(artifact_root), '--directory', str((ROOT / args.directory).resolve())], check=True)
+        return
+    parent = artifact_root / 'artifacts/paid-stack-carry-projection-v1/build'
     pointer_path = parent.parent / 'validated-proof-pointer.json'
     pointer = json.loads(pointer_path.read_text())
     base = json.loads((parent / 'report.json').read_text())
@@ -37,9 +46,9 @@ def main():
     assert sha(parent / 'full.wasm') == base['wasm_sha256'] == pointer['module']
     for group in ['source_hashes', 'dependency_hashes']:
         for name, digest in base[group].items():
-            assert sha(ROOT / name) == digest, name
+            assert sha(artifact_root / name) == digest, name
     for name, digest in pointer['hashes'].items():
-        assert sha(ROOT / name) == digest, name
+        assert sha(artifact_root / name) == digest, name
     directory = (ROOT / args.directory).resolve()
     directory.mkdir(parents=True, exist_ok=False)
     for path in parent.glob('*.rs'):
@@ -47,7 +56,12 @@ def main():
     for name in ['paid_inference.rs', 'paid_types.rs']:
         shutil.copyfile(ROOT / 'canisters/inference/src' / name, directory / name)
     scheduler = directory / 'update_inference.rs'
-    scheduler.write_text(prefix27_scheduler(scheduler.read_text()))
+    text = prefix27_scheduler(scheduler.read_text())
+    old = 'const STOP: u64 = 34_000_000_000;'
+    assert text.count(old) == 1
+    text = text.replace(old, 'pub(super) const WORKER_BUDGET: u64 = 30_000_000_000;').replace('<STOP', '<WORKER_BUDGET')
+    text += "\npub(super) fn progress_limit(_: usize) -> u64 { 64 }\n"
+    scheduler.write_text(text)
     expose_public_queries(directory)
     command = base['command'][:]
     # Produce the normal module, without owner diagnostic/fault endpoints.
@@ -64,7 +78,7 @@ def main():
     files = [Path(__file__), ROOT / 'scripts/build_common_prefix27.py', ROOT / 'scripts/build_paid_message_checkpoint.py',
              ROOT / 'scripts/public_query_build.py', pointer_path,
              parent / 'report.json', parent / 'full.wasm'] + list(directory.glob('*.rs'))
-    hashes = {str(p.relative_to(ROOT)): sha(p) for p in files}
+    hashes = {str(p): sha(p) for p in files}
     with (directory / 'compiler.log').open('w') as log:
         subprocess.run(command, cwd=ROOT, env=env, check=True, stdout=log, stderr=log)
     previous = directory / 'raw.wasm'
@@ -75,7 +89,7 @@ def main():
         source.write_bytes(donor)
         target = directory / ('full.wasm' if i == len(base['patches']) - 1 else f'patched{i}.wasm')
         row = json.loads(subprocess.check_output([
-            str(ROOT / 'artifacts/wasm-audit-target/release/imajev-wasm-patch-unique'),
+            str(artifact_root / 'artifacts/wasm-audit-target/release/imajev-wasm-patch-unique'),
             str(previous), str(source), str(target), entry['export']], text=True))
         assert row['wasmparser_validation']
         assert row['replacement_body_sha256'] == entry['replacement_body_sha256']

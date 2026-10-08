@@ -5,7 +5,13 @@ use ic_cdk::call::Call;
 use serde::{Serialize,Deserialize};
 const RECEIPTS:usize=128;
 const TTL:u64=86_400_000_000_000;
-const MAX_STEPS:u32=6;
+const MAX_STEPS:u32=8;
+// Replay must survive switching back to a build with a smaller execution limit.
+const REPLAY_INPUT_LIMIT:usize=512;
+#[cfg(feature="experimental-update-token-chunks")]
+const INPUT_LIMIT:usize=512;
+#[cfg(not(feature="experimental-update-token-chunks"))]
+const INPUT_LIMIT:usize=116;
 const PREFIX27:[u32;27]=[248045,846,198,56555,279,2420,5721,321,4087,279,3296,1608,279,10661,12521,13,3301,1132,279,3074,2904,1970,13,198,1349,25,328];
 #[derive(Serialize,Deserialize)]
 struct PaidStore {config:Config,next_id:u64,receipts:Vec<Receipt>,active:Option<Job>}
@@ -17,10 +23,10 @@ thread_local! {static PAID:RefCell<PaidStore>=RefCell::new(PaidStore::default())
 thread_local! {static FAULT:RefCell<Option<(u64,bool)>>=RefCell::new(None);static REFUND_FAULT:RefCell<bool>=RefCell::new(false);}
 fn decision(d:ChoiceResult)->Decision {Decision{value:d.value,probabilities:d.probabilities,unknown_probability:d.unknown_probability,abstained:d.abstained,raw_logits:d.raw_logits,instructions:d.instructions,calibration_version:d.calibration_version}}
 fn suffix_tokens(r:&InferRequest)->Result<usize,InferError> {
- if r.version!=1 || r.model.len()!=64 || r.token_ids.len()>84 || r.token_ids.is_empty() || r.token_ids.iter().any(|i|*i>=248320) {return Err(InferError::Invalid("input bounds/version".into()));}
+ if r.version!=1 || r.model.len()!=64 || r.token_ids.len()>INPUT_LIMIT || r.token_ids.is_empty() || r.token_ids.iter().any(|i|*i>=248320) {return Err(InferError::Invalid("input bounds/version".into()));}
  if !r.token_ids.starts_with(&PREFIX27){return Err(InferError::Invalid("common prefix mismatch".into()));}
  let n=r.token_ids.len()-PREFIX27.len();
- if !(1..=57).contains(&n){return Err(InferError::Invalid("suffix bounds".into()));}
+ if !(1..=INPUT_LIMIT-PREFIX27.len()).contains(&n){return Err(InferError::Invalid("suffix bounds".into()));}
  Ok(n)
 }
 fn plan(r:&InferRequest)->Result<Quote,InferError> {
@@ -33,7 +39,7 @@ fn plan(r:&InferRequest)->Result<Quote,InferError> {
  if !STORE.with(|s|s.borrow().ready && s.borrow().weight_cache.names().len()==721) {return Err(InferError::NotReady);}
  PAID.with(|s|{let s=s.borrow();let fee=s.config.fee_per_token.checked_mul(n as u128).and_then(|v|v.checked_add(s.config.base_fee)).ok_or_else(||InferError::Invalid("fee overflow".into()))?;
   if fee==0{return Err(InferError::NotReady);}
-  Ok(Quote{version:s.config.version,fee,prefix_tokens:p as u32,suffix_tokens:n as u32,estimated_steps:((n as u64*2_600_000_000).div_ceil(34_000_000_000) as u32),max_steps:MAX_STEPS})})
+  Ok(Quote{version:s.config.version,fee,prefix_tokens:p as u32,suffix_tokens:n as u32,estimated_steps:((n as u64*2_600_000_000).div_ceil(update_inference::WORKER_BUDGET) as u32),max_steps:if n>229 {64}else if n>89 {32}else{MAX_STEPS}})})
 }
 #[ic_cdk::query]
 fn quote(request:InferRequest)->Result<Quote,InferError>{plan(&request)}
@@ -42,16 +48,24 @@ fn configure_paid(config:Config)->Result<(),String>{owner_auth();apply_config(co
 fn apply_config(config:Config)->Result<(),String>{if config.version==0 || config.base_fee>1_000_000_000_000_000 || config.fee_per_token>1_000_000_000_000 || config.reserve_cycles>1_000_000_000_000_000 || (config.enabled && config.base_fee==0){return Err("config bounds".into());}
  PAID.with(|s|{let mut s=s.borrow_mut();if s.active.is_some() && config.enabled{return Err("paid inference active".into());}if config.version<=s.config.version{return Err("version must increase".into());}s.config=config;Ok(())})}
 fn input_hash(request:&InferRequest)->String {let b=candid::encode_one(request).expect("validated request encoding");Sha256::digest(b).iter().map(|b|format!("{b:02x}")).collect()}
+fn validate_replay_size(request:&InferRequest)->Result<(),InferError> {
+ if request.token_ids.len()>REPLAY_INPUT_LIMIT || request.options.len()>7 || request.options.iter().any(|s|s.len()>128){return Err(InferError::Invalid("input size".into()));}
+ Ok(())
+}
+fn replay_receipt(r:Receipt,hash:&str)->Result<InferenceResult,InferError> {
+ if r.input_hash!=hash{return Err(InferError::IdConflict);}
+ match r.state {ReceiptState::Completed(v)=>Ok(v),ReceiptState::Running=>Err(InferError::InProgress{job_id:r.job_id}),ReceiptState::Failed(reason)=>Err(InferError::Failed{job_id:r.job_id,reason,refund:r.refund})}
+}
 fn prune(s:&mut PaidStore){let now=ic_cdk::api::time();s.receipts.retain(|r|matches!(r.state,ReceiptState::Running) || !matches!(r.refund,Refund::None|Refund::Done) || now.saturating_sub(r.time)<TTL);}
 #[ic_cdk::update]
 async fn infer(request:InferRequest,request_id:String,quote_version:u64)->Result<InferenceResult,InferError> {
  let caller=ic_cdk::api::msg_caller();
  if caller==Principal::anonymous() || caller==ic_cdk::api::canister_self() || request_id.is_empty() || request_id.len()>64 {return Err(InferError::Invalid("caller/request ID".into()));}
- // Preserve replay of pre-upgrade receipts with up to 95 tokens; plan limits new work to 84.
- if request.token_ids.len()>95 || request.options.len()>7 || request.options.iter().any(|s|s.len()>128){return Err(InferError::Invalid("input size".into()));}
+ // Receipts remain bound to caller, request ID and the full input hash.
+ validate_replay_size(&request)?;
  let hash=input_hash(&request);
  let duplicate=PAID.with(|s|{let mut s=s.borrow_mut();prune(&mut s);s.receipts.iter().find(|r|r.caller==caller && r.request_id==request_id).cloned()});
- if let Some(r)=duplicate {if r.input_hash!=hash{return Err(InferError::IdConflict);}return match r.state {ReceiptState::Completed(v)=>Ok(v),ReceiptState::Running=>Err(InferError::InProgress{job_id:r.job_id}),ReceiptState::Failed(reason)=>Err(InferError::Failed{job_id:r.job_id,reason,refund:r.refund})};}
+ if let Some(r)=duplicate {return replay_receipt(r,&hash);}
  let q=plan(&request)?;
  if q.version!=quote_version{return Err(InferError::QuoteChanged{current:q.version});}
  let id=PAID.with(|s|->Result<u64,InferError>{let mut s=s.borrow_mut();if !s.config.enabled{return Err(InferError::Paused);}if s.active.is_some() || update_inference::busy(){return Err(InferError::Busy);}if s.receipts.len()>=RECEIPTS{return Err(InferError::ReceiptCapacity);}
@@ -66,7 +80,7 @@ async fn infer(request:InferRequest,request_id:String,quote_version:u64)->Result
   let response=Call::unbounded_wait(ic_cdk::api::canister_self(),"inference_step").with_args(&(id,stage)).await;
   let decoded=response.map_err(|e|format!("worker call: {e}")).and_then(|v|v.candid::<Result<StepResult,String>>().map_err(|e|format!("worker decode: {e}")).and_then(|v|v));
   match decoded {
-   Ok(v) if v.job_id==id && v.stage>stage && v.stage<=64 => {
+   Ok(v) if v.job_id==id && v.stage>stage && v.stage<=update_inference::progress_limit(q.suffix_tokens as usize) => {
     let status=PAID.with(|s|{let mut s=s.borrow_mut();if let Some(j)=s.active.as_mut(){if j.id!=id || j.stage!=v.stage || !j.in_flight{return None;}j.in_flight=false;}
       s.receipts.iter().find(|r|r.job_id==id).map(|r|r.state.clone())});
     if v.done {if let Some(ReceiptState::Completed(result))=status {PAID.with(|s|s.borrow_mut().active=None);return Ok(result);} }
@@ -148,10 +162,49 @@ mod tests {
         InferRequest{model:"0".repeat(64),version:1,token_ids,options:vec!["no".into(),"yes".into()]}
     }
     #[test]
-    fn common_prefix_accepts_84_tokens_but_rejects_85_and_empty_suffix() {
-        assert_eq!(suffix_tokens(&request_with_suffix(57)).unwrap(),57);
-        assert!(matches!(suffix_tokens(&request_with_suffix(58)),Err(InferError::Invalid(_))));
+    fn common_prefix_accepts_feature_limit_and_rejects_overflow_and_empty_suffix() {
+        assert_eq!(suffix_tokens(&request_with_suffix(INPUT_LIMIT-27)).unwrap(),INPUT_LIMIT-27);
+        assert!(matches!(suffix_tokens(&request_with_suffix(INPUT_LIMIT-26)),Err(InferError::Invalid(_))));
         assert!(matches!(suffix_tokens(&request_with_suffix(0)),Err(InferError::Invalid(_))));
+    }
+    #[test]
+    fn replay_bounds_do_not_expand_new_inference_limit() {
+        let request=request_with_suffix(512-27);
+        assert!(validate_replay_size(&request).is_ok());
+        #[cfg(not(feature="experimental-update-token-chunks"))]
+        assert!(matches!(suffix_tokens(&request),Err(InferError::Invalid(_))));
+        #[cfg(feature="experimental-update-token-chunks")]
+        assert_eq!(suffix_tokens(&request).unwrap(),485);
+        assert!(matches!(validate_replay_size(&request_with_suffix(513-27)),Err(InferError::Invalid(_))));
+        let mut oversized=request.clone();oversized.options=vec!["no".into();8];
+        assert!(matches!(validate_replay_size(&oversized),Err(InferError::Invalid(_))));
+        oversized.options=vec!["x".repeat(129)];
+        assert!(matches!(validate_replay_size(&oversized),Err(InferError::Invalid(_))));
+    }
+    #[test]
+    fn restored_512_token_receipts_replay_results_refunds_and_conflicts() {
+        let request=request_with_suffix(512-27);
+        let hash=input_hash(&request);
+        let result=InferenceResult{job_id:1,decision:Decision{value:Some("yes".into()),probabilities:vec![0.2,0.7],
+            unknown_probability:0.1,abstained:false,raw_logits:vec![1.,2.,0.],instructions:100,calibration_version:"test".into()},
+            paid_cycles:1_555_000_000_000,quote_version:2,prefix_tokens:27,suffix_tokens:485,workers:vec![]};
+        let mut completed=failed_receipt(1,Refund::None);
+        completed.input_hash=hash.clone();completed.quote.suffix_tokens=485;completed.quote.prefix_tokens=27;
+        completed.quote.max_steps=64;completed.state=ReceiptState::Completed(result.clone());
+        let mut failed=completed.clone();failed.job_id=2;failed.request_id="failed-2".into();
+        failed.state=ReceiptState::Failed("worker rejected".into());failed.refund=Refund::Pending;
+        PAID.with(|p|{let mut s=p.borrow_mut();*s=PaidStore::default();s.next_id=2;s.receipts=vec![completed,failed];});
+        let saved=metadata();
+        PAID.with(|p|*p.borrow_mut()=PaidStore::default());
+        restore_metadata(&saved);
+        validate_replay_size(&request).unwrap();
+        let receipts=PAID.with(|p|p.borrow().receipts.clone());
+        let replayed=replay_receipt(receipts[0].clone(),&hash).unwrap();
+        assert_eq!(candid::encode_one(replayed).unwrap(),candid::encode_one(result).unwrap());
+        assert!(matches!(replay_receipt(receipts[1].clone(),&hash),Err(InferError::Failed{job_id:2,refund:Refund::Pending,..})));
+        let mut changed=request;changed.token_ids[27]=2;
+        assert!(matches!(replay_receipt(receipts[0].clone(),&input_hash(&changed)),Err(InferError::IdConflict)));
+        assert_eq!(metadata(),saved);
     }
     #[test]
     fn former_voting_prefix_is_part_of_the_paid_suffix() {

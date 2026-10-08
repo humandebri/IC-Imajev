@@ -15,7 +15,10 @@ sha2.workspace = true
 serde_bytes = { version = "=0.11.19", optional = true }
 
 [features]
-paid-update-inference = ["experimental-update-inference"]
+default = ["experimental-adaptive-token-tiles"]
+experimental-adaptive-token-tiles = ["experimental-update-token-chunks", "imajev-runtime/experimental-adaptive-token-tiles"]
+experimental-update-token-chunks = ["paid-update-inference", "imajev-runtime/experimental-update-token-chunks"]
+paid-update-inference = ["experimental-update-inference", "experimental-full-weight-cache"]
 paid-update-diagnostics = ["paid-update-inference"]
 experimental-update-inference = ["experimental-prefix-hybrid", "experimental-mlp-full89", "experimental-attention-full", "experimental-mlp-delta-query"]
 experimental-mlp-delta-query = ["experimental-mlp-stream", "experimental-delta-full-log"]
