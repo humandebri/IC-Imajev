@@ -2,7 +2,8 @@ import { HttpAgent, StatePaths } from "@icp-sdk/core/agent";
 import { Principal } from "@icp-sdk/core/principal";
 import { IDL } from "@icp-sdk/core/candid";
 import release from "./inference-release.json" with { type: "json" };
-import { sha } from "./query-codec.ts";
+import { timed, type TimingObserver } from "./inference-diagnostics.ts";
+import { createPrefixLoader } from "./prefix-loader.ts";
 
 const blob = IDL.Vec(IDL.Nat8);
 const measurementFields = { state: blob, instructions: IDL.Nat64,
@@ -31,7 +32,7 @@ export interface QueryClient {
   query: (method: string, args: unknown[]) => Promise<unknown>;
   checkModule: () => Promise<void>;
 }
-export async function createQueryClient(signal: AbortSignal): Promise<QueryClient> {
+export async function createQueryClient(signal: AbortSignal, observe?: TimingObserver): Promise<QueryClient> {
   const timedFetch: typeof fetch = async (input, init) => {
     const combined = AbortSignal.any([signal, AbortSignal.timeout(30_000)]);
     const response = await fetch(input, { ...init, signal: combined });
@@ -41,11 +42,12 @@ export async function createQueryClient(signal: AbortSignal): Promise<QueryClien
     }
     return response;
   };
-  const agent = await HttpAgent.create({ host: release.host, fetch: timedFetch,
-    retryTimes: 0, verifyQuerySignatures: true });
+  const agent = await timed(observe, "agent-init", () => HttpAgent.create({ host: release.host, fetch: timedFetch,
+    retryTimes: 0, verifyQuerySignatures: true }));
   const canister = Principal.fromText(release.canister);
   return {
     async query(method, args) {
+      return timed(observe, "query", async () => {
       signal.throwIfAborted();
       const schema = methods[method];
       if (!schema) throw new Error("Unsupported query method.");
@@ -56,14 +58,17 @@ export async function createQueryClient(signal: AbortSignal): Promise<QueryClien
       if (response.status !== "replied") throw new Error("IC query rejected. Please try again.");
       if (response.reply.arg.byteLength >= 1_990_000) throw new Error("Query reply too large.");
       return IDL.decode(schema.reply, response.reply.arg)[0];
+      }, { method });
     },
     async checkModule() {
+      return timed(observe, "module-check", async () => {
       const path = StatePaths.canisterModuleHash(canister);
       const response = await agent.readState({ canisterId: canister }, { paths: [path] });
       const hash = response.values.get(path);
       if (!hash || Array.from(hash, b => b.toString(16).padStart(2, "0")).join("") !== release.module_hash) {
         throw new Error("Inference runtime changed. Reload after deployment completes.");
       }
+      });
     },
   };
 }
@@ -72,19 +77,6 @@ export interface PrefixManifest {
   model: string; pack_hash: string; model_bytes: number; prefix: number[];
   assets: Record<string, { file: string; bytes: number; sha256: string }>;
 }
-export async function loadPrefix(base: string, signal: AbortSignal) {
-  const response = await fetch(`${base}manifest.json`, { signal });
-  if (!response.ok) throw new Error("Could not load prefix settings.");
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (await sha(bytes) !== release.manifest_sha256) throw new Error("Prefix manifest mismatch.");
-  const manifest = JSON.parse(new TextDecoder().decode(bytes)) as PrefixManifest;
-  return { manifest, async asset(layer: number) {
-    signal.throwIfAborted();
-    const entry = manifest.assets[String(layer)];
-    const response = await fetch(`${base}${entry.file}`, { signal });
-    if (!response.ok) throw new Error("Could not load prefix state.");
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.length !== entry.bytes || await sha(bytes) !== entry.sha256) throw new Error("Prefix state mismatch.");
-    return bytes;
-  } };
-}
+const prefixes = createPrefixLoader(release.manifest_sha256);
+export const loadPrefix = prefixes.load;
+export const prefixCacheBytes = prefixes.cachedBytes;

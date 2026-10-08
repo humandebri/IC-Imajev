@@ -75,6 +75,7 @@ test("input samples and free editing do not produce results or inference request
 test("choice limits, empty question and whitespace duplicate validation", async ({
   page,
 }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await expect(
     page.getByRole("button", { name: "Remove option 1", exact: true }),

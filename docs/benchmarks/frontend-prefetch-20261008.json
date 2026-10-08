@@ -1,0 +1,813 @@
+{
+  "complete": true,
+  "baselineRevision": "6fea57ece9ed81248e3a0879f5a53e5148190a9c",
+  "release": {
+    "canister": "xis3j-paaaa-aaaai-axumq-cai",
+    "host": "https://icp-api.io",
+    "module_hash": "3291a064976fb13df548582871ae96a3347f052569eceb7b9807dc23ec5b2495",
+    "model": "7ef38ecb70f4afa4e92bad2fe9f0448699ee45041688b1110819143f41601330",
+    "pack_hash": "364e3aa3f69a61a69e6df62e3e2a71d4f55457f1a8e1c16934aefc6130f04c84",
+    "manifest_sha256": "767ef0e4923b6bac7a709bc792e03be11b033b1c858060de5d76dfe97c79e85a"
+  },
+  "variants": [
+    {
+      "label": "baseline",
+      "url": "http://127.0.0.1:4191",
+      "dist": ".cache/prefetch-baseline-dist/",
+      "worker": "tokenizer.worker-BH7gG-YL.js",
+      "sha256": "52d0dff2529e5b8db173d26f3cbc937a28395a9a83a26bb1172cde1ae22f8329"
+    },
+    {
+      "label": "candidate",
+      "url": "http://127.0.0.1:4192",
+      "dist": "frontend/dist/",
+      "worker": "tokenizer.worker-BTeDm4k1.js",
+      "sha256": "72f78ae77481c7b405ae2c229d6bbc0790df0e147764e6c14d3f548a8cd1398a"
+    }
+  ],
+  "acceptance": {
+    "maximumMedianRegressionPercent": 5,
+    "passed": true
+  },
+  "summary": [
+    {
+      "fixture": "short",
+      "temperature": "cold",
+      "baselineRuns": 3,
+      "candidateRuns": 3,
+      "baselineMedianMs": 51140.90000009537,
+      "candidateMedianMs": 49154.60000002384,
+      "improvementPercent": 3.8839754483550815,
+      "baselinePrefixWaitMedianMs": 179.80000019073486,
+      "candidatePrefixWaitMedianMs": 12.199999213218689
+    },
+    {
+      "fixture": "short",
+      "temperature": "warm",
+      "baselineRuns": 3,
+      "candidateRuns": 3,
+      "baselineMedianMs": 55971.300000071526,
+      "candidateMedianMs": 45912.700000047684,
+      "improvementPercent": 17.970995849678296,
+      "baselinePrefixWaitMedianMs": 131.79999995231628,
+      "candidatePrefixWaitMedianMs": 0.29999983310699463
+    },
+    {
+      "fixture": "96-token",
+      "temperature": "cold",
+      "baselineRuns": 3,
+      "candidateRuns": 3,
+      "baselineMedianMs": 97532.09999990463,
+      "candidateMedianMs": 101234.30000007153,
+      "improvementPercent": -3.7958784853094674,
+      "baselinePrefixWaitMedianMs": 223.0000001192093,
+      "candidatePrefixWaitMedianMs": 10.800000071525574
+    },
+    {
+      "fixture": "96-token",
+      "temperature": "warm",
+      "baselineRuns": 3,
+      "candidateRuns": 3,
+      "baselineMedianMs": 117634.60000002384,
+      "candidateMedianMs": 103914.69999992847,
+      "improvementPercent": 11.663150127677223,
+      "baselinePrefixWaitMedianMs": 131.79999995231628,
+      "candidatePrefixWaitMedianMs": 0.20000004768371582
+    }
+  ],
+  "runs": [
+    {
+      "variant": "baseline",
+      "fixture": "short",
+      "round": 0,
+      "temperature": "cold",
+      "totalMs": 83342.30000007153,
+      "tokenizerReadyMs": 669.1999999284744,
+      "counts": {
+        "total": 67,
+        "prefix": 27,
+        "suffix": 40,
+        "paidPrefix": 27,
+        "paidSuffix": 40
+      },
+      "queries": 34,
+      "assetFetches": 32,
+      "prefixWaitMs": 210.4999998807907,
+      "preparationMs": 15569.600000023842,
+      "prefixFetchMs": 205.69999945163727,
+      "prefixHashMs": 8.9000004529953,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.980604887008667,
+          0.01698530651628971
+        ],
+        "unknown_probability": 0.0024098893627524376,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "baseline",
+      "fixture": "short",
+      "round": 0,
+      "temperature": "warm",
+      "totalMs": 62064.39999997616,
+      "tokenizerReadyMs": 1,
+      "counts": {
+        "total": 67,
+        "prefix": 27,
+        "suffix": 40,
+        "paidPrefix": 27,
+        "paidSuffix": 40
+      },
+      "queries": 34,
+      "assetFetches": 32,
+      "prefixWaitMs": 227.700000166893,
+      "preparationMs": 831.6000000238419,
+      "prefixFetchMs": 221.60000050067902,
+      "prefixHashMs": 7.999999642372131,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.980604887008667,
+          0.01698530651628971
+        ],
+        "unknown_probability": 0.0024098893627524376,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "candidate",
+      "fixture": "short",
+      "round": 0,
+      "temperature": "cold",
+      "totalMs": 49154.60000002384,
+      "tokenizerReadyMs": 401.10000002384186,
+      "counts": {
+        "total": 67,
+        "prefix": 27,
+        "suffix": 40,
+        "paidPrefix": 27,
+        "paidSuffix": 40
+      },
+      "queries": 34,
+      "assetFetches": 32,
+      "prefixWaitMs": 12.199999213218689,
+      "preparationMs": 471.60000002384186,
+      "prefixFetchMs": 1124.7999995946884,
+      "prefixHashMs": 7.900000214576721,
+      "prefixCacheBytes": 15418368,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.980604887008667,
+          0.01698530651628971
+        ],
+        "unknown_probability": 0.0024098893627524376,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "candidate",
+      "fixture": "short",
+      "round": 0,
+      "temperature": "warm",
+      "totalMs": 43502.10000002384,
+      "tokenizerReadyMs": 1.399999976158142,
+      "counts": {
+        "total": 67,
+        "prefix": 27,
+        "suffix": 40,
+        "paidPrefix": 27,
+        "paidSuffix": 40
+      },
+      "queries": 34,
+      "assetFetches": 0,
+      "prefixWaitMs": 0.30000007152557373,
+      "preparationMs": 373.1999999284744,
+      "prefixFetchMs": 0,
+      "prefixHashMs": 0,
+      "prefixCacheBytes": 15418368,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.980604887008667,
+          0.01698530651628971
+        ],
+        "unknown_probability": 0.0024098893627524376,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "baseline",
+      "fixture": "96-token",
+      "round": 0,
+      "temperature": "cold",
+      "totalMs": 97532.09999990463,
+      "tokenizerReadyMs": 394,
+      "counts": {
+        "total": 96,
+        "prefix": 27,
+        "suffix": 69,
+        "paidPrefix": 27,
+        "paidSuffix": 69
+      },
+      "queries": 65,
+      "assetFetches": 32,
+      "prefixWaitMs": 223.0000001192093,
+      "preparationMs": 1108.3999999761581,
+      "prefixFetchMs": 217.29999995231628,
+      "prefixHashMs": 7.300000071525574,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.18735957145690918,
+          0.6214591860771179
+        ],
+        "unknown_probability": 0.1911812126636505,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "baseline",
+      "fixture": "96-token",
+      "round": 0,
+      "temperature": "warm",
+      "totalMs": 117634.60000002384,
+      "tokenizerReadyMs": 0.8999999761581421,
+      "counts": {
+        "total": 96,
+        "prefix": 27,
+        "suffix": 69,
+        "paidPrefix": 27,
+        "paidSuffix": 69
+      },
+      "queries": 65,
+      "assetFetches": 32,
+      "prefixWaitMs": 112.30000054836273,
+      "preparationMs": 880.4000000953674,
+      "prefixFetchMs": 107.30000019073486,
+      "prefixHashMs": 6.600000381469727,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.18735957145690918,
+          0.6214591860771179
+        ],
+        "unknown_probability": 0.1911812126636505,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "candidate",
+      "fixture": "96-token",
+      "round": 0,
+      "temperature": "cold",
+      "totalMs": 101234.30000007153,
+      "tokenizerReadyMs": 508.59999990463257,
+      "counts": {
+        "total": 96,
+        "prefix": 27,
+        "suffix": 69,
+        "paidPrefix": 27,
+        "paidSuffix": 69
+      },
+      "queries": 65,
+      "assetFetches": 32,
+      "prefixWaitMs": 13,
+      "preparationMs": 368.7000000476837,
+      "prefixFetchMs": 1538.4999998807907,
+      "prefixHashMs": 7.300000309944153,
+      "prefixCacheBytes": 15418368,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.18735957145690918,
+          0.6214591860771179
+        ],
+        "unknown_probability": 0.1911812126636505,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "candidate",
+      "fixture": "96-token",
+      "round": 0,
+      "temperature": "warm",
+      "totalMs": 98058.29999995232,
+      "tokenizerReadyMs": 1.2999999523162842,
+      "counts": {
+        "total": 96,
+        "prefix": 27,
+        "suffix": 69,
+        "paidPrefix": 27,
+        "paidSuffix": 69
+      },
+      "queries": 65,
+      "assetFetches": 0,
+      "prefixWaitMs": 0.10000002384185791,
+      "preparationMs": 394.5,
+      "prefixFetchMs": 0,
+      "prefixHashMs": 0,
+      "prefixCacheBytes": 15418368,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.18735957145690918,
+          0.6214591860771179
+        ],
+        "unknown_probability": 0.1911812126636505,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "candidate",
+      "fixture": "short",
+      "round": 1,
+      "temperature": "cold",
+      "totalMs": 48228.299999952316,
+      "tokenizerReadyMs": 420.8000000715256,
+      "counts": {
+        "total": 67,
+        "prefix": 27,
+        "suffix": 40,
+        "paidPrefix": 27,
+        "paidSuffix": 40
+      },
+      "queries": 34,
+      "assetFetches": 32,
+      "prefixWaitMs": 9.199999213218689,
+      "preparationMs": 470.5,
+      "prefixFetchMs": 1167.1999995708466,
+      "prefixHashMs": 7.400000095367432,
+      "prefixCacheBytes": 15418368,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.980604887008667,
+          0.01698530651628971
+        ],
+        "unknown_probability": 0.0024098893627524376,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "candidate",
+      "fixture": "short",
+      "round": 1,
+      "temperature": "warm",
+      "totalMs": 60556.800000071526,
+      "tokenizerReadyMs": 1,
+      "counts": {
+        "total": 67,
+        "prefix": 27,
+        "suffix": 40,
+        "paidPrefix": 27,
+        "paidSuffix": 40
+      },
+      "queries": 34,
+      "assetFetches": 0,
+      "prefixWaitMs": 0.29999983310699463,
+      "preparationMs": 399.2999999523163,
+      "prefixFetchMs": 0,
+      "prefixHashMs": 0,
+      "prefixCacheBytes": 15418368,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.980604887008667,
+          0.01698530651628971
+        ],
+        "unknown_probability": 0.0024098893627524376,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "baseline",
+      "fixture": "short",
+      "round": 1,
+      "temperature": "cold",
+      "totalMs": 50479.300000071526,
+      "tokenizerReadyMs": 401.60000002384186,
+      "counts": {
+        "total": 67,
+        "prefix": 27,
+        "suffix": 40,
+        "paidPrefix": 27,
+        "paidSuffix": 40
+      },
+      "queries": 34,
+      "assetFetches": 32,
+      "prefixWaitMs": 179.80000019073486,
+      "preparationMs": 795.7999999523163,
+      "prefixFetchMs": 174.09999978542328,
+      "prefixHashMs": 7.500000476837158,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.980604887008667,
+          0.01698530651628971
+        ],
+        "unknown_probability": 0.0024098893627524376,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "baseline",
+      "fixture": "short",
+      "round": 1,
+      "temperature": "warm",
+      "totalMs": 55971.300000071526,
+      "tokenizerReadyMs": 1.1999999284744263,
+      "counts": {
+        "total": 67,
+        "prefix": 27,
+        "suffix": 40,
+        "paidPrefix": 27,
+        "paidSuffix": 40
+      },
+      "queries": 34,
+      "assetFetches": 32,
+      "prefixWaitMs": 103.50000023841858,
+      "preparationMs": 656.7000000476837,
+      "prefixFetchMs": 97.09999990463257,
+      "prefixHashMs": 7.9000004529953,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.980604887008667,
+          0.01698530651628971
+        ],
+        "unknown_probability": 0.0024098893627524376,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "candidate",
+      "fixture": "96-token",
+      "round": 1,
+      "temperature": "cold",
+      "totalMs": 97796.10000002384,
+      "tokenizerReadyMs": 388.89999997615814,
+      "counts": {
+        "total": 96,
+        "prefix": 27,
+        "suffix": 69,
+        "paidPrefix": 27,
+        "paidSuffix": 69
+      },
+      "queries": 65,
+      "assetFetches": 32,
+      "prefixWaitMs": 8.899999976158142,
+      "preparationMs": 463.89999997615814,
+      "prefixFetchMs": 1494.799999833107,
+      "prefixHashMs": 8.800000548362732,
+      "prefixCacheBytes": 15418368,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.18735957145690918,
+          0.6214591860771179
+        ],
+        "unknown_probability": 0.1911812126636505,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "candidate",
+      "fixture": "96-token",
+      "round": 1,
+      "temperature": "warm",
+      "totalMs": 103914.69999992847,
+      "tokenizerReadyMs": 1,
+      "counts": {
+        "total": 96,
+        "prefix": 27,
+        "suffix": 69,
+        "paidPrefix": 27,
+        "paidSuffix": 69
+      },
+      "queries": 65,
+      "assetFetches": 0,
+      "prefixWaitMs": 0.20000004768371582,
+      "preparationMs": 337.2000000476837,
+      "prefixFetchMs": 0,
+      "prefixHashMs": 0,
+      "prefixCacheBytes": 15418368,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.18735957145690918,
+          0.6214591860771179
+        ],
+        "unknown_probability": 0.1911812126636505,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "baseline",
+      "fixture": "96-token",
+      "round": 1,
+      "temperature": "cold",
+      "totalMs": 95059.10000002384,
+      "tokenizerReadyMs": 457.7999999523163,
+      "counts": {
+        "total": 96,
+        "prefix": 27,
+        "suffix": 69,
+        "paidPrefix": 27,
+        "paidSuffix": 69
+      },
+      "queries": 65,
+      "assetFetches": 32,
+      "prefixWaitMs": 1892.4000002145767,
+      "preparationMs": 1026.2999999523163,
+      "prefixFetchMs": 1888.1000000238419,
+      "prefixHashMs": 5.900000333786011,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.18735957145690918,
+          0.6214591860771179
+        ],
+        "unknown_probability": 0.1911812126636505,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "baseline",
+      "fixture": "96-token",
+      "round": 1,
+      "temperature": "warm",
+      "totalMs": 130568.90000009537,
+      "tokenizerReadyMs": 1.399999976158142,
+      "counts": {
+        "total": 96,
+        "prefix": 27,
+        "suffix": 69,
+        "paidPrefix": 27,
+        "paidSuffix": 69
+      },
+      "queries": 65,
+      "assetFetches": 32,
+      "prefixWaitMs": 183.40000021457672,
+      "preparationMs": 592.8999999761581,
+      "prefixFetchMs": 179.30000019073486,
+      "prefixHashMs": 7.799999952316284,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.18735957145690918,
+          0.6214591860771179
+        ],
+        "unknown_probability": 0.1911812126636505,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "baseline",
+      "fixture": "short",
+      "round": 2,
+      "temperature": "cold",
+      "totalMs": 51140.90000009537,
+      "tokenizerReadyMs": 390.5,
+      "counts": {
+        "total": 67,
+        "prefix": 27,
+        "suffix": 40,
+        "paidPrefix": 27,
+        "paidSuffix": 40
+      },
+      "queries": 34,
+      "assetFetches": 32,
+      "prefixWaitMs": 114.799999833107,
+      "preparationMs": 1071,
+      "prefixFetchMs": 108.90000021457672,
+      "prefixHashMs": 7.7999995946884155,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.980604887008667,
+          0.01698530651628971
+        ],
+        "unknown_probability": 0.0024098893627524376,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "baseline",
+      "fixture": "short",
+      "round": 2,
+      "temperature": "warm",
+      "totalMs": 54711,
+      "tokenizerReadyMs": 0.8999999761581421,
+      "counts": {
+        "total": 67,
+        "prefix": 27,
+        "suffix": 40,
+        "paidPrefix": 27,
+        "paidSuffix": 40
+      },
+      "queries": 34,
+      "assetFetches": 32,
+      "prefixWaitMs": 131.79999995231628,
+      "preparationMs": 703.5,
+      "prefixFetchMs": 126.30000007152557,
+      "prefixHashMs": 6.9999998807907104,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.980604887008667,
+          0.01698530651628971
+        ],
+        "unknown_probability": 0.0024098893627524376,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "candidate",
+      "fixture": "short",
+      "round": 2,
+      "temperature": "cold",
+      "totalMs": 50973.39999997616,
+      "tokenizerReadyMs": 576.2000000476837,
+      "counts": {
+        "total": 67,
+        "prefix": 27,
+        "suffix": 40,
+        "paidPrefix": 27,
+        "paidSuffix": 40
+      },
+      "queries": 34,
+      "assetFetches": 32,
+      "prefixWaitMs": 15.999999761581421,
+      "preparationMs": 404.2000000476837,
+      "prefixFetchMs": 1472.799999833107,
+      "prefixHashMs": 8.299999952316284,
+      "prefixCacheBytes": 15418368,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.980604887008667,
+          0.01698530651628971
+        ],
+        "unknown_probability": 0.0024098893627524376,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "candidate",
+      "fixture": "short",
+      "round": 2,
+      "temperature": "warm",
+      "totalMs": 45912.700000047684,
+      "tokenizerReadyMs": 1.2999999523162842,
+      "counts": {
+        "total": 67,
+        "prefix": 27,
+        "suffix": 40,
+        "paidPrefix": 27,
+        "paidSuffix": 40
+      },
+      "queries": 34,
+      "assetFetches": 0,
+      "prefixWaitMs": 0,
+      "preparationMs": 356.60000002384186,
+      "prefixFetchMs": 0,
+      "prefixHashMs": 0,
+      "prefixCacheBytes": 15418368,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.980604887008667,
+          0.01698530651628971
+        ],
+        "unknown_probability": 0.0024098893627524376,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "baseline",
+      "fixture": "96-token",
+      "round": 2,
+      "temperature": "cold",
+      "totalMs": 109935.10000002384,
+      "tokenizerReadyMs": 400.7999999523163,
+      "counts": {
+        "total": 96,
+        "prefix": 27,
+        "suffix": 69,
+        "paidPrefix": 27,
+        "paidSuffix": 69
+      },
+      "queries": 65,
+      "assetFetches": 32,
+      "prefixWaitMs": 174.69999969005585,
+      "preparationMs": 719.1000000238419,
+      "prefixFetchMs": 168.09999990463257,
+      "prefixHashMs": 8.5,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.18735957145690918,
+          0.6214591860771179
+        ],
+        "unknown_probability": 0.1911812126636505,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "baseline",
+      "fixture": "96-token",
+      "round": 2,
+      "temperature": "warm",
+      "totalMs": 105062,
+      "tokenizerReadyMs": 1.8000000715255737,
+      "counts": {
+        "total": 96,
+        "prefix": 27,
+        "suffix": 69,
+        "paidPrefix": 27,
+        "paidSuffix": 69
+      },
+      "queries": 65,
+      "assetFetches": 32,
+      "prefixWaitMs": 131.79999995231628,
+      "preparationMs": 900.7000000476837,
+      "prefixFetchMs": 124.19999945163727,
+      "prefixHashMs": 9.9000004529953,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.18735957145690918,
+          0.6214591860771179
+        ],
+        "unknown_probability": 0.1911812126636505,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "candidate",
+      "fixture": "96-token",
+      "round": 2,
+      "temperature": "cold",
+      "totalMs": 116408.5,
+      "tokenizerReadyMs": 382.5,
+      "counts": {
+        "total": 96,
+        "prefix": 27,
+        "suffix": 69,
+        "paidPrefix": 27,
+        "paidSuffix": 69
+      },
+      "queries": 65,
+      "assetFetches": 32,
+      "prefixWaitMs": 10.800000071525574,
+      "preparationMs": 426,
+      "prefixFetchMs": 1649.9000008106232,
+      "prefixHashMs": 7.299999475479126,
+      "prefixCacheBytes": 15418368,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.18735957145690918,
+          0.6214591860771179
+        ],
+        "unknown_probability": 0.1911812126636505,
+        "abstained": false
+      }
+    },
+    {
+      "variant": "candidate",
+      "fixture": "96-token",
+      "round": 2,
+      "temperature": "warm",
+      "totalMs": 106080.60000002384,
+      "tokenizerReadyMs": 1.600000023841858,
+      "counts": {
+        "total": 96,
+        "prefix": 27,
+        "suffix": 69,
+        "paidPrefix": 27,
+        "paidSuffix": 69
+      },
+      "queries": 65,
+      "assetFetches": 0,
+      "prefixWaitMs": 0.5999999046325684,
+      "preparationMs": 403.39999997615814,
+      "prefixFetchMs": 0,
+      "prefixHashMs": 0,
+      "prefixCacheBytes": 15418368,
+      "result": {
+        "value": "yes",
+        "probabilities": [
+          0.18735957145690918,
+          0.6214591860771179
+        ],
+        "unknown_probability": 0.1911812126636505,
+        "abstained": false
+      }
+    }
+  ],
+  "note": "Local static assets, signed mainnet queries, serial paired trials. Phase durations overlap; three samples per group do not establish a general speedup rate. Full diagnostics remain in artifacts/frontend-prefetch-20261008/report.json."
+}

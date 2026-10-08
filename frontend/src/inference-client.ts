@@ -1,9 +1,10 @@
 import type { DecisionInput, DecisionResult } from "./types.ts";
 import type { TokenCounts } from "./tokenization.ts";
+import type { InferenceDiagnostics } from "./inference-diagnostics.ts";
 
 let worker: Worker | undefined;
 let nextId = 0;
-type Message = { id: number; counts?: TokenCounts; completed?: number; total?: number; result?: DecisionResult; error?: string };
+type Message = { id: number; counts?: TokenCounts; completed?: number; total?: number; result?: DecisionResult; error?: string; diagnostics?: InferenceDiagnostics };
 const pending = new Map<number, { resolve: (m: Message) => void; reject: (e: Error) => void; progress?: (n: number, total: number) => void }>();
 function getWorker() {
   if (!worker) {
@@ -29,11 +30,12 @@ export function countTokens(input: DecisionInput): Promise<TokenCounts> {
     getWorker().postMessage({ id, input, op: "count" });
   });
 }
-export function infer(input: DecisionInput, progress: (n: number, total: number) => void) {
+export function infer(input: DecisionInput, progress: (n: number, total: number) => void,
+  options: { onDiagnostics?: (diagnostics: InferenceDiagnostics) => void } = {}) {
   const id = ++nextId;
   const promise = new Promise<DecisionResult>((resolve, reject) => {
-    pending.set(id, { resolve: m => resolve(m.result!), reject, progress });
-    getWorker().postMessage({ id, input, op: "run" });
+    pending.set(id, { resolve: m => { resolve(m.result!); if (m.diagnostics) options.onDiagnostics?.(m.diagnostics); }, reject, progress });
+    getWorker().postMessage({ id, input, op: "run", diagnostics: Boolean(options.onDiagnostics) });
   });
   return { promise, cancel() {
     worker?.postMessage({ id, op: "cancel" });

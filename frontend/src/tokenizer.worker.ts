@@ -1,10 +1,11 @@
 import { Tokenizer } from "@huggingface/tokenizers";
 import { tokenizeInput } from "./tokenization.ts";
 import type { DecisionInput } from "./types";
-import { createQueryClient, loadPrefix } from "./inference-agent.ts";
-import { runQueryGraph, validateInput } from "./query-runner.ts";
+import { prefixCacheBytes } from "./inference-agent.ts";
+import { prepareQueryRun } from "./prepare-query-run.ts";
+import { runQueryGraph } from "./query-runner.ts";
 import { MAX_TOKENS } from "./query-plan.ts";
-import release from "./inference-release.json" with { type: "json" };
+import { timed, type TimingObserver, type TimingEvent } from "./inference-diagnostics.ts";
 
 async function loadTokenizer() {
   const base = `${import.meta.env.BASE_URL}tokenizer/`;
@@ -42,12 +43,15 @@ async function loadTokenizer() {
 let loaded: ReturnType<typeof loadTokenizer> | undefined;
 const runs = new Map<number, AbortController>();
 self.onmessage = async (
-  event: MessageEvent<{ id: number; input: DecisionInput; op?: "count" | "run" | "cancel" }>,
+  event: MessageEvent<{ id: number; input: DecisionInput; op?: "count" | "run" | "cancel"; diagnostics?: boolean }>,
 ) => {
   const { id, input, op } = event.data;
   if (op === "cancel") { runs.get(id)?.abort(); return; }
   const controller = op === "run" ? new AbortController() : undefined;
   if (controller) runs.set(id, controller);
+  const started = performance.now();
+  const events: TimingEvent[] = [];
+  const observe: TimingObserver | undefined = event.data.diagnostics ? timing => events.push(timing) : undefined;
   try {
     if (!input || typeof input.state !== "string" || typeof input.question !== "string" ||
         input.state.length + input.question.length > 100_000 || !Array.isArray(input.options) ||
@@ -61,22 +65,16 @@ self.onmessage = async (
     signal.throwIfAborted();
     if (!input.question.trim()) throw new Error("Enter a question.");
     if (tokenized.counts.total > MAX_TOKENS) throw new Error(`Input exceeds ${MAX_TOKENS} tokens. Shorten the context, question or options.`);
-    const prefix = await loadPrefix(`${import.meta.env.BASE_URL}inference/prefix27-v1/`, signal);
-    validateInput(tokenized.tokenIds, input.options, prefix.manifest);
-    const client = await createQueryClient(signal);
-    await client.checkModule();
-    const pack = await client.query("pack_status", []) as { model: string; pack_hash: string; ready: boolean; bytes: bigint };
-    const cache = await client.query("weight_cache_status", []) as { names: string[] };
-    if (!pack.ready || pack.model !== release.model || pack.pack_hash !== release.pack_hash ||
-        Number(pack.bytes) !== prefix.manifest.model_bytes || cache.names.length !== 721) {
-      throw new Error("Inference canister is being prepared. Please try later.");
-    }
+    const { prefix, client } = await timed(observe, "preparation", () =>
+      prepareQueryRun(`${import.meta.env.BASE_URL}inference/prefix27-v1/`, tokenized.tokenIds, input.options, signal, observe));
     const result = await runQueryGraph(tokenized.tokenIds, input.options, {
-      ...prefix, client, signal, progress: (completed, total) => self.postMessage({ id, completed, total }),
+      ...prefix, asset: layer => timed(observe, "prefix-wait", () => prefix.asset(layer), { layer }),
+      client, signal, progress: (completed, total) => self.postMessage({ id, completed, total }),
     });
     await client.checkModule();
     signal.throwIfAborted();
-    self.postMessage({ id, result });
+    observe?.({ phase: "total", durationMs: performance.now() - started });
+    self.postMessage({ id, result, ...(observe ? { diagnostics: { events, prefixCacheBytes: prefixCacheBytes() } } : {}) });
   } catch (error) {
     self.postMessage({
       id,
@@ -85,5 +83,5 @@ self.onmessage = async (
           ? error.message
           : "Could not count tokens.",
     });
-  } finally { runs.delete(id); }
+  } finally { controller?.abort(); runs.delete(id); }
 };
