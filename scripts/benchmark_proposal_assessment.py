@@ -83,7 +83,7 @@ def prepare(directory):
              ROOT / 'artifacts/decision-index-v1/dense-prefix/queries/cache.json',
              ROOT / 'artifacts/decision-index-v1/prefix/queries/cache.json', ROOT / 'artifacts/decision-index-v1/packets/cache.json']
     paths += sorted((ROOT / 'client').glob('*.py'))
-    paths += [ROOT / 'tools/proposal_assessment' / n for n in ('core.py','extensions.py','adapters.py','evaluation.py','vote.py')]
+    paths += [ROOT / 'tools/proposal_assessment' / n for n in ('core.py','extensions.py','adapters.py','evaluation.py','vote.py','token_sweep.py','prompt_contract.json','PROVENANCE.json')]
     assert sha(ROOT / 'artifacts/query-packing-v3/build/full.wasm') == MODULE
     fixture = dict(model_lock_sha256=sha(ROOT / 'MODEL_LOCK.json'), records=records)
     for name in ('prefix', 'dense-prefix'):

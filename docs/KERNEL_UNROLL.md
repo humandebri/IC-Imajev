@@ -1,3 +1,5 @@
+2026-10-08更新：この文書は当時の実験・測定記録。旧column16/column32・balanced44・dot-scale・whole-token scaleの実装とfeatureは削除済みで、以下の旧featureを指定するコマンドは現行ソースでは使えない。現行実装と検証は[INDEPENDENT_RUNTIME.md](runtime/INDEPENDENT_RUNTIME.md)を参照。
+
 # 整数dotの結果取り出しとDelta状態の書き込み削減
 
 2026-10-02。入力tokens、W8/A8 block256、F32 LoRA、BF16丸め境界、readout、calibrationを維持する候補。モデルの公表値から改善を推定せず、専用local canisterで比較する。

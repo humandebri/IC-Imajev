@@ -11,11 +11,9 @@ sys.path.insert(0,str(ROOT/'client'))
 from transport import decode
 
 def main():
- ap=argparse.ArgumentParser();ap.add_argument('--canister',required=True);ap.add_argument('--candidate-kind',choices=['pair-factor','column16','column16-explicit','column16-token48','dot-scale','balanced44','column32'],default='pair-factor');ap.add_argument('--helper',default='artifacts/pair-factor/target/release/pair_args');ap.add_argument('--wasm',default='artifacts/pair-factor/target/wasm32-unknown-unknown/release/imajev_pair_bench.wasm');ap.add_argument('--directory',default='artifacts/pair-factor/check');a=ap.parse_args()
+ ap=argparse.ArgumentParser();ap.add_argument('--canister',required=True);ap.add_argument('--helper',default='artifacts/pair-factor/target/release/pair_args');ap.add_argument('--wasm',default='artifacts/pair-factor/target/wasm32-unknown-unknown/release/imajev_pair_bench.wasm');ap.add_argument('--directory',default='artifacts/pair-factor/check');a=ap.parse_args()
  d=ROOT/a.directory;d.mkdir(parents=True,exist_ok=True);helper=ROOT/a.helper;wasm=ROOT/a.wasm;sha=lambda b:hashlib.sha256(b).hexdigest()
  sources=[ROOT/'scripts/pair_bench/Cargo.toml',ROOT/'scripts/pair_bench/Cargo.lock',ROOT/'scripts/pair_bench/src/lib.rs',ROOT/'scripts/pair_bench/src/pair.rs',ROOT/'scripts/pair_bench/src/bin/pair_args.rs',pathlib.Path(__file__),ROOT/'crates/imajev-runtime/src/int8_kernel.rs',ROOT/'crates/imajev-runtime/src/lib.rs',ROOT/'crates/imajev-runtime/Cargo.toml',ROOT/'Cargo.lock']
- if a.candidate_kind in ('dot-scale','balanced44','column32'):sources.append(ROOT/'crates/imajev-runtime/src/int8_dot_scale.rs')
- if a.candidate_kind=='column32':sources.append(ROOT/'crates/imajev-runtime/src/int8_column32.rs')
  hashes={str(p.relative_to(ROOT)):sha(p.read_bytes()) for p in sources}
  def status():return json.loads(subprocess.check_output(['icp','canister','status',a.canister,'--network','local','--identity','imajev-local','--json'],text=True,cwd=ROOT))['module_hash'].removeprefix('0x')
  expected=sha(wasm.read_bytes());assert status()==expected
@@ -37,26 +35,25 @@ def main():
  preparations.append(call('seal'))
  cases=[]
  for label in ['prefix','617','insufficient','maximum','normal']:
-  source=ROOT/f'artifacts/{"byte-buffer-v3" if a.candidate_kind=="column32" else "mlp-full-v2" if a.candidate_kind=="balanced44" else "mlp-pipeline-v1" if a.candidate_kind=="dot-scale" else "delta-projected-v1"}-{label}';report_raw=(source/'report.json').read_bytes();report=json.loads(report_raw);query=next(q for q in report['queries'] if q['op'] in ('attention_q_gqa_integer','attention_full_integer') and q['tensor']==tensor);request=source/'queries'/f'{query["index"]:06d}.request.bin';header,values=decode(request.read_bytes());n=header['dims'][0];assert 1<=n<=132;rows=4096 if n>109 else 8192
+  source=ROOT/f'artifacts/delta-projected-v1-{label}';report_raw=(source/'report.json').read_bytes();report=json.loads(report_raw);query=next(q for q in report['queries'] if q['op'] in ('attention_q_gqa_integer','attention_full_integer') and q['tensor']==tensor);request=source/'queries'/f'{query["index"]:06d}.request.bin';header,values=decode(request.read_bytes());n=header['dims'][0];assert 1<=n<=132;rows=4096 if n>109 else 8192
   input_path=d/f'{label}.input.bin';input_path.write_bytes(values[:n*2560].astype('<f4').tobytes());wpath=d/f'weights-{rows}-native.bin';wpath.write_bytes(weights[:rows*2560]+weights[8192*2560:8192*2560+rows*4]);native=json.loads(subprocess.check_output([str(helper),'native',str(n),str(rows),'2560',str(wpath),str(input_path)],text=True,cwd=ROOT))
   measured={}
   for paired in [False,True]:
    arg=d/f'{label}-{paired}.args.bin';subprocess.run([str(helper),'query',str(paired).lower(),str(input_path),str(arg)],check=True);measured['pair' if paired else 'baseline']=call('project',arg,True,'measurement');assert measured['pair' if paired else 'baseline']['digest']==native['digest']
   row=dict(label=label,tokens=n,rows=rows,cols=2560,source_request=str(request.relative_to(ROOT)),source_request_sha256=sha(request.read_bytes()),source_report_sha256=sha(report_raw),input_sha256=sha(input_path.read_bytes()),native=native,measurements=measured)
   row['total_change_percent']=100*(measured['pair']['total_instructions']/measured['baseline']['total_instructions']-1);cases.append(row);print(json.dumps(row),flush=True)
- if a.candidate_kind in ('dot-scale','balanced44','column32'):
-  import numpy as np
-  for n in [1,7,8,9,17,33,47,48,49,63,64,65,81,82,83,84,85,86,87,88,96,127,128,132]:
-   label=f'boundary-{n}';rows=4096 if n>109 else 8192
-   x=np.resize(np.array([-127.,127.,0.,-0.,-1.,1.,0.5,-0.5,2**-126,-2**-126],dtype='<f4'),n*2560)
-   ip=d/f'{label}.input.bin';ip.write_bytes(x.tobytes());wp=d/f'weights-{rows}-native.bin';wp.write_bytes(weights[:rows*2560]+weights[8192*2560:8192*2560+rows*4])
-   native=json.loads(subprocess.check_output([str(helper),'native',str(n),str(rows),'2560',str(wp),str(ip)],text=True,cwd=ROOT))
-   measured={}
-   for paired in [False,True]:
-    arg=d/f'{label}-{paired}.args.bin';subprocess.run([str(helper),'query',str(paired).lower(),str(ip),str(arg)],check=True);key='pair' if paired else 'baseline';measured[key]=call('project',arg,True,'measurement');assert measured[key]['digest']==native['digest']
-   row=dict(label=label,tokens=n,rows=rows,cols=2560,input_sha256=sha(ip.read_bytes()),scope='Synthetic signed extremes, zero and tiny inputs with the same real fixed weights; kernel boundary evidence only',native=native,measurements=measured,total_change_percent=100*(measured['pair']['total_instructions']/measured['baseline']['total_instructions']-1));cases.append(row);print(json.dumps(row),flush=True)
+ import numpy as np
+ for n in [1,7,8,9,17,33,47,48,49,63,64,65,81,82,83,84,85,86,87,88,96,127,128,132]:
+  label=f'boundary-{n}';rows=4096 if n>109 else 8192
+  x=np.resize(np.array([-127.,127.,0.,-0.,-1.,1.,0.5,-0.5,2**-126,-2**-126],dtype='<f4'),n*2560)
+  ip=d/f'{label}.input.bin';ip.write_bytes(x.tobytes());wp=d/f'weights-{rows}-native.bin';wp.write_bytes(weights[:rows*2560]+weights[8192*2560:8192*2560+rows*4])
+  native=json.loads(subprocess.check_output([str(helper),'native',str(n),str(rows),'2560',str(wp),str(ip)],text=True,cwd=ROOT))
+  measured={}
+  for paired in [False,True]:
+   arg=d/f'{label}-{paired}.args.bin';subprocess.run([str(helper),'query',str(paired).lower(),str(ip),str(arg)],check=True);key='pair' if paired else 'baseline';measured[key]=call('project',arg,True,'measurement');assert measured[key]['digest']==native['digest']
+  row=dict(label=label,tokens=n,rows=rows,cols=2560,input_sha256=sha(ip.read_bytes()),scope='Synthetic signed extremes, zero and tiny inputs with the same real fixed weights; kernel boundary evidence only',native=native,measurements=measured,total_change_percent=100*(measured['pair']['total_instructions']/measured['baseline']['total_instructions']-1));cases.append(row);print(json.dumps(row),flush=True)
  assert status()==expected
  assert hashes=={str(p.relative_to(ROOT)):sha(p.read_bytes()) for p in sources}
- result=dict(candidate_kind=a.candidate_kind,helper_sha256=sha(helper.read_bytes()),baseline_kind=('column16-balanced44-dot-scale' if a.candidate_kind=='column32' else 'column16-token48-dot-scale' if a.candidate_kind=='balanced44' else 'column16-token48' if a.candidate_kind in ('dot-scale','balanced44','column32') else 'column16-explicit-token32' if a.candidate_kind=='column16-token48' else 'column8'),scope='Pure INT8 base Q projection, same original block256 scaling; excludes LoRA, full graph, checksum/encoding and output digest. Not full-model accuracy or query-count measurement.',model=m['model'],pack_hash=m['pack_hash'],tensor=tensor,tensor_bytes_sha256=sha(weights),canister=a.canister,wasm_sha256=expected,source_hashes=hashes,preparation_updates=len(preparations),preparation=preparations,ordinary_queries=2*len(cases),module_status_update_reads=2,cases=cases)
+ result=dict(candidate_kind='pair-factor',helper_sha256=sha(helper.read_bytes()),baseline_kind='block256-reference',scope='Pure INT8 base Q projection, same original block256 scaling; excludes LoRA, full graph, checksum/encoding and output digest. Not full-model accuracy or query-count measurement.',model=m['model'],pack_hash=m['pack_hash'],tensor=tensor,tensor_bytes_sha256=sha(weights),canister=a.canister,wasm_sha256=expected,source_hashes=hashes,preparation_updates=len(preparations),preparation=preparations,ordinary_queries=2*len(cases),module_status_update_reads=2,cases=cases)
  (d/'report.json').write_text(json.dumps(result,indent=2)+'\n')
 if __name__=='__main__':main()

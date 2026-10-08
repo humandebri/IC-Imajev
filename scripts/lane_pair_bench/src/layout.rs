@@ -64,6 +64,6 @@ pub fn project(q:&QuantizedRows,p:&PairInput,w:&PairWeights,scales:&[f32])->Resu
         let x:Vec<f32>=(0..n*cols).map(|i|[-127.,127.,-0.,0.,1.,-1.,0.5,-0.5][i%8]*(1+i/256%3)as f32).collect();
         let w:Vec<i8>=(0..rows*cols).map(|i|[-128,127,-127,0,1,-1][i%6]).collect();let scales:Vec<f32>=(0..rows).map(|i|0.00123*(i+1)as f32).collect();
         let q=imajev_runtime::int8_kernel::quantize_rows(&x,n,cols).unwrap();let pw=prepare_weights(&w,rows,cols).unwrap();let pq=prepare_input(&q);assert_eq!(pw.data.len(),w.len());
-        let old=imajev_runtime::int8_kernel::project_column32_balanced(&q,&w,&scales,rows).unwrap();let new=project(&q,&pq,&pw,&scales).unwrap();assert!(old.iter().zip(new).all(|(a,b)|a.to_bits()==b.to_bits()));
+        let old=imajev_runtime::int8_kernel::project(&q,&w,&scales,rows).unwrap();let new=project(&q,&pq,&pw,&scales).unwrap();assert!(old.iter().zip(new).all(|(a,b)|a.to_bits()==b.to_bits()));
     }}}
 }

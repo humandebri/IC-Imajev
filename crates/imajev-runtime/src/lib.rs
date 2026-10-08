@@ -65,8 +65,9 @@ mod delta_stage;
 #[cfg(feature="experimental-delta-projected")]
 mod delta_projected;
 mod mlp_norm;
+#[cfg(target_arch = "wasm32")]
+mod int8_tile;
 pub mod int8_kernel;
-pub mod int8_token_kernel;
 pub mod profile;
 mod quantize_simd;
 mod rope;
@@ -1813,12 +1814,7 @@ where
     {
         return Err("integer tensor shape".into());
     }
-    let token_mode = cfg!(feature = "experimental-token-scale")
-        && matches!(
-            r.op.as_str(),
-            "int8_matmul_token" | "linear_integer_token_bf16" | "lora_integer_token"
-        );
-    let with_lora = r.op == "lora_integer" || (token_mode && r.op == "lora_integer_token");
+    let with_lora = r.op == "lora_integer";
     let lora = if with_lora {
         if r.aux.len() != 2 || r.scalars.len() != 1 || !r.scalars[0].is_finite() {
             return Err("integer LoRA metadata".into());
@@ -1856,7 +1852,7 @@ where
         read(tensor.offset + (start * cols) as u64, rows * cols)
     })?;
     #[cfg(feature="experimental-prepared-output-pairs")]
-    let packed_weights = if !token_mode && n<=132 { values.prepared_output_pairs() } else { None };
+    let packed_weights = if n<=132 { values.prepared_output_pairs() } else { None };
     #[cfg(feature="experimental-prepared-output-pairs")]
     let cached_scales = packed_weights.as_ref().map(|w|w.scales());
     #[cfg(not(feature="experimental-prepared-output-pairs"))]
@@ -1884,17 +1880,7 @@ where
         let weight_bytes=values.as_ref();
         unsafe {std::slice::from_raw_parts(weight_bytes.as_ptr().cast::<i8>(),weight_bytes.len())}
     };
-    let base = if token_mode {
-        if prepared.is_some() {
-            return Err("block quantization supplied to token projection".into());
-        }
-        let q = profile::measure("activation_quantize_token", || {
-            int8_token_kernel::quantize(x, n, cols)
-        })?;
-        profile::measure("base_project_inclusive", || {
-            int8_token_kernel::project(&q, original_weights(), &scales, rows)
-        })?
-    } else {
+    let base = {
         let owned;
         let q = if let Some(q) = prepared {
             q
@@ -1943,7 +1929,7 @@ where
             .zip(z)
             .map(|(v, z)| bf(bf(v) + bf(r.scalars[0] * z)))
             .collect::<Vec<_>>()
-    } else if r.op == "linear_integer_bf16" || (token_mode && r.op == "linear_integer_token_bf16") {
+    } else if r.op == "linear_integer_bf16" {
         base.into_iter().map(bf).collect()
     } else {
         base
@@ -1987,13 +1973,7 @@ where
             .strip_suffix(".weight")
             .ok_or("fused MLP weight name")?;
         let mut request = r.clone();
-        request.op =
-            if cfg!(feature = "experimental-token-scale") && r.op == "mlp_gate_up_integer_token" {
-                "lora_integer_token"
-            } else {
-                "lora_integer"
-            }
-            .into();
+        request.op = "lora_integer".into();
         request.tensor = name.clone();
         request.aux = vec![
             format!("{prefix}.lora_A.weight"),
@@ -2032,13 +2012,9 @@ where
     if work > 4_500_000_000 {
         return Err("fused MLP work limit".into());
     }
-    let q = if cfg!(feature = "experimental-token-scale") && r.op == "mlp_gate_up_integer_token" {
-        None
-    } else {
-        Some(profile::measure("activation_quantize", || {
-            int8_kernel::quantize_rows(x, n, cols)
-        })?)
-    };
+    let q = Some(profile::measure("activation_quantize", || {
+        int8_kernel::quantize_rows(x, n, cols)
+    })?);
     #[cfg(feature="experimental-lora-input-sharing")]
     let shared = (4..=89).contains(&n) && q.is_some() && requests.iter().all(|r|
         m.tensors.iter().any(|t| t.name==r.aux[0] && t.rows==64));
@@ -2150,18 +2126,13 @@ where F: FnMut(u64, usize) -> Result<B>, B: WeightBuffer,
         return mlp_norm::evaluate(r, x, m, &mut read);
     }
     if r.op == "mlp_gate_up_integer"
-        || (cfg!(feature = "experimental-token-scale") && r.op == "mlp_gate_up_integer_token")
     {
         return evaluate_mlp(r, x, m, &mut read);
     }
     if matches!(
         r.op.as_str(),
         "int8_matmul" | "linear_integer_bf16" | "lora_integer"
-    ) || (cfg!(feature = "experimental-token-scale")
-        && matches!(
-            r.op.as_str(),
-            "int8_matmul_token" | "linear_integer_token_bf16" | "lora_integer_token"
-        ))
+    )
     {
         return evaluate_integer(r, x, m, &mut read, None);
     }

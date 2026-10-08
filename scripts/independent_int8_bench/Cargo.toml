@@ -1,17 +1,13 @@
 [package]
-name = "laya-kernel-bench"
+name = "independent-int8-bench"
 version = "0.1.0"
 edition = "2021"
 publish = false
-
 [workspace]
-
 [lib]
-crate-type = ["cdylib"]
-
+crate-type = ["cdylib", "rlib"]
 [dependencies]
-imajev-runtime = { path = "../../crates/imajev-runtime" }
-
+imajev-runtime = { path = "../../crates/imajev-runtime", features = ["experimental-projection-reuse"] }
 [profile.release]
 opt-level = 3
 lto = "thin"

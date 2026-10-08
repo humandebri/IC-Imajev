@@ -28,14 +28,9 @@ fn seal()->Preparation {FIXED.with(|s|{let mut s=s.borrow_mut();let f=s.as_mut()
 pub struct Measurement {pub digest:Vec<u8>,pub quantize_instructions:u64,pub input_prepare_instructions:u64,pub project_instructions:u64,pub total_instructions:u64,pub output_values:u64,pub heap_pages:u64}
 #[ic_cdk::query]
 fn project(input:Vec<u8>,paired:bool)->Measurement {FIXED.with(|s| {let s=s.borrow();let f=s.as_ref().unwrap();assert_eq!(f.owner,ic_cdk::api::msg_caller());assert!(f.sealed && !input.is_empty() && input.len()<=1_500_000 && input.len()%(f.cols*4)==0);let n=input.len()/(f.cols*4);let rows=if n>109 {f.rows.min(4096)} else {f.rows};assert!(n<=132 && n*rows<=900_000);let begin=ic_cdk::api::performance_counter(0);
- let x:Vec<f32>=input.chunks_exact(4).map(|b|f32::from_le_bytes(b.try_into().unwrap())).collect();let q=int8_kernel::quantize_rows(&x,n,f.cols).unwrap();let quant=ic_cdk::api::performance_counter(0);#[cfg(not(feature="column16"))] let prepared=paired.then(||pair::activation(&q));
- #[cfg(feature="column16")] let prepared:Option<(Vec<i16>,Vec<i32>)>=None;#[cfg(feature="column16")] let _=&prepared;let prep=ic_cdk::api::performance_counter(0);
- #[cfg(all(feature="column16",not(feature="column16-token48")))] let out=if paired {int8_kernel::project_column16(&q,&f.w[..rows*f.cols],&f.scales[..rows],rows).unwrap()}else{int8_kernel::project(&q,&f.w[..rows*f.cols],&f.scales[..rows],rows).unwrap()};
- #[cfg(all(feature="column16-token48",not(feature="dot-scale")))] let out=if paired {int8_kernel::project_column16_token48(&q,&f.w[..rows*f.cols],&f.scales[..rows],rows).unwrap()}else{int8_kernel::project_column16(&q,&f.w[..rows*f.cols],&f.scales[..rows],rows).unwrap()};
- #[cfg(all(feature="dot-scale",not(feature="balanced44")))] let out=if paired {int8_kernel::project_dot_scale(&q,&f.w[..rows*f.cols],&f.scales[..rows],rows).unwrap()}else{int8_kernel::project_column16_token48(&q,&f.w[..rows*f.cols],&f.scales[..rows],rows).unwrap()};
- #[cfg(all(feature="balanced44",not(feature="column32")))] let out=if paired {int8_kernel::project_balanced44(&q,&f.w[..rows*f.cols],&f.scales[..rows],rows).unwrap()}else{int8_kernel::project_dot_scale(&q,&f.w[..rows*f.cols],&f.scales[..rows],rows).unwrap()};
- #[cfg(feature="column32")] let out=if paired {int8_kernel::project_column32_balanced(&q,&f.w[..rows*f.cols],&f.scales[..rows],rows).unwrap()}else{int8_kernel::project_balanced44(&q,&f.w[..rows*f.cols],&f.scales[..rows],rows).unwrap()};
- #[cfg(not(feature="column16"))] let out=if let Some((qp,qf))=prepared {pair::project(&q,&qp,&qf,&f.paired[..rows*f.cols],&f.factors[..rows*f.cols/256],&f.scales[..rows],rows)}else{int8_kernel::project(&q,&f.w[..rows*f.cols],&f.scales[..rows],rows).unwrap()};let end=ic_cdk::api::performance_counter(0);
+ let x:Vec<f32>=input.chunks_exact(4).map(|b|f32::from_le_bytes(b.try_into().unwrap())).collect();let q=int8_kernel::quantize_rows(&x,n,f.cols).unwrap();let quant=ic_cdk::api::performance_counter(0);let prepared=paired.then(||pair::activation(&q));
+ let prep=ic_cdk::api::performance_counter(0);
+ let out=if let Some((qp,qf))=prepared {pair::project(&q,&qp,&qf,&f.paired[..rows*f.cols],&f.factors[..rows*f.cols/256],&f.scales[..rows],rows)}else{int8_kernel::project(&q,&f.w[..rows*f.cols],&f.scales[..rows],rows).unwrap()};let end=ic_cdk::api::performance_counter(0);
  let mut digest=Sha256::new();for v in &out {digest.update(v.to_le_bytes());}
  #[cfg(target_arch="wasm32")] let heap_pages=core::arch::wasm32::memory_size(0) as u64;
  #[cfg(not(target_arch="wasm32"))] let heap_pages=0;

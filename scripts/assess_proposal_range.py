@@ -101,7 +101,7 @@ def prepare(directory, reuse=True, snapshot_archive=None):
                                   accuracy_measured=False, reference_is_gold=False, source_manifest_sha256=sha(manifest_path)))
     save(out/'facts.json', facts_rows)
     shutil.copyfile(ORIGIN/'binary-improved-final-20261006/runner.py', out/'runner.py')
-    source_paths = [Path(__file__), ROOT/'scripts/proposal_snapshots.py', ROOT/'MODEL_LOCK.json'] + list((TOOLS/'proposal_assessment').glob('*.py'))
+    source_paths = [Path(__file__), ROOT/'scripts/proposal_snapshots.py', ROOT/'MODEL_LOCK.json'] + list((TOOLS/'proposal_assessment').glob('*.py')) + [TOOLS/'proposal_assessment/prompt_contract.json', TOOLS/'proposal_assessment/PROVENANCE.json']
     save(out/'source-hashes.json', {str(p):sha(p) for p in source_paths})
     save(out/'identity.json',dict(inputs_sha256=sha(out/'inputs.json'), prepared_sha256=sha(out/'prepared.json'), runner_sha256=sha(out/'runner.py'), bridge_sha256=sha(ROOT/'target/release/imajev-client')))
     # Exact token/model identity permits reuse, separately counted from new execution.

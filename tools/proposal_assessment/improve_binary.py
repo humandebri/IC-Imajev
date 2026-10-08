@@ -1,181 +1,125 @@
-"""Prompt/feature experiments with exact arithmetic and explicit order checks.
-
-Expectations never enter prompts; all outputs remain advisory. This is tuning,
-not independently established accuracy. No external LLM preprocessing.
-"""
-import argparse
+"""Exact input encoding and approval evidence checks for Imajev assessments."""
 from fractions import Fraction
-import hashlib
 import json
-from pathlib import Path
-import shutil
-import sys
-from .binary_benchmark import IMAJEV, binary_decision, run
 from .million_notation import format_million
-from .token_sweep import ROOT, numeric_change, save, sha
+from .token_sweep import numeric_change, save, sha
+from .binary_benchmark import binary_decision
 
 VARIANTS = {
-    'format': 'Should this proposal be approved? Reject changes that make voting inaccessible, even if another barrier is lowered.',
     'ratio': 'Which vote protects participation? Approve lower barriers; reject prohibitive stake or lock requirements. Consider all changes together.',
-    'ratio_swapped': 'Which vote protects participation? Approve lower barriers; reject prohibitive stake or lock requirements. Consider all changes together.',
 }
-THRESHOLDS = [.5, .6, .7, .8, .9, .95]
-
-
-def quantity(value):
-    return format_million(value).replace('M', ' million')
-
+ELIGIBILITY = ('neuron_minimum_stake_e8s','neuron_minimum_dissolve_delay_to_vote_seconds')
+LABELS = {'min stake':'Minimum stake', 'min voting lock':'Minimum voting lock',
+          'max lock':'Maximum lock', 'max lock bonus':'Maximum lock bonus'}
 
 def terminating_decimal(value):
-    """Exact rational rendering; return None for nonterminating decimals."""
-    denominator=value.denominator;twos=fives=0
-    while denominator%2==0:denominator//=2;twos+=1
-    while denominator%5==0:denominator//=5;fives+=1
-    if denominator!=1:return None
-    places=max(twos,fives)
-    scaled=value.numerator*(10**places//value.denominator)
-    digits=str(scaled).zfill(places+1)
-    return (digits[:-places]+'.'+digits[-places:]).rstrip('0').rstrip('.') if places else digits
+    remainder = value.denominator
+    for prime in (2,5):
+        while remainder % prime == 0:
+            remainder //= prime
+    if remainder != 1:
+        return None
+    sign = '-' if value < 0 else ''
+    integer, remainder = divmod(abs(value.numerator),value.denominator)
+    digits = []
+    while remainder:
+        digit,remainder = divmod(remainder*10,value.denominator)
+        digits.append(str(digit))
+    return sign + str(integer) + ('.'+''.join(digits) if digits else '')
 
+def quantity(value):
+    return format_million(value).replace('M',' million')
 
-def encode_state(task, ratios=True):
+def _lines(task, ratios):
     state = json.loads(task['state'])
     if state['action'] != 'ManageNervousSystemParameters':
-        raise ValueError('participation policy only supports parameter changes')
-    lines = []
-    labels = {'min stake': 'Minimum stake', 'min voting lock': 'Minimum voting lock',
-              'max lock': 'Maximum lock', 'max lock bonus': 'Maximum lock bonus'}
-    for row in sorted(state['changes_or_requests'],key=lambda row:row['field']):
-        field = row['field'];old,new=row.get('previous'),row.get('proposed')
-        if type(old) is not int or type(new) is not int or old<0 or new<0:
+        raise ValueError('parameter changes only')
+    result = []
+    for row in sorted(state['changes_or_requests'],key=lambda r:r['field']):
+        pair = row.get('previous'),row.get('proposed')
+        if any(type(v) is not int or v < 0 for v in pair):
             raise ValueError('known nonnegative integer old/new required')
-        text = numeric_change(row)
-        name,values = text.split(': ',1);before,after=values.split(' -> ',1)
-        units = name.split()[-1];name=name.rsplit(' ',1)[0]
-        if units=='seconds':
-            days=[terminating_decimal(Fraction(x,86400)) for x in (old,new)]
-            if all(x is not None for x in days):before,after=days;units='days'
-        name=labels.get(name,name)
-        lines.append(f'{name}: {quantity(before)} -> {quantity(after)} {units}')
-        if ratios and field in ('neuron_minimum_stake_e8s','neuron_minimum_dissolve_delay_to_vote_seconds') and old!=new:
-            if min(old,new)>0:
-                ratio=Fraction(max(old,new),min(old,new))
-                decimal=terminating_decimal(ratio)
-                factor=quantity(decimal) if decimal is not None else f'{ratio.numerator}/{ratio.denominator}'
-                lines.append(f'{name} requirement {"increases" if new>old else "decreases"} {factor}-fold')
-            else:
-                lines.append(f'{name} requirement {"increases from zero" if old==0 else "decreases to zero"}')
-    return '; '.join(lines)
+        title,values = numeric_change(row).split(': ',1)
+        title,unit = title.rsplit(' ',1)
+        title = LABELS.get(title,title)
+        displayed = values.split(' -> ')
+        if unit == 'seconds':
+            days = [terminating_decimal(Fraction(v,86400)) for v in pair]
+            if None not in days:
+                displayed,unit = days,'days'
+        result.append((row['field'],False,f'{title}: {quantity(displayed[0])} -> {quantity(displayed[1])} {unit}'))
+        if not ratios or row['field'] not in ELIGIBILITY or pair[0] == pair[1]:
+            continue
+        if min(pair) == 0:
+            detail = 'increases from zero' if pair[0] == 0 else 'decreases to zero'
+        else:
+            factor = Fraction(max(pair),min(pair))
+            decimal = terminating_decimal(factor)
+            multiplier = quantity(decimal) if decimal is not None else f'{factor.numerator}/{factor.denominator}'
+            detail = ('increases' if pair[1]>pair[0] else 'decreases') + ' ' + multiplier + '-fold'
+        result.append((row['field'],True,title + ' requirement ' + detail))
+    return result
 
+def encode_state(task, ratios=True):
+    return '; '.join(text for _,_,text in _lines(task,ratios))
 
 def compact_exact_state(task):
-    """Keep every old/new number; compact labels and one redundant ratio fact."""
-    rows=json.loads(task['state'])['changes_or_requests']
-    lines=encode_state(task).split('; ')
-    # Retain the strongest calculated increase (otherwise strongest decrease).
-    # Other ratios can always be reconstructed from the retained raw values.
-    eligible=[r for r in rows if r['field'] in ('neuron_minimum_stake_e8s',
-              'neuron_minimum_dissolve_delay_to_vote_seconds') and r['previous']!=r['proposed']
-              and min(r['previous'],r['proposed'])>0]
-    if eligible:
-        increases=[r for r in eligible if r['proposed']>r['previous']]
-        best=max(increases or eligible,key=lambda r:Fraction(max(r['previous'],r['proposed']),min(r['previous'],r['proposed'])))
-        prefix='Minimum stake' if best['field']=='neuron_minimum_stake_e8s' else 'Minimum voting lock'
-        lines=[line for line in lines if ' requirement ' not in line or line.startswith(prefix+' requirement ')]
-    text='; '.join(lines)
-    for old,new in [('Minimum stake','stake'),('Minimum voting lock','min voting lock'),
-                    ('Maximum lock bonus','lock bonus'),('Maximum lock','max lock'),
-                    ('max age bonus','age bonus'),('max bonus age','bonus age'),
-                    (': ',' '),(' -> ','→'),(' percent','%')]:text=text.replace(old,new)
+    rows = json.loads(task['state'])['changes_or_requests']
+    eligible = [r for r in rows if r['field'] in ELIGIBILITY and r['previous']!=r['proposed'] and min(r['previous'],r['proposed'])>0]
+    preferred = [r for r in eligible if r['proposed'] > r['previous']] or eligible
+    selected = max(preferred,key=lambda r:Fraction(max(r['previous'],r['proposed']),min(r['previous'],r['proposed'])))['field'] if preferred else None
+    lines = [text for field,ratio,text in _lines(task,True) if not ratio or selected is None or field==selected]
+    substitutions = {'Minimum stake':'stake','Minimum voting lock':'min voting lock','Maximum lock bonus':'lock bonus',
+                     'Maximum lock':'max lock','max age bonus':'age bonus','max bonus age':'bonus age',
+                     ': ':' ',' -> ':'→',' percent':'%'}
+    text = '; '.join(lines)
+    for original,replacement in substitutions.items():
+        text = text.replace(original,replacement)
     return text
 
-
 def approval_evidence_gate(task, recommendation):
-    """An approval requires directly demonstrated eligibility improvement.
-
-    No hard rejection thresholds. Conflicting/unknown directions are reviewed;
-    this gate never converts hold/approve into reject and reads no labels/IDs.
-    """
-    if recommendation!='approve':return recommendation,None
-    rows=json.loads(task['state'])['changes_or_requests']
-    eligibility=[r for r in rows if r['field'] in ('neuron_minimum_stake_e8s',
-                  'neuron_minimum_dissolve_delay_to_vote_seconds')]
-    if not eligibility or any(type(r.get('previous')) is not int or type(r.get('proposed')) is not int for r in eligibility):
+    if recommendation != 'approve':
+        return recommendation,None
+    rows = [r for r in json.loads(task['state'])['changes_or_requests'] if r['field'] in ELIGIBILITY]
+    if not rows or any(type(r.get(k)) is not int for r in rows for k in ('previous','proposed')):
         return 'hold','Direct eligibility improvement is not established.'
-    if any(r['proposed']>r['previous'] for r in eligibility):
+    if any(r['proposed']>r['previous'] for r in rows):
         return 'hold','An eligibility requirement becomes stricter; net benefit needs further evidence.'
-    if not any(r['proposed']<r['previous'] for r in eligibility):
-        return 'hold','No directly demonstrated eligibility improvement.'
-    return recommendation,None
-
-
-def prepare(out):
-    if out.exists():raise ValueError('fresh directory required')
-    oldroot=ROOT/'artifacts/proposal-assessment/heldout-128-20261006'
-    source=json.loads((oldroot/'prepared.json').read_text())['entries']
-    # All three were previously evaluated: explicitly a tuning screen.
-    selected=[source[i] for i in (0,3,4)]
-    sys.path.insert(0,str(IMAJEV/'scripts'));from prepare_text import TextPreparer
-    p=TextPreparer();records=[];entries=[]
-    for variant,question in VARIANTS.items():
-        for e in selected:
-            state=encode_state(e['task'],ratios=variant!='format')
-            options=['reject','approve'] if variant.endswith('swapped') else ['approve','reject']
-            prompt=f'State: {state}\nQuestion: {question}\n'+'\n'.join(f'{code}: {label}' for code,label in zip('AB',options))
-            ids=p.tokenizer.encode(p.render(prompt),add_special_tokens=False)
-            assert len(ids)<=128
-            records.append(dict(id=f'improve_{len(records)}',options=options,gold=None,token_ids=ids,
-                                input_sha256=hashlib.sha256(json.dumps(ids).encode()).hexdigest(),prompt=prompt))
-            entries.append(dict(record_index=len(records)-1,proposal_ids=e['proposal_ids'],variant=variant,
-                                tokens=len(ids),expected=e['reference_prediction'],synthetic=e.get('synthetic',False),
-                                task=e['task'],state=state))
-    out.mkdir(parents=True)
-    save(out/'inputs.json',dict(model_lock_sha256=sha(IMAJEV/'MODEL_LOCK.json'),records=records))
-    save(out/'prepared.json',dict(entries=entries,thresholds=THRESHOLDS,scope='tuning screen; not heldout accuracy',
-                                 variants=VARIANTS,expectations_in_model_input=False))
-    origin=ROOT/'artifacts/proposal-assessment/binary-44-20261006'
-    shutil.copyfile(origin/'runner.py',out/'runner.py')
-    shutil.copyfile(__file__,out/'prepare_source.py')
-    shutil.copyfile(Path(__file__).parent/'million_notation.py',out/'numeric_source.py')
-    save(out/'identity.json',dict(inputs_sha256=sha(out/'inputs.json'),prepared_sha256=sha(out/'prepared.json'),
-         runner_sha256=sha(out/'runner.py'),bridge_sha256=sha(IMAJEV/'target/release/imajev-client')))
-    print(json.dumps([(e['variant'],e['proposal_ids'],e['tokens']) for e in entries]))
-
+    if any(r['proposed']<r['previous'] for r in rows):
+        return recommendation,None
+    return 'hold','No directly demonstrated eligibility improvement.'
 
 def results(out):
-    prepared=json.loads((out/'prepared.json').read_text());inputs=json.loads((out/'inputs.json').read_text())
-    identity=json.loads((out/'identity.json').read_text())
-    assert sha(out/'prepared.json')==identity['prepared_sha256'] and sha(out/'inputs.json')==identity['inputs_sha256']
-    rows=[]
-    for e in prepared['entries']:
-        row=dict(e,status='pending');i=e['record_index'];path=out/'runs'/f'{i:03d}'/'report.json'
+    prepared,inputs,identity = [json.loads((out/name).read_text()) for name in ('prepared.json','inputs.json','identity.json')]
+    for name in ('prepared','inputs'):
+        if sha(out/f'{name}.json') != identity[f'{name}_sha256']:
+            raise ValueError('frozen input hash mismatch')
+    rows = []
+    for entry in prepared['entries']:
+        row = dict(entry,status='pending')
+        path = out/'runs'/f"{entry['record_index']:03d}"/'report.json'
         if path.exists():
-            report=json.loads(path.read_text());record=inputs['records'][i]
-            assert report['wasm_sha256']==report['deployed_wasm_sha256']=='6052cc94ffb6285edfc3343c3edf5ae8de24d048188b282a7f88451beba0e931'
-            assert report['input_hash']==record['input_sha256'] and report['model']==inputs['model_lock_sha256']
-            assert [x['layer'] for x in report['layers']]==list(range(32)) and report['tokens']==e['tokens']
-            assert not report['replayed_queries'] and not report.get('fallback') and report['executed_query_count']==report['query_count']
-            assert not (path.parent/'active-staging.json').exists()
-            logits=report['decision_query']['ok']['decision']['raw_logits'];assert len(logits)==3
-            # Convert presentation order to canonical approve/reject scores.
-            scores=dict(zip(record['options'],logits[:2]));canonical=[scores['approve'],scores['reject']]
-            label,score=binary_decision(canonical,.5)
-            row.update(status='evaluated',prediction=label,score=score,canonical_logits=canonical,
-                       expectation_match=label==e['expected'],report_sha256=sha(path),
+            report = json.loads(path.read_text())
+            record = inputs['records'][entry['record_index']]
+            expected_module = '6052cc94ffb6285edfc3343c3edf5ae8de24d048188b282a7f88451beba0e931'
+            if not (report['wasm_sha256']==report['deployed_wasm_sha256']==expected_module and
+                    report['input_hash']==record['input_sha256'] and report['model']==inputs['model_lock_sha256'] and
+                    [layer['layer'] for layer in report['layers']]==list(range(32)) and report['tokens']==entry['tokens'] and
+                    not report['replayed_queries'] and not report.get('fallback') and
+                    report['executed_query_count']==report['query_count'] and not (path.parent/'active-staging.json').exists()):
+                raise ValueError('historical inference identity or execution mismatch')
+            logits = report['decision_query']['ok']['decision']['raw_logits']
+            if len(logits)!=3 or set(record['options'])!={'approve','reject'}:
+                raise ValueError('binary readout contract mismatch')
+            scores = dict(zip(record['options'],logits[:2]))
+            canonical = [scores['approve'],scores['reject']]
+            prediction,score = binary_decision(canonical,.5)
+            row.update(status='evaluated',prediction=prediction,score=score,canonical_logits=canonical,
+                       expectation_match=prediction==entry['expected'],report_sha256=sha(path),
                        decisions={str(t):binary_decision(canonical,t)[0] for t in prepared['thresholds']})
-        elif (path.parent/'error.json').exists():row['status']='execution_error'
+        elif (path.parent/'error.json').exists():
+            row['status'] = 'execution_error'
         rows.append(row)
     save(out/'results.json',dict(complete=all(r['status']=='evaluated' for r in rows),rows=rows,
                                accuracy_measured=False,scope=prepared['scope']))
-    print(json.dumps([(r['variant'],r['proposal_ids'],r.get('prediction',r['status']),r.get('score')) for r in rows]))
     return rows
-
-
-def main():
-    p=argparse.ArgumentParser();p.add_argument('mode',choices=['prepare','run','report']);p.add_argument('--output',type=Path,required=True);p.add_argument('--shards',type=int,default=1);p.add_argument('--shard',type=int,default=0);a=p.parse_args();out=a.output.resolve()
-    if a.mode=='prepare':prepare(out)
-    elif a.mode=='run':run(out,a.shard,a.shards)
-    else:results(out)
-
-
-if __name__=='__main__':main()
