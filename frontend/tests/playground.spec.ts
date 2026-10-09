@@ -116,7 +116,7 @@ test("choice limits, empty question and whitespace duplicate validation", async 
 test("BOOM DAO examples fit the query budget and preserve original evidence", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/");
-  await expect(page.getByRole("button", { name: "BOOM #620" })).not.toBeVisible();
+  await expect(page.getByRole("button", { name: "BOOM #584" })).not.toBeVisible();
   await page.getByText("Real-world examples", { exact: true }).click();
   for (const sample of realWorldSamples) {
     await page.getByRole("button", { name: sample.label }).click();
@@ -127,6 +127,23 @@ test("BOOM DAO examples fit the query budget and preserve original evidence", as
     await expect(page.locator(".sample-source")).toContainText("Question added for this demo");
     await expect(page.locator(".token-counts dd")).toHaveText(String(sample.tokens));
     await expect(page.getByRole("button", { name: "Run inference" })).toBeEnabled();
+    if (sample.id === "boom-653") {
+      await expect(page.locator(".sample-ledger")).toContainText("Proposal #653 already executed");
+      await page.getByText("Ledger supply and recipient balance", { exact: true }).click();
+      const snapshot = sample.audit.ledger_snapshot!;
+      for (const amount of [snapshot.totalSupplyE8s, snapshot.recipientBalanceE8s]) {
+        const value = BigInt(amount);
+        await expect(page.locator(".sample-ledger")).toContainText(`${value / 100000000n}.${(value % 100000000n).toString().padStart(8, "0")}`);
+      }
+    }
+    if (sample.id === "boom-617") {
+      const snapshot = sample.audit.participation_snapshot!;
+      await expect(page.locator(".sample-ledger")).toContainText("not a count of people");
+      await page.getByText("Voting participation snapshot and assumptions", { exact: true }).click();
+      await expect(page.locator(".sample-ledger")).toContainText(String(snapshot.totalNeurons));
+      await expect(page.locator(".sample-ledger")).toContainText(snapshot.sha256);
+      await expect(page.locator(".sample-ledger")).toContainText("changed voting bonuses are not recalculated");
+    }
     await page.getByText("Original payload and identifier mapping", { exact: true }).click();
     await expect(page.locator(".sample-original pre")).toHaveText(sample.originalState);
     for (const identifier of sample.audit.identifiers) {
@@ -258,7 +275,31 @@ test("token details are available without cluttering the initial view", async ({
   await page.getByText("Count details", { exact: true }).click();
   await expect(page.locator(".token-breakdown")).toBeVisible();
   await expect(page.locator(".token-counter dd")).toHaveCount(3);
+  await expect(page.locator(".token-details")).toContainText("Fixed prefix: 5 tokens");
+  await expect(page.locator(".token-details")).not.toContainText("Fixed prefix: 27 tokens");
 });
+
+for (const width of [320, 375, 480]) {
+  test(`BOOM #617 option labels fit ${width}px without horizontal scrolling`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 812 });
+    await page.goto("/");
+    await page.getByText("Real-world examples", { exact: true }).click();
+    await page.getByRole("button", { name: "BOOM #617" }).click();
+    const labels = await page.locator(".option-control input").evaluateAll(inputs => inputs.map(node => {
+      const input = node as HTMLInputElement;
+      const style = getComputedStyle(input);
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d")!;
+      context.font = style.font;
+      return { available: input.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
+        required: context.measureText(input.value).width };
+    }));
+    for (const label of labels) expect(label.available).toBeGreaterThanOrEqual(label.required);
+    const rows = await page.locator(".option-control").evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().top));
+    expect(rows[1]).toBeGreaterThan(rows[0]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  });
+}
 
 test("former voting prefix uses the verified common-prefix token limit", async ({ page }) => {
   await page.goto("/");
@@ -268,11 +309,11 @@ test("former voting prefix uses the verified common-prefix token limit", async (
   await page.getByText("Count details", { exact: true }).click();
   const counter = page.getByRole("region", { name: "Tokens", exact: true });
   const state = "Minimum voting dissolve delay changes from 1 day to 2 days.";
-  await page.getByLabel("Context").fill(state + " more".repeat(MAX_TOKENS - 69));
+  await page.getByLabel("Context").fill(state + " more".repeat(MAX_TOKENS - 48));
   await expect(counter.locator(".token-counts dd")).toHaveText(String(MAX_TOKENS), { timeout: 15000 });
   await expect(counter).toContainText(`Query limit: ${MAX_SUFFIX} / ${MAX_SUFFIX}`);
   await expect(counter).not.toContainText("limit exceeded");
-  await page.getByLabel("Context").fill(state + " more".repeat(MAX_TOKENS - 68));
+  await page.getByLabel("Context").fill(state + " more".repeat(MAX_TOKENS - 47));
   await expect(counter.locator(".token-counts dd")).toHaveText(String(MAX_TOKENS + 1));
   await expect(counter).toContainText(`Query limit: ${MAX_SUFFIX + 1} / ${MAX_SUFFIX}`);
   await expect(counter).toContainText("limit exceeded");

@@ -8,7 +8,7 @@ async function clientFixture(page: import("@playwright/test").Page) {
     contentType: "text/javascript", body: `
       export async function countTokens(input) {
         const total = input.state.length > 200 ? ${MAX_TOKENS + 1} : 64;
-        return {total, prefix:27, suffix:total-27, paidPrefix:27, paidSuffix:total-27};
+        return {total, prefix:5, suffix:total-5, paidPrefix:5, paidSuffix:total-5};
       }
       export function infer(input, progress) {
         const promise = new Promise((resolve, reject) => {
@@ -33,6 +33,26 @@ async function clientFixture(page: import("@playwright/test").Page) {
     `,
   }));
 }
+
+test("BOOM #617 result retains its assessment meaning when the form is edited", async ({ page }) => {
+  await clientFixture(page); await page.goto("/");
+  await page.getByText("Real-world examples", { exact: true }).click();
+  await page.getByRole("button", { name: "BOOM #617" }).click();
+  await expect(page.getByLabel("Question")).toHaveValue("Does this change indicate malicious governance manipulation?");
+  await expect(page.getByLabel("Option 1", { exact: true })).toHaveValue("likely malicious");
+  await expect(page.getByLabel("Option 2", { exact: true })).toHaveValue("legitimate change");
+  await expect(page.locator(".sample-ledger")).toContainText("does not establish intent");
+  await page.getByRole("button", { name: "Run inference" }).click();
+  await page.getByLabel("Question").fill("Edited question");
+  await expect(page.locator(".result-panel")).toHaveAttribute("data-state", "done");
+  await expect(page.locator(".result-label")).toHaveText("Model assessment");
+  await expect(page.locator(".actual-result h3")).toHaveText("likely malicious · 80%");
+  await expect(page.locator(".actual-result")).toContainText("not proof of malicious intent");
+  await page.getByRole("button", { name: "Value change" }).click();
+  await page.getByRole("button", { name: "Run inference" }).click();
+  await expect(page.locator(".result-label")).toHaveText("Selected value");
+  await expect(page.locator(".actual-result")).not.toContainText("not proof of malicious intent");
+});
 
 test("run displays real progress and preserves submitted option labels while editing", async ({ page }) => {
   await clientFixture(page); await page.goto("/");

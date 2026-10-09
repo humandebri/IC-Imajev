@@ -68,7 +68,7 @@ export function TokenCounter({ input, onCounts }: { input: DecisionInput; onCoun
               <p className={overLimit ? "error" : "help"}>
                 Query limit: {counts.paidSuffix} / {MAX_SUFFIX} additional tokens
                 {overLimit ? " (limit exceeded)" : ""}.
-                {` Fixed prefix: 27 tokens; total limit: ${MAX_TOKENS} tokens.`}
+                {` Fixed prefix: ${counts.paidPrefix} tokens; total limit: ${MAX_TOKENS} tokens.`}
               </p>
             )}
           </>

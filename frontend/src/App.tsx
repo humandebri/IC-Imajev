@@ -7,6 +7,11 @@ import type { DecisionInput, DecisionResult, InferenceProgress } from "./types";
 import type { TokenCounts } from "./tokenization.ts";
 import { infer } from "./inference-client.ts";
 
+function ledgerTokens(e8s: string) {
+  const value = BigInt(e8s);
+  return `${value / 100000000n}.${(value % 100000000n).toString().padStart(8, "0")}`;
+}
+
 type Option = { id: number; text: string };
 const emptyInput: DecisionInput = {
   state: "",
@@ -44,9 +49,10 @@ export default function App() {
   const [tokenAnswer, setTokenAnswer] = useState<{ key: string; counts: TokenCounts | null } | null>(null);
   const onCounts = useCallback((key: string, counts: TokenCounts | null) => setTokenAnswer({ key, counts }), []);
   const counts = tokenAnswer?.key === inputKey ? tokenAnswer.counts : null;
-  const canRun = valid && counts?.paidPrefix === 27 && counts.paidSuffix !== null && counts.paidSuffix >= 1 && counts.paidSuffix <= MAX_SUFFIX;
+  const canRun = valid && counts?.paidPrefix === 5 && counts.paidSuffix !== null && counts.paidSuffix >= 1 && counts.paidSuffix <= MAX_SUFFIX;
   const [result, setResult] = useState<(DecisionResult & { elapsedMs: number }) | null>(null);
   const [resultOptions, setResultOptions] = useState<string[]>([]);
+  const [resultAssessment, setResultAssessment] = useState(false);
   const [progress, setProgress] = useState<InferenceProgress | null>(null);
   const [inferenceError, setInferenceError] = useState("");
   const activeRun = useRef<ReturnType<typeof infer> | null>(null);
@@ -61,7 +67,7 @@ export default function App() {
     const id = ++generation.current, startedAt = Date.now();
     const startedTick = performance.now();
     const snapshot = structuredClone(input);
-    setResult(null); setResultOptions(snapshot.options); setInferenceError("");
+    setResult(null); setResultOptions(snapshot.options); setResultAssessment(activeSample?.id === "boom-617"); setInferenceError("");
     setProgress({ kind: "waiting", startedAt, phase: "Preparing" });
     const run = infer(snapshot, (completed, total) => {
       if (generation.current === id) setProgress({ kind: "steps", completed, total, startedAt, phase: "Running" });
@@ -208,6 +214,44 @@ export default function App() {
                       View {activeSample.sourceLabel} ↗
                     </a>
                   </p>
+                  {activeSample.audit.ledger_snapshot && (
+                    <div className="sample-ledger">
+                      <p>Scenario: mint another 250M tokens using current balances. Proposal #653 already executed; this is a new hypothetical mint.</p>
+                      <p>Ledger read: {activeSample.audit.ledger_snapshot.completedAt}. Model input uses enclosing ranges and a calculated share after the extra mint; exact ledger values are retained below.</p>
+                      <details>
+                        <summary>Ledger supply and recipient balance</summary>
+                        <dl>
+                          <dt>Total supply (tokens)</dt><dd>{ledgerTokens(activeSample.audit.ledger_snapshot.totalSupplyE8s)}</dd>
+                          <dt>Recipient account balance (tokens)</dt><dd>{ledgerTokens(activeSample.audit.ledger_snapshot.recipientBalanceE8s)}</dd>
+                          <dt>Calculated share after additional mint</dt><dd>{activeSample.audit.derived?.share_percent_bounds.join("–")}%</dd>
+                          <dt>Calculation</dt><dd>(account balance + mint) / (total supply + mint)</dd>
+                          <dt>Ledger</dt><dd>{activeSample.audit.ledger_snapshot.ledgerCanisterId}</dd>
+                          <dt>Account owner (default subaccount)</dt><dd>{activeSample.audit.ledger_snapshot.recipient}</dd>
+                        </dl>
+                        <p>Read-only icrc1_total_supply and icrc1_balance_of queries, fetched separately between {activeSample.audit.ledger_snapshot.startedAt} and {activeSample.audit.ledger_snapshot.completedAt}. These values are a saved snapshot.</p>
+                      </details>
+                    </div>
+                  )}
+                  {activeSample.audit.participation_snapshot && (
+                    <div className="sample-ledger">
+                      <p>Scenario: apply #617 to current neurons without extending their locks. Experimental assessment of suspected malicious governance manipulation. This simulation does not establish intent or reconstruct the proposal-time outcome.</p>
+                      <p>Eligible neurons: {activeSample.audit.participation_snapshot.analysis.before.count} → {activeSample.audit.participation_snapshot.analysis.after.count}. These are neurons, not a count of people.</p>
+                      <details>
+                        <summary>Voting participation snapshot and assumptions</summary>
+                        <dl>
+                          <dt>Neurons fetched</dt><dd>{activeSample.audit.participation_snapshot.totalNeurons}</dd>
+                          <dt>Neurons losing eligibility</dt><dd>{activeSample.audit.participation_snapshot.analysis.excluded_neurons}</dd>
+                          <dt>Share of previously eligible neurons losing eligibility</dt><dd>{activeSample.audit.participation_snapshot.analysis.excluded_percent_bps_floor === null ? "No eligible baseline" : `At least ${((activeSample.audit.participation_snapshot.analysis.excluded_percent_bps_floor ?? 0) / 100).toFixed(2)}%`}</dd>
+                          <dt>Largest neuron’s share under old threshold</dt><dd>{activeSample.audit.participation_snapshot.analysis.before.largest_share_bps_floor === null ? "No eligible baseline" : `At least ${((activeSample.audit.participation_snapshot.analysis.before.largest_share_bps_floor ?? 0) / 100).toFixed(2)}% of indexed voting power`}</dd>
+                          <dt>Largest remaining neuron’s share</dt><dd>{activeSample.audit.participation_snapshot.analysis.after.largest_share_bps_floor === null ? "No remaining voting power" : `At least ${((activeSample.audit.participation_snapshot.analysis.after.largest_share_bps_floor ?? 0) / 100).toFixed(2)}% of remaining indexed voting power`}</dd>
+                          <dt>Fetched between</dt><dd>{activeSample.audit.participation_snapshot.startedAt} and {activeSample.audit.participation_snapshot.completedAt}</dd>
+                          <dt>Snapshot hash</dt><dd>{activeSample.audit.participation_snapshot.sha256}</dd>
+                        </dl>
+                        <p>Eligibility requires positive indexed voting power and a dissolve delay at least as long as the threshold. Dissolving neurons use remaining time at the snapshot reference time. Concentration holds current indexed weights fixed; changed voting bonuses are not recalculated. The indexed API pages are fetched separately.</p>
+                        <a href={activeSample.audit.participation_snapshot.sourceUrl} target="_blank" rel="noopener noreferrer">View neuron data ↗</a>
+                      </details>
+                    </div>
+                  )}
                   <details className="sample-original">
                     <summary>Original payload and identifier mapping</summary>
                     <pre>{activeSample.originalState}</pre>
@@ -271,7 +315,7 @@ export default function App() {
                 <legend>
                   Options <span className="optional">2–7 options</span>
                 </legend>
-                <div className="option-list">
+                <div className="option-list" data-compact={normalized.every(text => text.length <= 3)}>
                   {options.map((option, index) => (
                     <div className="option-row" key={option.id}>
                       <div className="option-control">
@@ -382,6 +426,7 @@ export default function App() {
           <div className="output-column">
             <ResultPanel
               result={result}
+              assessment={resultAssessment}
               elapsedMs={result?.elapsedMs}
               progress={progress}
               options={result || progress ? resultOptions : input.options}

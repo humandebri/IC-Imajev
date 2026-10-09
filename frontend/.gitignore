@@ -1,5 +1,6 @@
 node_modules/
 dist/
+*.tsbuildinfo
 test-results/
 playwright-report/
 .vlmkit/
@@ -8,3 +9,6 @@ playwright-report/
 /public/tokenizer/
 /public/inference/
 /public/api/
+
+# Saved browser inspection output; not an input fixture.
+/verification/boom-copy.txt

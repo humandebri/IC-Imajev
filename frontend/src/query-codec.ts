@@ -4,7 +4,7 @@ export interface Header {
   step: number; op: string; encoding: string; tensor: string;
   aux: string[]; dims: number[]; scalars: number[];
 }
-export const C = 2560, H = 9216, P = 27, CONV = 24576;
+export const C = 2560, H = 9216, P = 5, CONV = 24576;
 export function concat(...parts: Uint8Array[]): Uint8Array<ArrayBuffer> {
   const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
   let offset = 0;

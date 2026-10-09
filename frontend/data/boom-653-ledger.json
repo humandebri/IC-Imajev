@@ -1,0 +1,17 @@
+{
+  "rootCanisterId": "xjngq-yaaaa-aaaaq-aabha-cai",
+  "ledgerCanisterId": "vtrom-gqaaa-aaaaq-aabia-cai",
+  "recipient": "4mpab-ayg5c-m2frb-vjja5-b2qbe-5rxgv-33ova-ddjgm-egfav-br5hu-gqe",
+  "subaccount": null,
+  "startedAt": "2026-10-08T23:59:08.901Z",
+  "completedAt": "2026-10-08T23:59:09.365Z",
+  "decimals": 8,
+  "totalSupplyE8s": "202573263241539386",
+  "recipientBalanceE8s": "1580662252",
+  "methods": [
+    "icrc1_total_supply",
+    "icrc1_balance_of",
+    "icrc1_decimals"
+  ],
+  "scenario": "Additional mint now, not a reconstruction of proposal-time holdings. Separate queries, not an atomic snapshot."
+}

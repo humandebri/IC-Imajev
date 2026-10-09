@@ -5,7 +5,7 @@ import { test, expect } from "@playwright/test";
 // Use a real HTTP server: Playwright routing disables the browser HTTP cache.
 for (const corrupted of ["manifest.json", "layer-00.bin"]) {
   test(`recovers immutable HTTP cache corruption in ${corrupted}`, async ({ page, baseURL }) => {
-    const assets = new URL("../public/inference/prefix27-v1/", import.meta.url);
+    const assets = new URL("../public/inference/prefix5-v1/", import.meta.url);
     const manifestBytes = await readFile(new URL("manifest.json", assets));
     const manifest = JSON.parse(manifestBytes.toString());
     const files = new Map<string, Buffer>([["manifest.json", manifestBytes]]);

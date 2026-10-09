@@ -71,11 +71,13 @@ function DecisionPrism({ count }: { count: number }) {
 /** Only pass an actual response and the options from that same request. */
 export function ResultPanel({
   result,
+  assessment = false,
   options,
   progress = null,
   elapsedMs,
 }: {
   result: DecisionResult | null;
+  assessment?: boolean;
   options: string[];
   /** Pass only real progress from in-flight calls; null when idle. */
   progress?: InferenceProgress | null;
@@ -114,7 +116,7 @@ export function ResultPanel({
       ) : (
         <div className="actual-result" aria-live="polite">
           <p className="result-label">
-            {result.abstained ? "Abstained" : "Selected value"}
+            {result.abstained ? "Abstained" : assessment ? "Model assessment" : "Selected value"}
           </p>
           <h3>
             {result.abstained ? "Not enough information" : (result.value ?? "No value")}
@@ -136,6 +138,7 @@ export function ResultPanel({
               </div>
             )}
           </dl>
+          {assessment && <p className="muted">Assessment of suspicion, not proof of malicious intent. Percentages are model probabilities.</p>}
           <p className="muted">Model probabilities</p>
           <ul className="probabilities">
             {options.map((option, index) => (

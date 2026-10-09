@@ -4,7 +4,7 @@ import { runQueryGraph } from "../src/query-runner.ts";
 import { baselinePlan, queryCount, selectPlan, validatePlan, MAX_SUFFIX } from "../src/query-plan.ts";
 import { frame, concat, u32, C, CONV } from "../src/query-codec.ts";
 const profiles=JSON.parse(await readFile(new URL("../src/query-profiles.json",import.meta.url),"utf8"));
-const manifest = JSON.parse(await readFile(new URL("../public/inference/prefix27-v1/manifest.json",import.meta.url),"utf8"));
+const manifest = JSON.parse(await readFile(new URL("../public/inference/prefix5-v1/manifest.json",import.meta.url),"utf8"));
 const carry = (n, done) => concat(new Uint8Array([1]),u32(done),new Uint8Array(n*(3*C+done+4*(C/256+done/256+192))));
 function fixture(n, plan, failure, signal = new AbortController().signal) {
   const seen = []; const progress = [];
@@ -16,8 +16,8 @@ function fixture(n, plan, failure, signal = new AbortController().signal) {
       assert.equal(h.step,seen.length);assert.equal(h.input_hash.length,64);seen.push({method,layer,op:h.op});
       if (failure === "timeout" && seen.length===2) throw new DOMException("Timed out","TimeoutError");
       const out={...h,step:h.step+1};let payload;
-      if(method==="terminal_step_decision") return {Ok:{measurement:{state:await frame(out,concat(new Uint8Array([0]),new Uint8Array(2*(2*C+n*2048))))},decision:{value:["yes"],probabilities:[0.6,0.3],unknown_probability:0.1,abstained:false}}};
-      if(method==="step") {
+      if(method==="runFinalInferenceStep") return {Ok:{measurement:{state:await frame(out,concat(new Uint8Array([0]),new Uint8Array(2*(2*C+n*2048))))},decision:{value:["yes"],probabilities:[0.6,0.3],unknown_probability:0.1,abstained:false}}};
+      if(method==="runInferenceStep") {
         const done=h.op==="mlp_stream_next" ? h.dims[1]+h.dims[2] : h.dims[1];payload=carry(n,done);
         if(h.op==="delta_mlp_stream_start_ids")payload=concat(new Uint8Array([0]),payload,new Uint8Array(2*CONV));
       } else {
@@ -32,13 +32,19 @@ function fixture(n, plan, failure, signal = new AbortController().signal) {
   return {ids,d,seen,progress};
 }
 const makePlan = n => {const p=baselinePlan(n);p.completions=p.fronts.slice(0,31).map((f,layer)=>f+(layer%2===0?256:0));return p;};
-for(const n of [1,57,69]) {
+for(const n of [1,57,91]) {
   const plan=makePlan(n),t=fixture(n,plan);await runQueryGraph(t.ids,["yes","no"],t.d);
   assert.equal(t.seen.length,48);assert.equal(queryCount(plan),48);
   assert.deepEqual(t.progress,Array.from({length:49},(_,i)=>[i,48]));
-  assert.equal(t.seen.at(-2).op,"mlp_stream_next");assert.equal(t.seen.at(-1).method,"terminal_step_decision");
+  assert.equal(t.seen.at(-2).op,"mlp_stream_next");assert.equal(t.seen.at(-1).method,"runFinalInferenceStep");
 }
-const concurrent=await Promise.all([1,69].map(async n=>{const t=fixture(n,makePlan(n));await runQueryGraph(t.ids,["yes","no"],t.d);return t;}));
+// Exercise opaque generation chunks, including the terminal layer.
+const long=baselinePlan(91),multi=fixture(91,long);
+await runQueryGraph(multi.ids,["yes","no"],multi.d);
+assert.equal(queryCount(long),63);
+assert.equal(multi.seen.length,63);
+assert.deepEqual(multi.progress.at(-1),[63,63]);
+const concurrent=await Promise.all([1,91].map(async n=>{const t=fixture(n,makePlan(n));await runQueryGraph(t.ids,["yes","no"],t.d);return t;}));
 assert.equal(concurrent[0].seen.length,48);assert.equal(concurrent[1].seen.length,48);
 for(const [failure,message] of [["carry",/carry/],["step",/step mismatch/],["timeout",/Timed out/]]) {
   const t=fixture(1,makePlan(1),failure);await assert.rejects(runQueryGraph(t.ids,["yes","no"],t.d),message);assert.equal(t.seen.length,2);

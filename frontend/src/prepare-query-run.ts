@@ -13,8 +13,8 @@ export async function prepareQueryRun(base: string, ids: number[], options: stri
   validateInput(ids, options, prefix.manifest);
   const [, pack, cache] = await Promise.all([
     client.checkModule(),
-    client.query("pack_status", []) as Promise<{ model: string; pack_hash: string; ready: boolean; bytes: bigint }>,
-    client.query("weight_cache_status", []) as Promise<{ names: string[] }>,
+    client.query("getModelStatus", []) as Promise<{ model: string; pack_hash: string; ready: boolean; bytes: bigint }>,
+    client.query("getWeightCacheStatus", []) as Promise<{ names: string[] }>,
   ]);
   signal.throwIfAborted();
   if (!pack.ready || pack.model !== release.model || pack.pack_hash !== release.pack_hash ||

@@ -1,23 +1,28 @@
 /** Explicit, read-only mainnet browser test. Not part of the default test suite. */
+import { queryCount, selectPlan } from "../src/query-plan.ts";
+import release from "../src/inference-release.json" with { type: "json" };
 import { chromium } from "@playwright/test";
 import { readFile, mkdir, writeFile } from "node:fs/promises";
-const profiles = JSON.parse(await readFile(new URL("../src/query-profiles.json", import.meta.url), "utf8"));
 const root = new URL("../../", import.meta.url);
-const records = JSON.parse(await readFile(new URL("artifacts/text-short-v2/inputs.json", root), "utf8"));
-const report = JSON.parse(await readFile(new URL("artifacts/mainnet-prefix27-upgrade-20261007/anonymous-query-653/report.json", root), "utf8"));
+const evidenceRoot = new URL("artifacts/prefix5-local-20261009/", root);
+const examples = JSON.parse(await readFile(new URL("../src/boom-examples.generated.json", import.meta.url), "utf8"));
+const inputs = examples.map(e => e.input);
+const expected = await Promise.all(examples.map(async e => {
+  const proofUrl = e.id === "boom-617"
+    ? new URL("artifacts/boom617-malicious-validation-20261009/measurements/final-question.json", root)
+    : new URL(`measurements/${e.id}.json`, evidenceRoot);
+  const proof = JSON.parse(await readFile(proofUrl, "utf8"));
+  if (!proof.complete || proof.moduleHash !== release.module_hash) throw new Error("Local reference runtime mismatch");
+  return proof.result;
+}));
+const boundary = JSON.parse(await readFile(new URL("extra-inputs.json", evidenceRoot), "utf8")).records[3];
+inputs.push(boundary.source_input);
+expected.push(JSON.parse(await readFile(new URL("full-extra-3/report.json", evidenceRoot), "utf8")).decision_query.ok.decision);
 const browser = await chromium.launch({ headless: true });
-const output = new URL(process.env.QUERY_TEST_OUTPUT ?? "artifacts/adaptive-query-20261008/browser-local/", root);
+const output = new URL(process.env.QUERY_TEST_OUTPUT ?? "artifacts/prefix5-mainnet-browser/", root);
 await mkdir(output, { recursive: true });
-const fixture = records.records[2];
-const first = { state: "This proposal mints 250,000,000 tokens to one account.",
-  question: "Could this token mint concentrate token control?", options: fixture.options };
-const second = { state: "The limit changes from 5 to 10.", question: "Does the limit increase?", options: ["yes", "no"] };
-const third = JSON.parse(await readFile(new URL("artifacts/adaptive-query-20261008/real-input-n69.json", root), "utf8"));
-const expandedReport = JSON.parse(await readFile(new URL("artifacts/adaptive-query-20261008/real-n69-verified.json", root), "utf8"));
-const optimizedInput=JSON.parse(await readFile(new URL("artifacts/adaptive-query-20261008/real-input-n58.json",root),"utf8"));
-const optimizedReport=JSON.parse(await readFile(new URL("artifacts/adaptive-query-20261008/real-balanced-n58-verified.json",root),"utf8"));
 try {
-  const results = await Promise.all([first, second, third, optimizedInput].map(async (input, index) => {
+  const results = await Promise.all(inputs.map(async (input, index) => {
     const context = await browser.newContext();
     const page = await context.newPage();
     let queries = 0;
@@ -45,18 +50,12 @@ try {
     const probabilities = await page.locator("meter").evaluateAll(nodes => nodes.map(n => n.value));
     if (writes.length || errors.length) throw new Error(`Unexpected writes/errors: ${JSON.stringify({ writes, errors })}`);
     const totalText = await page.locator(".token-counts dd").innerText();
-    const n = Number(totalText) - 27;
-    const plan = profiles.plans[String(n)];
-    const count = plan ? 32 + plan.completions.filter((done, layer) => done > plan.fronts[layer]).length : 32;
+    const n = Number(totalText) - release.prefix_tokens;
+    const count = queryCount(selectPlan(n));
     if (queries !== count + 2) throw new Error(`Expected ${count} inference + 2 readiness queries, got ${queries}`);
-    if (index === 0 && (selected !== report.decision.value || JSON.stringify(probabilities) !== JSON.stringify([...report.decision.probabilities, report.decision.unknown_probability]))) {
-      throw new Error("Browser result differs from verified mainnet evidence.");
-    }
-    if (index === 2 && (selected !== expandedReport.reference.result.value || JSON.stringify(probabilities) !== JSON.stringify([...expandedReport.reference.result.probabilities, expandedReport.reference.result.unknown_probability]))) {
-      throw new Error("Expanded browser result differs from independently verified reference.");
-    }
-    if(index===3 && (selected!==optimizedReport.reference.result.value || JSON.stringify(probabilities)!==JSON.stringify([...optimizedReport.reference.result.probabilities,optimizedReport.reference.result.unknown_probability]))) {
-      throw new Error("Optimized browser result differs from independently verified reference.");
+    const reference = expected[index];
+    if (selected !== reference.value || JSON.stringify(probabilities) !== JSON.stringify([...reference.probabilities, reference.unknown_probability])) {
+      throw new Error("Browser result differs from the verified five-token/full-processing reference.");
     }
     await page.screenshot({ path: new URL(`run-${index}.png`, output).pathname, fullPage: true });
     const result = { input, selected, probabilities, queries, writes, errors, seconds: (Date.now() - started) / 1000 };

@@ -29,14 +29,16 @@ const votingInput = {
   question: "Approve?",
   options: ["no", "yes"],
 };
-for (const [extra, total] of [[15, 84], [16, 85]]) {
+for (const [extra, total] of [[48, 96], [49, 97]]) {
   const result = tokenizeInput(tokenizer, {
     ...votingInput, state: votingInput.state + " more".repeat(extra),
   }, readout.codes.map((entry) => entry.code));
-  assert.deepEqual(result.tokenIds.slice(27, 38),
-    [27756,15209,70173,7383,4203,494,220,16,1834,310,220]);
   assert.equal(result.counts.total, total);
-  assert.equal(result.counts.paidPrefix, 27);
-  assert.equal(result.counts.paidSuffix, total - 27);
+  assert.equal(result.counts.paidPrefix, 5);
+  assert.equal(result.counts.paidSuffix, total - 5);
 }
-console.log("Former voting prefix counts as suffix; 84/85-token boundaries matched.");
+console.log("Five-token cache boundary and 96/97-token limits matched.");
+
+for (const state of [null, {}, 1]) {
+  assert.throws(() => tokenizeInput(tokenizer, { ...votingInput, state }, readout.codes.map(entry => entry.code)), /Context must be a string/);
+}

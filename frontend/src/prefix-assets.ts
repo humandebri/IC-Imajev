@@ -3,13 +3,13 @@ import { sha } from "./query-codec.ts";
 import { timed, type TimingObserver } from "./inference-diagnostics.ts";
 
 export interface PrefixManifest {
-  model: string; pack_hash: string; model_bytes: number; prefix: number[];
+  module_hash: string; prompt_layout: string; model: string; pack_hash: string; model_bytes: number; prefix: number[];
   assets: Record<string, { file: string; bytes: number; sha256: string }>;
 }
 
-// Retain only verified assets for one release/base (about 15.4 MB per worker).
+// Retain only verified assets for one release/base (about 3.8 MB per worker).
 // In-flight requests belong to a run, so cancelling one run cannot poison another.
-const MAX_PREFIX_BYTES = 15_418_368;
+const MAX_PREFIX_BYTES = 3_816_448;
 let cached: { base: string; manifest: PrefixManifest; assets: Map<number, Uint8Array>; bytes: number } | undefined;
 export const prefixCacheBytes = () => cached?.bytes ?? 0;
 class PrefixIntegrityError extends Error {}
@@ -43,6 +43,10 @@ export async function loadPrefix(base: string, signal: AbortSignal, observe?: Ti
       async bytes => await sha(bytes) === release.manifest_sha256,
       "Could not load prefix settings.", "Prefix manifest mismatch.", observe);
     const manifest = JSON.parse(new TextDecoder().decode(bytes)) as PrefixManifest;
+    if (manifest.module_hash !== release.module_hash || manifest.prompt_layout !== release.prompt_layout ||
+        manifest.prefix.length !== 5 || !manifest.prefix.every((id, i) => id === [248045, 846, 198, 1349, 25][i])) {
+      throw new Error("Prefix runtime or prompt layout mismatch.");
+    }
     const entries = Array.from({ length: 32 }, (_, layer) => manifest.assets[String(layer)]);
     if (Object.keys(manifest.assets).length !== 32 || entries.some(entry => !entry ||
         !Number.isSafeInteger(entry.bytes) || entry.bytes <= 0) ||

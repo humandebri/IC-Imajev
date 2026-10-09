@@ -1,7 +1,7 @@
 import { concat, u32, sha, frame, unframe, checkCarry, C, H, P, CONV } from "./query-codec.ts";
 import type { Header } from "./query-codec.ts";
 import type { PrefixManifest, QueryClient } from "./inference-agent.ts";
-import { MAX_SUFFIX, queryCount, selectPlan, validatePlan } from "./query-plan.ts";
+import { MAX_SUFFIX, MLP_CHUNK_ROWS, queryCount, selectPlan, validatePlan } from "./query-plan.ts";
 import type { QueryPlan } from "./query-plan.ts";
 import type { DecisionResult } from "./types.ts";
 
@@ -24,8 +24,8 @@ export function validateInput(ids: number[], options: string[], manifest: Prefix
   if (options.some(o => o.trim() === "__unknown__")) {
     throw new Error("This option is reserved for abstention.");
   }
-  if (ids.length < 28 || ids.length > P + maxSuffix || !ids.every(id => Number.isInteger(id) && id >= 0 && id < 248320) ||
-      manifest.prefix.length !== 27 || !manifest.prefix.every((id, i) => ids[i] === id)) {
+  if (ids.length < P + 1 || ids.length > P + maxSuffix || !ids.every(id => Number.isInteger(id) && id >= 0 && id < 248320) ||
+      manifest.prefix.length !== P || !manifest.prefix.every((id, i) => ids[i] === id)) {
     throw new Error(`Input must have the common prefix and 1–${maxSuffix} additional tokens (${P + maxSuffix} total maximum).`);
   }
   if (options.length < 2 || options.length > 7 || options.some(o => !o.trim() || new TextEncoder().encode(o).length > 128) ||
@@ -59,7 +59,7 @@ export async function runQueryGraph(ids: number[], options: string[], d: Depende
   d.signal.throwIfAborted();
   d.progress(0, total);
   const first = header(0, 0, "delta_mlp_stream_start_ids", "delta-mlp-start-exact-v1", [n, plan.fronts[0], P]);
-  const initial = await send(0, "step", first, concat(new Uint8Array([2]), ...ids.slice(P).map(u32), await d.asset(0)), [], { ...first, step: 1 });
+  const initial = await send(0, "runInferenceStep", first, concat(new Uint8Array([2]), ...ids.slice(P).map(u32), await d.asset(0)), [], { ...first, step: 1 });
   if (initial.bytes[0] !== 0 || initial.bytes.length <= 1 + 2 * CONV) throw new Error("Invalid initial reply.");
   let carry = initial.bytes.subarray(1, -2 * CONV);
   checkCarry(carry, n, plan.fronts[0]);
@@ -67,11 +67,11 @@ export async function runQueryGraph(ids: number[], options: string[], d: Depende
   for (let layer = 0; layer <= 30; layer++) {
     let begin = plan.fronts[layer];
     const next = plan.fronts[layer + 1];
-    if (plan.completions[layer] > begin) {
-      const end = plan.completions[layer];
+    while (plan.completions[layer] > begin) {
+      const end = Math.min(plan.completions[layer], begin + MLP_CHUNK_ROWS);
       checkCarry(carry, n, begin);
       const chunk = header(completed, layer, "mlp_stream_next", "mlp-stream-exact-v1", [n, begin, end - begin]);
-      const { bytes } = await send(completed, "step", chunk, carry, [], { ...chunk, step: completed + 1 });
+      const { bytes } = await send(completed, "runInferenceStep", chunk, carry, [], { ...chunk, step: completed + 1 });
       checkCarry(bytes, n, end);
       carry = bytes; begin = end;
       progress();
@@ -87,7 +87,7 @@ export async function runQueryGraph(ids: number[], options: string[], d: Depende
     if (terminal) {
       const request = await frame(h, concat(new Uint8Array([3]), u32(carry.length), carry, prefix));
       d.signal.throwIfAborted();
-      const value = await d.client.query("terminal_step_decision", [request, options]) as {
+      const value = await d.client.query("runFinalInferenceStep", [request, options]) as {
         Ok?: { measurement: Measurement; decision: Omit<DecisionResult, "value"> & { value: string[] } }; Err?: string;
       };
       d.signal.throwIfAborted();
@@ -110,7 +110,7 @@ export async function runQueryGraph(ids: number[], options: string[], d: Depende
     }
     const expected = header(step + 1, layer + 1, "mlp_stream_prepare", "mlp-stream-exact-v1", [n, 0, next]);
     const payload = attention ? concat(new Uint8Array([3]), u32(carry.length), carry, prefix) : carry;
-    const { reply, bytes } = await send(step, attention ? "attention_mlp_front" : "mlp_delta_front", h, payload,
+    const { reply, bytes } = await send(step, attention ? "runAttentionInferenceStep" : "runDeltaInferenceStep", h, payload,
       attention ? [next] : [prefix, P, next], expected);
     if (reply.previous_hidden?.length !== 2 * n * C ||
         (attention ? reply.kv?.length !== 2 * n * 2048 : reply.conv?.length !== 2 * CONV)) throw new Error("Invalid bridge output shape.");

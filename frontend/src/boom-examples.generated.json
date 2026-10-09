@@ -1,56 +1,58 @@
 [
   {
-    "id": "boom-620",
-    "label": "BOOM #620",
-    "description": "Compare the previous and proposed voting lock duration",
-    "sourceLabel": "BOOM DAO #620",
-    "sourceUrl": "https://sns-api.internetcomputer.org/api/v1/snses/xjngq-yaaaa-aaaaq-aabha-cai/proposals/620",
+    "id": "boom-584",
+    "label": "BOOM #584",
+    "description": "Compare a metadata adjustment title with the actual treasury transfer",
+    "sourceLabel": "BOOM DAO #584 (rejected)",
+    "sourceUrl": "https://dashboard.internetcomputer.org/sns/xjngq-yaaaa-aaaaq-aabha-cai/proposal/584",
     "input": {
-      "state": "days: min voting lock 1→2",
-      "question": "Does this proposal increase the minimum lock duration needed for voting?",
+      "state": "Title: SNS Metadata Adjustment. Payload: send 20M BOOM from DAO treasury to P1.",
+      "question": "What would execution actually do?",
       "options": [
-        "yes",
-        "no"
+        "metadata update",
+        "treasury transfer",
+        "no change"
       ]
     },
-    "originalState": "SNS parameters adjustment\n\n# Proposal to change nervous system parameters:\n## Current nervous system parameters:\n    neuron_minimum_dissolve_delay_to_vote_seconds: Some(\n        86400,\n    ),\n## New nervous system parameters:\n    neuron_minimum_dissolve_delay_to_vote_seconds: Some(\n        172800,\n    ),",
-    "sourceStateSha256": "f06debf7c9cc4bfbc61da7f7d6bbe39c416d096f4f32c2afa596892198ae304d",
-    "tokens": 73,
+    "originalState": "SNS Metadata Adjustment\n\n# Proposal to transfer SNS Treasury funds:\n## Source treasury: SNS Token Treasury (SNS Ledger)\n## Amount: 20000000.00000000 SNS Tokens\n## Amount (e8s): 2000000000000000\n## Target principal: jrnhz-6ekxv-2fffs-wfcgt-l3pe7-456id-heznf-xyf64-nykjq-4jyso-zae\n## Target account: jrnhz-6ekxv-2fffs-wfcgt-l3pe7-456id-heznf-xyf64-nykjq-4jyso-zae\n## Memo: 0",
+    "originalQuestion": "What would execution actually do?",
+    "sourceStateSha256": "bee99baed46de1b7821853a50a8abbaa9dfdbc30e1ddbc1152d6e7ba8caedbd4",
+    "tokens": 65,
     "audit": {
-      "kind": "parameters",
-      "facts": [
+      "kind": "treasury_transfer",
+      "action": "TransferSnsTreasuryFunds",
+      "status": "REJECTED",
+      "amount_e8s": "2000000000000000",
+      "from_treasury": 2,
+      "proposal_sha256": "f4db52aaabfd1e5ad5ddc753cfd09ae777311e819ecb41e2fdab6435add994df",
+      "identifiers": [
         {
-          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
-          "previous": 86400,
-          "proposed": 172800,
-          "unit_group": "days",
-          "rendered_values": [
-            "1",
-            "2"
-          ]
+          "alias": "P1",
+          "value": "jrnhz-6ekxv-2fffs-wfcgt-l3pe7-456id-heznf-xyf64-nykjq-4jyso-zae"
         }
       ],
-      "identifiers": []
+      "semantics": "Rejected proposal: evaluate the requested execution, not a completed transfer. Title/action mismatch is observable; malicious intent is not established by the payload alone."
     },
-    "compactionVersion": 1
+    "compactionVersion": 4
   },
   {
     "id": "boom-653",
     "label": "BOOM #653",
-    "description": "A mint amount alone cannot establish the recipient's share of total supply",
+    "description": "Use ledger supply and recipient balance to assess an additional mint today",
     "sourceLabel": "BOOM DAO #653",
     "sourceUrl": "https://sns-api.internetcomputer.org/api/v1/snses/xjngq-yaaaa-aaaaq-aabha-cai/proposals/653",
     "input": {
-      "state": "Mint 250M SNS tokens; principal/account P1; memo 0. Supply and prior holdings unknown.",
-      "question": "Will the recipient own more than half of the total token supply after this mint?",
+      "state": "Supply 2025-2026M tokens; account 15-16. Mint 250M to account. New share 10-11%.",
+      "question": "Account over half?",
       "options": [
         "yes",
         "no"
       ]
     },
     "originalState": "SNS Adjustment\n\n# Proposal to mint SNS Tokens:\n## Amount: 250000000.00000000 SNS Tokens\n## Amount (e8s): 25000000000000000\n## Target principal: 4mpab-ayg5c-m2frb-vjja5-b2qbe-5rxgv-33ova-ddjgm-egfav-br5hu-gqe\n## Target account: 4mpab-ayg5c-m2frb-vjja5-b2qbe-5rxgv-33ova-ddjgm-egfav-br5hu-gqe\n## Memo: 0",
+    "originalQuestion": "Account over half?",
     "sourceStateSha256": "18f11a153a40f630a0114d7ed453f1ac7b65b262fcb0c52848290c370fbb3d89",
-    "tokens": 92,
+    "tokens": 75,
     "audit": {
       "kind": "mint",
       "amount_tokens": "250000000.00000000",
@@ -64,31 +66,66 @@
           "value": "4mpab-ayg5c-m2frb-vjja5-b2qbe-5rxgv-33ova-ddjgm-egfav-br5hu-gqe"
         }
       ],
-      "missing_from_excerpt": [
-        "total_supply",
-        "recipient_prior_holdings"
-      ]
+      "missing_from_excerpt": [],
+      "derived": {
+        "post_supply_e8s": "227573263241539386",
+        "post_balance_e8s": "25000001580662252",
+        "share_percent_bounds": [
+          10,
+          11
+        ],
+        "formula": "100 * (recipientBalanceE8s + amount_e8s) / (totalSupplyE8s + amount_e8s)"
+      },
+      "input_bounds": {
+        "supply_scale_e8s": 100000000000000,
+        "balance_scale_e8s": 100000000,
+        "supply": [
+          2025,
+          2026
+        ],
+        "balance": [
+          15,
+          16
+        ]
+      },
+      "ledger_snapshot": {
+        "rootCanisterId": "xjngq-yaaaa-aaaaq-aabha-cai",
+        "ledgerCanisterId": "vtrom-gqaaa-aaaaq-aabia-cai",
+        "recipient": "4mpab-ayg5c-m2frb-vjja5-b2qbe-5rxgv-33ova-ddjgm-egfav-br5hu-gqe",
+        "subaccount": null,
+        "startedAt": "2026-10-08T23:59:08.901Z",
+        "completedAt": "2026-10-08T23:59:09.365Z",
+        "decimals": 8,
+        "totalSupplyE8s": "202573263241539386",
+        "recipientBalanceE8s": "1580662252",
+        "methods": [
+          "icrc1_total_supply",
+          "icrc1_balance_of",
+          "icrc1_decimals"
+        ],
+        "scenario": "Additional mint now, not a reconstruction of proposal-time holdings. Separate queries, not an atomic snapshot."
+      }
     },
-    "compactionVersion": 1
+    "compactionVersion": 4
   },
   {
     "id": "boom-617",
     "label": "BOOM #617",
-    "description": "Classify the change in the minimum voting lock duration",
+    "description": "Assess suspected governance manipulation from voter exclusion and concentration",
     "sourceLabel": "BOOM DAO #617",
     "sourceUrl": "https://sns-api.internetcomputer.org/api/v1/snses/xjngq-yaaaa-aaaaq-aabha-cai/proposals/617",
     "input": {
-      "state": "days:max lock30.4375→30437.5 min voting lock1→20000",
-      "question": "How does the minimum lock duration needed for voting change?",
+      "state": "Current-neuron simulation, not historical: voting lock 1->20000 days; eligible neurons 2219->2; largest remaining indexed voting share >=99%. No relocking.",
+      "question": "Does this change indicate malicious governance manipulation?",
       "options": [
-        "increases",
-        "decreases",
-        "unchanged"
+        "likely malicious",
+        "legitimate change"
       ]
     },
     "originalState": "SNS parameters adjustment\n\n# Proposal to change nervous system parameters:\n## Current nervous system parameters:\n    neuron_minimum_dissolve_delay_to_vote_seconds: Some(\n        86400,\n    ),\n    max_dissolve_delay_seconds: Some(\n        2629800,\n    ),\n## New nervous system parameters:\n    neuron_minimum_dissolve_delay_to_vote_seconds: Some(\n        1728000000,\n    ),\n    max_dissolve_delay_seconds: Some(\n        2629800000,\n    ),",
+    "originalQuestion": "Does this change indicate malicious governance manipulation?",
     "sourceStateSha256": "052e001fb9ebbfd03105f8f305f9351aa65ef7e7da4e3f4106a2fd3526a313db",
-    "tokens": 95,
+    "tokens": 83,
     "audit": {
       "kind": "parameters",
       "facts": [
@@ -96,10 +133,10 @@
           "field": "max_dissolve_delay_seconds",
           "previous": 2629800,
           "proposed": 2629800000,
-          "unit_group": "days",
+          "unit_group": "hours",
           "rendered_values": [
-            "30.4375",
-            "30437.5"
+            "730.5",
+            "730500"
           ]
         },
         {
@@ -113,8 +150,35 @@
           ]
         }
       ],
-      "identifiers": []
+      "identifiers": [],
+      "participation_snapshot": {
+        "sourceUrl": "https://sns-api.internetcomputer.org/api/v1/snses/xjngq-yaaaa-aaaaq-aabha-cai/neurons",
+        "sourceKind": "Public indexed API, not certified governance responses",
+        "startedAt": "2026-10-09T00:12:52.078897+00:00",
+        "completedAt": "2026-10-09T00:13:00.713930+00:00",
+        "referenceTimestampSeconds": 1791504772,
+        "totalNeurons": 5699,
+        "scenario": "Apply #617 thresholds to current neurons without relocking. Not proposal-time reconstruction. Pages are not atomic.",
+        "sha256": "f7874efb217939bb2d2d8c67ae57d97c594cf074fdd670093aa8e35052b397e1",
+        "analysis": {
+          "before": {
+            "count": 2219,
+            "indexed_voting_power": "385355462659083364",
+            "largest_neuron_voting_power": "44227672790961422",
+            "largest_share_bps_floor": 1147
+          },
+          "after": {
+            "count": 2,
+            "indexed_voting_power": "25000496297606000",
+            "largest_neuron_voting_power": "25000280250000000",
+            "largest_share_bps_floor": 9999
+          },
+          "excluded_neurons": 2217,
+          "excluded_percent_bps_floor": 9990
+        },
+        "semantics": "Neurons, not unique people. No relocking. Positive indexed voting power and delay >= threshold. Concentration holds indexed weights fixed; bonuses are not recalculated."
+      }
     },
-    "compactionVersion": 1
+    "compactionVersion": 4
   }
 ]

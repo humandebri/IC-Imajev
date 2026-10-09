@@ -5,7 +5,7 @@ import { prepareQueryRun } from "../src/prepare-query-run.ts";
 import { sha } from "../src/query-codec.ts";
 import release from "../src/inference-release.json" with { type: "json" };
 
-const base = new URL("../public/inference/prefix27-v1/", import.meta.url);
+const base = new URL("../public/inference/prefix5-v1/", import.meta.url);
 const manifestBytes = new Uint8Array(await readFile(new URL("manifest.json", base)));
 const manifest = JSON.parse(new TextDecoder().decode(manifestBytes));
 const assets = await Promise.all(Array.from({ length: 32 }, (_, layer) => readFile(new URL(manifest.assets[layer].file, base))));
@@ -59,7 +59,7 @@ try {
   for (let layer = 0; layer < 32; layer++) assert.deepEqual(await cold.asset(layer), new Uint8Array(assets[layer]));
   assert.equal(requests.length, 33);
   assert.equal(all.cachedBytes(), totalBytes);
-  assert.equal(totalBytes, 15_418_368);
+  assert.equal(totalBytes, 3_816_448);
   const warmEvents = [];
   const warm = await all.load("https://fixture/", new AbortController().signal, e => warmEvents.push(e));
   for (let layer = 0; layer < 32; layer++) await warm.asset(layer);
@@ -114,12 +114,12 @@ try {
   assert.deepEqual(started, ["prefix", "agent"]);
   resolve.prefix({ manifest, asset: async () => assets[0] }); resolve.agent(client);
   await flush(() => started.length === 5);
-  assert.deepEqual(started.slice(2), ["module", "pack_status", "weight_cache_status"]);
+  assert.deepEqual(started.slice(2), ["module", "getModelStatus", "getWeightCacheStatus"]);
   resolve.module();
-  resolve.pack_status({ ready: true, model: release.model, pack_hash: release.pack_hash, bytes: BigInt(manifest.model_bytes) });
+  resolve.getModelStatus({ ready: true, model: release.model, pack_hash: release.pack_hash, bytes: BigInt(manifest.model_bytes) });
   let completed = false; void preparation.then(() => { completed = true; });
   await new Promise(done => setTimeout(done, 0)); assert.equal(completed, false);
-  resolve.weight_cache_status({ names: Array(721).fill("weight") });
+  resolve.getWeightCacheStatus({ names: Array(721).fill("weight") });
   assert.equal((await preparation).client, client);
   let queries = 0;
   await assert.rejects(prepareQueryRun("https://prepare/", [...manifest.prefix, 1], ["__unknown__", "yes"], new AbortController().signal,
@@ -129,5 +129,5 @@ try {
   await assert.rejects(prepareQueryRun("https://prepare/", [...manifest.prefix, 1], ["yes", "no"], new AbortController().signal,
     undefined, { loadPrefix: async () => ({ manifest, asset: async () => assets[0] }),
       createQueryClient: async () => ({ checkModule: async () => { throw new Error("Module mismatch"); }, query: async () => ({}) }) }), /Module mismatch/);
-  console.log("Prefix lookahead, warm reuse, 15.4 MB budget, isolation/cancel/retry/corruption and parallel readiness barriers passed.");
+  console.log("Prefix lookahead, warm reuse, 3.8 MB budget, isolation/cancel/retry/corruption and parallel readiness barriers passed.");
 } finally { globalThis.fetch = originalFetch; }

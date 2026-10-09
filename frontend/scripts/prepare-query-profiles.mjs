@@ -9,12 +9,12 @@ const root = new URL("../../", import.meta.url);
 const plans = {}, evidence = {};
 const balanced = process.argv.includes("--balanced");
 const throughArg=process.argv.find(arg=>arg.startsWith("--through="));
-const through=throughArg?Number(throughArg.slice("--through=".length)):69;
-assert(Number.isInteger(through) && through>=58 && through<=69 && (!throughArg || balanced),"--through requires --balanced and a suffix length58–69");
-for (let n=1;n<=69;n++) {
+const through=throughArg?Number(throughArg.slice("--through=".length)):91;
+assert(Number.isInteger(through) && through>=1 && through<=91 && (!throughArg || balanced),"--through requires --balanced and a suffix length1–91");
+for (let n=1;n<=91;n++) {
   const stem=`n${String(n).padStart(2,"0")}`;
-  const optimized=balanced && n>=58 && n<=through;
-  const reportURL=new URL(`artifacts/adaptive-query-20261008/${optimized ? "balanced-" : ""}${stem}-verified.json`,root);
+  const optimized=balanced && n>=1 && n<=through;
+  const reportURL=new URL(`artifacts/prefix5-calibration/${optimized ? "balanced-" : ""}${stem}-verified.json`,root);
   let bytes;
   try {bytes=await readFile(reportURL);} catch(e) {if(e.code==="ENOENT" && !balanced)break;throw e;}
   const approvedDigest=assertApprovedReport(decisions,release.module_hash,n,bytes);
@@ -26,12 +26,6 @@ for (let n=1;n<=69;n++) {
   assert.equal(c.finalPayloadHash,r.finalPayloadHash);assert.deepEqual(c.result,r.result);assert.deepEqual(c.rawLogits,r.rawLogits);
   const unchanged=JSON.stringify(c.plan)===JSON.stringify(baselinePlan(n));
   if(!unchanged)assert.notEqual(c.label,r.label,"Changed schedules require independent reference execution");
-  if(optimized) {
-    const previous=JSON.parse(await readFile(new URL(`artifacts/adaptive-query-20261008/${stem}-candidate/report.json`,root),"utf8"));
-    assert.equal(c.label,"balanced");
-    assert.equal(previous.moduleHash,c.moduleHash);assert.equal(previous.inputHash,c.inputHash);
-    assert(c.count<previous.count && c.totalBytes<previous.totalBytes,"Optimization must reduce both queries and measured Candid bytes");
-  }
   plans[n]={fronts:c.plan.fronts,completions:c.plan.completions};
   evidence[n]={queries:c.count,maxInstructions:c.maxInstructions,maxRequestBytes:c.maxRequestBytes,maxReplyBytes:c.maxReplyBytes,
     reference:unchanged?"unchanged-baseline":"separate-query-schedule",finalPayloadHash:c.finalPayloadHash,
@@ -39,10 +33,10 @@ for (let n=1;n<=69;n++) {
   assertApprovedProfile(decisions,release.module_hash,n,plans[n],evidence[n]);
 }
 const maxSuffix=Object.keys(plans).length;
-assert(maxSuffix>=57,"Never regress the existing input range because calibration is incomplete");
+assert(maxSuffix===91,"Never regress the existing input range because calibration is incomplete");
 const value={moduleHash:release.module_hash,maxSuffix,targetInstructions:4_000_000_000,plans,evidence};
 const dest=new URL("../src/query-profiles.json",import.meta.url);
 const encoded=JSON.stringify(value,null,2)+"\n";
 if(process.argv.includes("--check"))assert(await readFile(dest,"utf8")===encoded,"Query profile evidence changed");
 else await writeFile(dest,encoded);
-console.log(`Verified execution profiles: suffix1–${maxSuffix}, total${maxSuffix+27}; module${release.module_hash}.`);
+console.log(`Verified execution profiles: suffix1–${maxSuffix}, total${maxSuffix+5}; module${release.module_hash}.`);
