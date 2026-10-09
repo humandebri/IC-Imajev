@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Freeze a short-input subset without inspecting predictions or gold labels."""
 import collections,hashlib,json,pathlib,subprocess,sys
-from prepare_text import TextPreparer,shorten_header
+from prepare_text_legacy import TextPreparer,shorten_header
 from vision_decision.contracts import ChoiceField,Option
 from vision_decision.scoring import compile_question
 import evaluate_prompt_accuracy as e
@@ -51,7 +51,7 @@ def main():
                  model_lock_sha256=e.sha(R/'MODEL_LOCK.json'),official_kit_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=KIT,text=True).strip(),
                  bias='Conditioning on short prompts favors concise/easier examples; no long-context, retrieval or tool-catalog claim.',
                  max_suffix_tokens=87,records=records,inventory=inventory,
-                 source_hashes={str(path.relative_to(R)):e.sha(path) for path in source_paths+[source,R/'scripts/prepare_text.py',pathlib.Path(__file__),KIT/'hub/excluded-questions.json']})
+                 source_hashes={str(path.relative_to(R)):e.sha(path) for path in source_paths+[source,R/'scripts/prepare_text.py',R/'scripts/prepare_text_legacy.py',pathlib.Path(__file__),KIT/'hub/excluded-questions.json']})
     e.atomic_json(D/'inputs.json',fixture)
     print(json.dumps(dict(total=len(records),inventory=inventory,min_tokens=min(len(r['token_ids']) for r in records),max_tokens=max(len(r['token_ids']) for r in records))))
 

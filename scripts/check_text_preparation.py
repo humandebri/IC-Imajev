@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Verify the shorter default against saved prompts and preserve evidence text."""
 import hashlib,json,pathlib
-from prepare_text import TextPreparer, PROMPT_LAYOUT, IMAGE_EVIDENCE_INSTRUCTION, UNKNOWN_INSTRUCTION
+from prepare_text import IMAGE_EVIDENCE_INSTRUCTION, UNKNOWN_INSTRUCTION
+from prepare_text_legacy import TextPreparer, PROMPT_LAYOUT
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 p=TextPreparer();cases=json.loads((ROOT/'benchmarks/cases.json').read_text());refs=json.loads((ROOT/'artifacts/reference-orders.json').read_text())['records'];rows=[]
 for r in refs:

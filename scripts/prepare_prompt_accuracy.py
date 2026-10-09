@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Freeze paired original/current prompts and explicit golds before inference."""
 import hashlib,json,pathlib
-from prepare_text import TextPreparer
+from prepare_text_legacy import TextPreparer
 from vision_decision.contracts import ChoiceField,Option
 from vision_decision.scoring import compile_question
 ROOT=pathlib.Path(__file__).resolve().parents[1]
@@ -31,7 +31,7 @@ def main():
     pair[variant+'_record']=len(records);records.append(dict(record,variant=variant,offset=offset,category=c['category']))
    pairs.append(pair)
  assert len(pairs)==32
- out=dict(model_lock_sha256=sha(ROOT/'MODEL_LOCK.json'),records=records,pairs=pairs,distinct_cases=24,source_hashes={str(q.relative_to(ROOT)):sha(q) for q in [ROOT/'benchmarks/cases.json',ROOT/'benchmarks/prompt_accuracy_extra.json',ROOT/'scripts/prepare_text.py',pathlib.Path(__file__)]})
+ out=dict(model_lock_sha256=sha(ROOT/'MODEL_LOCK.json'),records=records,pairs=pairs,distinct_cases=24,source_hashes={str(q.relative_to(ROOT)):sha(q) for q in [ROOT/'benchmarks/cases.json',ROOT/'benchmarks/prompt_accuracy_extra.json',ROOT/'scripts/prepare_text.py',ROOT/'scripts/prepare_text_legacy.py',pathlib.Path(__file__)]})
  path=D/'inputs.json'
  if path.exists():raise RuntimeError('refusing to change frozen evaluation inputs')
  path.write_text(json.dumps(out,indent=2)+'\n');print(json.dumps(dict(distinct_cases=24,paired_orders=32,inference_runs=len(records),min_tokens=min(len(r['token_ids']) for r in records),max_tokens=max(len(r['token_ids']) for r in records),max_short_suffix=max(len(r['token_ids'])-r['prefix_tokens'] for r in records if r['variant']=='short'))))

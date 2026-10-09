@@ -30,6 +30,8 @@ def evidence_header(header):
     return 'State: ' + body
 
 class TextPreparer:
+    prompt_layout = PROMPT_LAYOUT
+    max_tokens = MAX_TOKENS
     def __init__(self):
         lock = json.loads((ROOT / 'MODEL_LOCK.json').read_text())
         for component, names in [('base', ['config.json', 'tokenizer.json', 'tokenizer_config.json', 'chat_template.jinja', 'merges.txt', 'vocab.json']), ('adapter', ['decision_readout.json', 'calibration.json'])]:
@@ -43,16 +45,26 @@ class TextPreparer:
     def render(self, text):
         # Same text-only message schema as pinned mlx-vlm Qwen3.5 formatter.
         return self.tokenizer.apply_chat_template([{'role': 'user', 'content': [{'type': 'text', 'text': text}]}], tokenize=False, add_generation_prompt=True, enable_thinking=False)
+    def prepare_state(self, case):
+        state = case.get('state', '')
+        if not isinstance(state, str):
+            raise ValueError('state must be a string')
+        return state
+    def prepare_header(self, header):
+        return evidence_header(header)
+    def count_prefix(self, rendered, ids, state):
+        prefix_ids = self.tokenizer.encode('<|im_start|>user\nState:', add_special_tokens=False)
+        if prefix_ids != [248045, 846, 198, 1349, 25] or ids[:5] != prefix_ids:
+            raise ValueError('common prefix token mismatch')
+        return 5
     def prepare(self, case):
         options = [Option(value=x) if isinstance(x, str) else Option(**x) for x in case['options']]
         if not 2 <= len(options) <= 7:
             raise ValueError('canister choice requires 2..7 options')
         field = ChoiceField(id=case['id'].replace('-', '_'), type='choice', question=case['question'], options=options)
-        state = case.get('state', '')
-        if not isinstance(state, str):
-            raise ValueError('state must be a string')
+        state = self.prepare_state(case)
         header, choices, texts = compile_question(field, state, 'standard')
-        header = evidence_header(header)
+        header = self.prepare_header(header)
         # compile_question appends the reserved unknown candidate last.
         texts[-1] = 'unknown'
         codes = readout_codes(self.tokenizer, self.render(header), 256, limit=256)
@@ -66,15 +78,12 @@ class TextPreparer:
         if verified_label_ids(self.tokenizer, rendered, labels) != [t for _, t in codes[:len(choices)]]:
             raise ValueError('decision token binding mismatch')
         ids = self.tokenizer.encode(rendered, add_special_tokens=False)
-        if not 1 <= len(ids) <= MAX_TOKENS:
-            raise ValueError(f'text prefill requires 1..{MAX_TOKENS} tokens; got {len(ids)}')
-        prefix_ids = self.tokenizer.encode('<|im_start|>user\nState:', add_special_tokens=False)
-        if prefix_ids != [248045, 846, 198, 1349, 25] or ids[:5] != prefix_ids:
-            raise ValueError('common prefix token mismatch')
-        prefix_count = 5
+        if not 1 <= len(ids) <= self.max_tokens:
+            raise ValueError(f'text prefill requires 1..{self.max_tokens} tokens; got {len(ids)}')
+        prefix_count = self.count_prefix(rendered, ids, state)
         return dict(id=case['id'], options=[x.value for x in options], gold=case.get('gold'), rotations=1,
                     token_ids=ids, input_sha256=hashlib.sha256(json.dumps(ids).encode()).hexdigest(), prompt=prompt,
-                    prompt_layout=PROMPT_LAYOUT, prefix_tokens=prefix_count)
+                    prompt_layout=self.prompt_layout, prefix_tokens=prefix_count)
 
 def main():
     ap=argparse.ArgumentParser();ap.add_argument('--input',required=True);ap.add_argument('--output',required=True);args=ap.parse_args()
