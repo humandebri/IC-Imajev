@@ -42,11 +42,11 @@ def main():
   report['prefix_validation_updates']=malformed
   for run_index in range(a.repeats*3):
    name=['617','620','653'][run_index%3];repeat=run_index//3+1
-   index={'617':0,'620':1,'653':2}[name];record=fixture['records'][index];ids=record['token_ids'];assert ids[:27]==metadata['token_ids'];directory=d/f'{name}-r{repeat}';directory.mkdir();old=ROOT/f'artifacts/boomdao-current-v1/{name}-r1';reference=json.loads(ref(old/'report.json').read_text());options=record['options'];rows=[];before=call(dict(op='balance_status'));started=time.perf_counter();cmd=dict(op='update_infer_start',ids=ids[27:],options=options)
+   index={'617':0,'620':1,'653':2}[name];record=fixture['records'][index];ids=record['token_ids'];assert ids[:27]==metadata['token_ids'];directory=d/f'{name}-r{repeat}';directory.mkdir();old=ROOT/f'artifacts/boomdao-current-v1/{name}-r1';reference=json.loads(ref(old/'report.json').read_text());options=record['options'];rows=[];before=call(dict(op='balance_status'));started=time.perf_counter();cmd=dict(diagnostics=True,op='update_infer_start',ids=ids[27:],options=options)
    while True:
     r=call(cmd);progress=r['ok']['progress'];rows.append(r);(directory/f'{len(rows):02d}.json').write_text(json.dumps(r,indent=2)+'\n');print(json.dumps(dict(case=name,call=len(rows),stage=progress['stage'],instructions=progress['instructions'],seconds=r['wall_seconds'])),flush=True)
     if progress['done']:break
-    cmd=dict(op='update_infer_continue',id=progress['id'],stage=progress['stage'])
+    cmd=dict(diagnostics=True,op='update_infer_continue',id=progress['id'],stage=progress['stage'])
    elapsed=time.perf_counter()-started;after=call(dict(op='balance_status'))
    for i in range(32):
     path=old/'queries'/f'layer-{i:02d}.npy';v=np.load(ref(path),allow_pickle=False) if path.exists() else None
@@ -66,7 +66,7 @@ def main():
    report['cases'].append(row);(d/'report.json').write_text(json.dumps(report,indent=2)+'\n');print(json.dumps(row),flush=True)
   # Rejected continuation/start must leave the completed session intact.
   boundary=[]
-  for cmd in [dict(op='update_infer_continue',id=progress['id'],stage=progress['stage']),dict(op='update_infer_start',ids=[],options=options)]:
+  for cmd in [dict(diagnostics=True,op='update_infer_continue',id=progress['id'],stage=progress['stage']),dict(diagnostics=True,op='update_infer_start',ids=[],options=options)]:
    try:call(cmd)
    except RuntimeError as error:
     assert str(error) in ('session progress mismatch','suffix token bounds'),str(error)

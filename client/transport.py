@@ -179,7 +179,7 @@ class Transport:
         result=json.loads(line)
         if 'error' in result:raise RuntimeError(result['error'])
         return result
-    def upload(self,manifest,pack):return self.command({'op':'upload','manifest':str(manifest),'pack':str(pack)})
+    def upload(self,manifest,pack,*,reset=False):return self.command({'op':'upload','manifest':str(manifest),'pack':str(pack),'reset':reset})
     def run(self,op,values,dims=(),scalars=(),tensor='',input_hash='0'*64,aux=()):
         h={'version':getattr(self,'frame_version',1),'model':self.model,'pack_hash':self.pack_hash,'input_hash':input_hash,'step':self.index,'op':op,'tensor':tensor,'dims':list(dims),'scalars':list(scalars)}
         if aux:h['aux']=list(aux)

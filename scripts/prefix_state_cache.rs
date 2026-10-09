@@ -1,7 +1,7 @@
 //! Owner-prepared immutable prefix states; exact-content lookups only.
 use crate::Result;
 use std::{cell::RefCell,rc::Rc};
-const TOKENS:usize=27;
+const TOKENS:usize=5;
 const VALUES:usize=TOKENS*6176;
 const STATE:usize=32*128*128;
 const MAX_ENTRIES:usize=24;
@@ -34,4 +34,30 @@ pub fn prepare(log_bytes:&[u8],packet:&[u8])->Result<(u32,u64)> {
  let actual=match decoded{crate::delta_full_log::InitialState::KeyMajor(v)=>v, _=>return Err("fixed prefix layout".into())};
  if state.len()!=STATE||actual.len()!=STATE||!state.iter().zip(&actual).all(|(a,b)|a.to_bits()==b.to_bits()){return Err("fixed prefix state mismatch".into());}
  CACHE.with(|c|{let mut c=c.borrow_mut();c.push(Entry{log:lk,packet:pk,state:Rc::new(state)});Ok((c.len()as u32,(c.len()*STATE*4)as u64))})
+}
+
+#[cfg(test)]
+mod tests {
+ use super::*;
+ #[test]
+ fn five_token_cache_prepares_all_delta_layers_and_retries_without_new_entries() {
+  CACHE.with(|c|c.borrow_mut().clear());
+  let mut first=None;
+  for layer in 0..24 {
+   let mut log=vec![0.;VALUES];
+   // Distinct BF16 innovations avoid aliasing identical content between layers.
+   log[0]=0.5;log[TOKENS*2048]=(layer+1) as f32 / 32.;log[TOKENS*6144..].fill(0.5);
+   let(packet,_)=crate::prefix_hybrid_codec::prepare(&log,TOKENS).unwrap();
+   let bytes=float_bytes(&log);
+   assert_eq!(prepare(bytes,&packet).unwrap(),((layer+1)as u32,(layer+1)as u64*STATE as u64*4));
+   assert!(lookup_log(TOKENS,32,&log).is_some());
+   assert!(lookup_packet(&packet).is_some());
+   if layer==0 {first=Some((log,packet));}
+  }
+  let(log,packet)=first.unwrap();
+  assert_eq!(prepare(float_bytes(&log),&packet).unwrap(),(24,24*STATE as u64*4));
+  let old_log=vec![0.;27*6176];
+  let(old_packet,_)=crate::prefix_hybrid_codec::prepare(&old_log,27).unwrap();
+  assert_eq!(prepare(float_bytes(&old_log),&old_packet).unwrap_err(),"fixed prefix shape/size");
+ }
 }

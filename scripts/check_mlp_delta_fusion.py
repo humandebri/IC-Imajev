@@ -29,7 +29,7 @@ try:
   def call(label,header,values=None,frame=None,profile=False):
    global query_count
    request=d/f'{layer:02d}-{label}.request.bin';out=d/f'{layer:02d}-{label}.response.bin';request.write_bytes(frame if frame is not None else encode(header,values));query_count+=1
-   try:result=t.command(dict(op='profile'if profile else'step',input=str(request),output=str(out)))
+   try:result=t.command(dict(diagnostics=bool(profile),op='profile'if profile else'step',input=str(request),output=str(out)))
    except RuntimeError as error:result={'error':str(error)}
    info=dict(result=result,request_frame_bytes=request.stat().st_size,request_sha256=sha(request.read_bytes()))
    if 'ok'in result:

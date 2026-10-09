@@ -5,7 +5,7 @@ pub(crate) fn evaluate<F,B>(r:&Request,x:&[f32],m:&Manifest,read:&mut F)->Result
 where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
  if r.op!="attention_full_integer" || !crate::lossless_encoding(&r.encoding) || r.dims.len()!=3 || !r.aux.is_empty() || !r.scalars.is_empty(){return Err("full attention metadata".into());}
  let(n,offset,last)=(r.dims[0],r.dims[1],r.dims[2]);
- if n==0 || n>132 || offset>512 || n+offset>512 || last>1 || (n>89 && last==0) || x.len()>crate::MAX_FLOATS || x.len()!=n*C+offset*2048 || !x.iter().all(|v|v.is_finite()){return Err("full attention bounds".into());}
+ if n==0 || n>132 || offset>crate::MAX_SEQUENCE_TOKENS || n+offset>crate::MAX_SEQUENCE_TOKENS || last>1 || (n>91 && last==0) || x.len()>crate::MAX_FLOATS || x.len()!=n*C+offset*2048 || !x.iter().all(|v|v.is_finite()){return Err("full attention bounds".into());}
  let p=r.tensor.strip_suffix(".self_attn.q_proj.weight").ok_or("full attention tensor")?;
  let i=p.strip_prefix("model.language_model.layers.").ok_or("full attention layer")?;let layer:usize=i.parse().map_err(|_|"full attention layer")?;
  if layer>31 || layer%4!=3 || i!=layer.to_string() || (last==1 && layer!=31){return Err("full attention layer".into());}

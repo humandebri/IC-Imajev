@@ -8,14 +8,14 @@ pub(super) struct AttentionMlpFrontMeasurement {
  stable_read_bytes:u64,heap_pages:u64,stable_pages:u64,spans:Vec<(String,u64)>,
 }
 fn bf16_bytes(x:&[f32])->Vec<u8>{x.iter().flat_map(|x|((x.to_bits()>>16)as u16).to_le_bytes()).collect()}
-#[ic_cdk::query]
+#[ic_cdk::query(name = "runAttentionInferenceStep")]
 fn attention_mlp_front(state:StateBytes,front:u32)->Result<AttentionMlpFrontMeasurement,String>{
  query_access();let start=ic_cdk::api::performance_counter(0);
  if state.len()>1_990_000||front==0||front>=9216||front%256!=0{return Err("attention front input bounds".into());}
  let(r,input)=decode_query(&state)?;
  let text=r.tensor.strip_prefix("model.language_model.layers.").and_then(|s|s.strip_suffix(".post_attention_layernorm.weight")).ok_or("attention front layer")?;
  let layer=text.parse::<usize>().map_err(|_|"attention front layer")?;
- if layer>=30||layer%4!=2||text!=layer.to_string()||r.op!="mlp_stream_complete_attention_full"||r.encoding!="mlp-attention-finish-exact-v1"||r.dims.len()!=3||!(1..=69).contains(&r.dims[0]){return Err("attention front scope".into());}
+ if layer>=30||layer%4!=2||text!=layer.to_string()||r.op!="mlp_stream_complete_attention_full"||r.encoding!="mlp-attention-finish-exact-v1"||r.dims.len()!=3||!(1..=91).contains(&r.dims[0]){return Err("attention front scope".into());}
  let n=r.dims[0];let before=ic_cdk::api::performance_counter(0);let(y,mut reads)=evaluate_decoded(&r,input)?;let values=y.into_values()?;
  if values.len()!=n*(2*C+KV){return Err("attention front result shape".into());}
  let mut spans=vec![("mlp_complete_attention_full".into(),ic_cdk::api::performance_counter(0)-before)];

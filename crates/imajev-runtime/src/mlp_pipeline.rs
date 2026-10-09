@@ -6,8 +6,8 @@ const C:usize=2560;const H:usize=9216;const R:usize=64;
 pub(crate) fn layout(r:&Request)->Result<(usize,usize,usize,usize)> {
     let partial=cfg!(feature="experimental-mlp-delta-fusion") && matches!(r.op.as_str(),"mlp_prepare_partial_down"|"mlp_down_norm_partial_prepared");
     let shape=match r.dims.as_slice() {
-        [n,c]=>*n>0 && *n<=89 && *c==C && r.op!="mlp_down_norm_partial_prepared",
-        [n,c,rows]=>partial && *n>0 && *n<=89 && *c==C && valid_partial_rows(*rows),
+        [n,c]=>*n>0 && *n<=91 && *c==C && r.op!="mlp_down_norm_partial_prepared",
+        [n,c,rows]=>partial && *n>0 && *n<=91 && *c==C && valid_partial_rows(*rows),
         _=>false,
     };
     if r.encoding!=NAME || !(matches!(r.op.as_str(),"mlp_prepare_down"|"mlp_down_norm_prepared") || partial) || !shape || r.scalars.len()!=2 || r.scalars[0].to_bits()!=2f32.to_bits() || r.scalars[1].to_bits()!=1e-6f32.to_bits() || r.aux.len()!=1 {return Err("MLP pipeline metadata".into());}

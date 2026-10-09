@@ -2,6 +2,12 @@
 use super::*;
 use imajev_runtime::Request;
 const C: usize = 2560;
+pub(super) const UNCHUNKED_SUFFIX_LIMIT: usize = 89;
+#[cfg(feature="paid-update-inference")]
+const PREFIX_TOKENS:usize=super::paid_inference::COMMON_PREFIX.len();
+// The standalone owner graph also builds without the paid module.
+#[cfg(not(feature="paid-update-inference"))]
+const PREFIX_TOKENS:usize=5;
 pub(super) const WORKER_BUDGET: u64 = 30_000_000_000;
 pub(super) fn progress_limit(n:usize)->u64 {
     #[cfg(feature="experimental-update-token-chunks")]
@@ -28,7 +34,7 @@ fn digest(v: &[f32]) -> String {
     let mut h=Sha256::new();for x in v {h.update(x.to_le_bytes());}
     h.finalize().iter().map(|b|format!("{b:02x}")).collect()
 }
-#[ic_cdk::update]
+#[ic_cdk::update(name = "installInferencePrefix")]
 fn update_prefix(layer: u32, values: Vec<f32>, packet: StateBytes) -> Result<(),String> {
     owner();paid_admin_guard();let i=layer as usize;
     let p=validate_prefix(i,&values,&packet)?;
@@ -52,7 +58,7 @@ fn validate_prefix(i:usize,values:&[f32],packet:&[u8])->Result<usize,String> {
         if packet.len()<12 || &packet[..4]!=b"NPF1" {return Err("prefix Delta shape".into());}
         u32::from_le_bytes(packet[4..8].try_into().unwrap()) as usize
     };
-    if p!=27 {return Err("prefix token bounds".into());}
+    if p!=PREFIX_TOKENS {return Err("prefix token bounds".into());}
     if i%4==3 {
         if values.len()!=p*2048 || !packet.is_empty() {return Err("prefix KV shape".into());}
     } else {
@@ -66,15 +72,16 @@ fn template() -> Request {
         version:1,model:m.model.clone(),pack_hash:m.pack_hash.clone(),input_hash:"0".repeat(64),
         step:0,op:String::new(),tensor:String::new(),dims:vec![],scalars:vec![],aux:vec![],encoding:"bf16-block256-exact-v1".into()}})
 }
-#[ic_cdk::update]
+#[cfg(feature="paid-update-diagnostics")]
+#[ic_cdk::update(name = "startOwnerInference")]
 fn update_infer_start(ids: Vec<u32>, options: Vec<String>) -> Result<UpdateProgress,String> {
     owner();paid_admin_guard();start(ids,options)
 }
 pub(super) fn start(ids: Vec<u32>, options: Vec<String>) -> Result<UpdateProgress,String> {
     if busy(){return Err("inference already active".into());}
     #[cfg(feature="experimental-update-token-chunks")]
-    if ids.len()>89 {return crate::chunked_update::start(ids,options);}
-    if !(1..=89).contains(&ids.len()){return Err("suffix token bounds".into());}
+    if ids.len()>UNCHUNKED_SUFFIX_LIMIT {return crate::chunked_update::start(ids,options);}
+    if !(1..=UNCHUNKED_SUFFIX_LIMIT).contains(&ids.len()){return Err("suffix token bounds".into());}
     STORE.with(|s|if s.borrow().ready {Ok(())}else{Err("not ready".to_string())})?;
     imajev_runtime::decide_candidates(&options,&vec![0.;options.len().min(7)+1],1.3051569717552742)?;
     GRAPH.with(|g| -> Result<(),String> {let g=g.borrow();if g.prefix.len()!=32 || g.prefix.iter().any(|p|p.values.is_empty()){return Err("prefix incomplete".into());}
@@ -87,11 +94,12 @@ pub(super) fn start(ids: Vec<u32>, options: Vec<String>) -> Result<UpdateProgres
     let before=ic_cdk::api::performance_counter(0);let(norm,b)=evaluate(&r,&hidden).unwrap_or_else(|e|ic_cdk::trap(&e));reads+=b;
     let initial_norm=ic_cdk::api::performance_counter(0)-before;
     let id=GRAPH.with(|g| {let mut g=g.borrow_mut();g.next_id=g.next_id.checked_add(1).expect("session id overflow");g.next_id});
-    let prefix_tokens=27;
+    let prefix_tokens=PREFIX_TOKENS;
     let s=Session{id,stage:0,n,prefix_tokens,options,request:r,hidden,norm,attention:vec![],hidden_hashes:vec![],state_hashes:vec![],decision:None};
     Ok(run(s,started,reads,vec![("embed".into(),embedding),("initial_norm".into(),initial_norm)]))
 }
-#[ic_cdk::update]
+#[cfg(feature="paid-update-diagnostics")]
+#[ic_cdk::update(name = "continueOwnerInference")]
 fn update_infer_continue(id:u64, stage:u64) -> Result<UpdateProgress,String> {
     owner();paid_admin_guard();continue_graph(id,stage)
 }
@@ -147,7 +155,7 @@ fn run(mut s:Session,start:u64,mut reads:u64,mut ops:Vec<(String,u64)>) -> Updat
     GRAPH.with(|g|g.borrow_mut().session=Some(s));reply
 }
 
-pub(super) fn bank_ready(tokens:usize)->bool {tokens==27 && GRAPH.with(|g|{let g=g.borrow();g.prefix.len()==32 && g.prefix.iter().all(|p|!p.values.is_empty())})}
+pub(super) fn bank_ready(tokens:usize)->bool {tokens==PREFIX_TOKENS && GRAPH.with(|g|{let g=g.borrow();g.prefix.len()==32 && g.prefix.iter().all(|p|!p.values.is_empty())})}
 pub(super) fn select_bank(tokens:usize)->Result<(),String> {if bank_ready(tokens){Ok(())}else{Err("prefix incomplete".into())}}
 pub(super) fn busy()->bool {
     #[cfg(feature="experimental-update-token-chunks")]
@@ -166,7 +174,7 @@ pub(super) fn stream_prefix(layer:usize)->Result<(Vec<f32>,Option<imajev_runtime
         if p.values.is_empty(){return Err("prefix incomplete".into());}
         let stream=if layer%4==3 {None}else{
             let mut r=template();r.op="delta_full_hybrid_integer".into();r.encoding="delta-hybrid-prefix-exact-v1".into();
-            r.tensor=format!("model.language_model.layers.{layer}.linear_attn.in_proj_qkv.weight");r.dims=vec![1,32,27,0];
+            r.tensor=format!("model.language_model.layers.{layer}.linear_attn.in_proj_qkv.weight");r.dims=vec![1,32,PREFIX_TOKENS,0];
             let mut x=vec![0.;C];x.extend_from_slice(&p.values);
             Some(imajev_runtime::server_delta_stream(&r,&x,&p.packet)?)
         };
@@ -181,20 +189,20 @@ mod tests {
     use super::*;
     #[test]
     fn registration_rejects_voting_bank_for_attention_and_delta() {
-        assert_eq!(validate_prefix(3,&vec![0.;27*2048],&[]).unwrap(),27);
+        assert_eq!(validate_prefix(3,&vec![0.;5*2048],&[]).unwrap(),5);
         assert!(validate_prefix(3,&vec![0.;38*2048],&[]).is_err());
-        let mut packet=b"NPF1".to_vec();packet.extend(27u32.to_le_bytes());packet.extend([0;4]);
-        assert_eq!(validate_prefix(0,&vec![0.;3*8192],&packet).unwrap(),27);
+        let mut packet=b"NPF1".to_vec();packet.extend(5u32.to_le_bytes());packet.extend([0;4]);
+        assert_eq!(validate_prefix(0,&vec![0.;3*8192],&packet).unwrap(),5);
         packet[4..8].copy_from_slice(&38u32.to_le_bytes());
         assert!(validate_prefix(0,&vec![0.;3*8192],&packet).is_err());
     }
     #[test]
     fn readiness_requires_every_common_layer() {
         GRAPH.with(|g|*g.borrow_mut()=GraphStore::default());
-        assert!(!bank_ready(27));
+        assert!(!bank_ready(5));
         GRAPH.with(|g|g.borrow_mut().prefix=(0..32).map(|_|Prefix{values:vec![0.],packet:vec![]}).collect());
-        assert!(bank_ready(27));assert!(!bank_ready(38));
+        assert!(bank_ready(5));assert!(!bank_ready(38));
         GRAPH.with(|g|g.borrow_mut().prefix[31].values.clear());
-        assert!(!bank_ready(27));
+        assert!(!bank_ready(5));
     }
 }

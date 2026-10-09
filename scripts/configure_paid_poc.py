@@ -8,9 +8,11 @@ def main():
  ap=argparse.ArgumentParser(description=__doc__)
  ap.add_argument('--canister',required=True)
  ap.add_argument('--directory',required=True,help='New output directory for payment configuration evidence')
+ ap.add_argument('--config',type=Path,default=R/'examples/paid-inference-caller/poc-config.json',help='Current config JSON or measure_paid_prefix5.py output')
  args=ap.parse_args();dest=R/args.directory;dest.mkdir(parents=True,exist_ok=False)
  wire=PaidTransport(dest,args.canister);old=wire.call('paid_config')['result']
- config=json.loads((R/'examples/paid-inference-caller/poc-config.json').read_text());config['version']=old['version']+1
+ data=json.loads(args.config.read_text());config=data.get('config',data)
+ if set(config)!={'base_fee','fee_per_token','reserve_cycles'}:raise ValueError('current fee config fields required; fee versions are retired')
  reply=wire.call('configure_paid',config)['result']
  if 'Ok' not in reply:raise RuntimeError(reply)
  actual=wire.call('paid_config')['result'];assert actual==config

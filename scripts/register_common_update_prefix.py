@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Register only the validated 27-token common prefix on an explicit local target."""
+"""Register only the validated five-token common prefix on an explicit local target."""
 import argparse
 import hashlib
 import json
@@ -10,22 +10,16 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'client'))
-from prefix_inference import load_cache, verify_module
+from prefix_inference import verify_module
 from transport import Transport
 
-PREFIX = [248045,846,198,56555,279,2420,5721,321,4087,279,3296,1608,279,10661,12521,13,3301,1132,279,3074,2904,1970,13,198,1349,25,328]
+from paid_prefix import COMMON_PREFIX as PREFIX, load_prefix
 
 def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 def load_layers(source, packets, manifest):
-    report = json.loads((source / 'report.json').read_text())
-    cache = load_cache(source / 'queries', manifest, report['wasm_sha256'])
-    metadata = json.loads((packets / 'cache.json').read_text())
-    if cache['metadata']['token_ids'] != PREFIX or report['tokens'] != 27:
-        raise ValueError('expected the 27-token common prefix')
-    if metadata['identity']['source_report_sha256'] != sha(source / 'report.json'):
-        raise ValueError('packet source mismatch')
+    cache = load_prefix(source, packets, manifest)
     layers = []
     for layer, state in enumerate(cache['states']):
         packet = b''
@@ -33,12 +27,7 @@ def load_layers(source, packets, manifest):
             values = np.concatenate([state['keys'].transpose(1,0,2).ravel(), state['values'].transpose(1,0,2).ravel()])
         else:
             values = state['conv'].ravel()
-            packet = (packets / f'layer-{layer:02d}.npf1').read_bytes()
-            entry = metadata['packets'][str(layer)]
-            if len(packet) != entry['bytes'] or hashlib.sha256(packet).hexdigest() != entry['sha256']:
-                raise ValueError('packet hash mismatch')
-            if len(packet) < 12 or packet[:4] != b'NPF1' or int.from_bytes(packet[4:8], 'little') != 27:
-                raise ValueError('packet prefix mismatch')
+            packet = cache['hybrid_packets'][layer]
         values = np.asarray(values, dtype='<f4')
         if not np.isfinite(values).all() or np.any(values.view('<u4') & 65535):
             raise ValueError('prefix precision')
@@ -50,17 +39,18 @@ def main():
     parser.add_argument('--canister', required=True)
     parser.add_argument('--wasm', required=True)
     parser.add_argument('--directory', required=True)
+    parser.add_argument('--prefix', type=Path, required=True)
+    parser.add_argument('--packets', type=Path, required=True)
     args = parser.parse_args()
     manifest = json.loads((ROOT / 'checkpoints/full-int8.manifest.json').read_text())
-    source = ROOT / 'artifacts/query-packing-v3/prefix-v2'
-    packets = ROOT / 'artifacts/query-packing-v3/packets-v2'
+    source = args.prefix
+    packets = args.packets
     layers = load_layers(source, packets, manifest)  # Validate every layer before any update.
     module = sha(ROOT / args.wasm)
     directory = ROOT / args.directory
     directory.mkdir(parents=True, exist_ok=False)
     transport = Transport(manifest['model'], 'http://localhost:8001/', args.canister,
-        str(ROOT / 'artifacts/imajev-local.pem'), directory / 'module', manifest['pack_hash'],
-        bridge_binary=str(ROOT / 'artifacts/query-packing-v3/build/imajev-client'))
+        str(ROOT / 'artifacts/imajev-local.pem'), directory / 'module', manifest['pack_hash'])
     rows = []
     try:
         verify_module(transport, module)
@@ -80,7 +70,7 @@ def main():
     finally:
         transport.close()
     (directory / 'report.json').write_text(json.dumps(dict(canister=args.canister,
-        wasm_sha256=module, prefix_tokens=27, update_calls=len(rows), layers=rows), indent=2) + '\n')
+        wasm_sha256=module, prefix_tokens=len(PREFIX), update_calls=len(rows), layers=rows), indent=2) + '\n')
 
 if __name__ == '__main__':
     main()

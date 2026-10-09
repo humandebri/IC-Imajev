@@ -7,6 +7,9 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from build_prefix_contract import align_prefix_contract
+from build_paid_contract import copy_paid_sources, align_upgrade_metadata
+from generate_wasm_candid import generate_candid
 
 from build_paid_message_checkpoint import projection_bodies, sha
 from public_query_build import expose_public_queries
@@ -31,7 +34,8 @@ def main():
     parser.add_argument('--directory', required=True)
     parser.add_argument('--source-root', type=Path, default=ROOT,
                         help='Checkout containing the frozen runtime and dependency artifacts')
-    parser.add_argument('--legacy-116', action='store_true', help='Build the compatibility 116-token version')
+    parser.add_argument('--legacy-116', action='store_true',
+                        help='Build without token chunks (legacy flag name; current prefix + 89-token suffix)')
     args = parser.parse_args()
     artifact_root = args.source_root.resolve()
     if not args.legacy_116:
@@ -53,8 +57,8 @@ def main():
     directory.mkdir(parents=True, exist_ok=False)
     for path in parent.glob('*.rs'):
         shutil.copyfile(path, directory / path.name)
-    for name in ['paid_inference.rs', 'paid_types.rs']:
-        shutil.copyfile(ROOT / 'canisters/inference/src' / name, directory / name)
+    copy_paid_sources(directory, ROOT / 'canisters/inference/src')
+    align_upgrade_metadata(directory)
     scheduler = directory / 'update_inference.rs'
     text = prefix27_scheduler(scheduler.read_text())
     old = 'const STOP: u64 = 34_000_000_000;'
@@ -62,6 +66,7 @@ def main():
     text = text.replace(old, 'pub(super) const WORKER_BUDGET: u64 = 30_000_000_000;').replace('<STOP', '<WORKER_BUDGET')
     text += "\npub(super) fn progress_limit(_: usize) -> u64 { 64 }\n"
     scheduler.write_text(text)
+    prefix_tokens = align_prefix_contract(directory)
     expose_public_queries(directory)
     command = base['command'][:]
     # Produce the normal module, without owner diagnostic/fault endpoints.
@@ -76,7 +81,7 @@ def main():
                CARGO_PKG_VERSION_PATCH='0', CARGO_PKG_VERSION_PRE='',
                CARGO_CRATE_NAME='imajev_inference')
     files = [Path(__file__), ROOT / 'scripts/build_common_prefix27.py', ROOT / 'scripts/build_paid_message_checkpoint.py',
-             ROOT / 'scripts/public_query_build.py', pointer_path,
+             ROOT / 'scripts/build_paid_contract.py', ROOT / 'scripts/generate_wasm_candid.py', ROOT / 'scripts/check_canister_api_exports.py', ROOT / 'scripts/public_query_build.py', ROOT / 'scripts/build_prefix_contract.py', ROOT / 'scripts/canister_api_names.py', pointer_path,
              parent / 'report.json', parent / 'full.wasm'] + list(directory.glob('*.rs'))
     hashes = {str(p): sha(p) for p in files}
     with (directory / 'compiler.log').open('w') as log:
@@ -97,10 +102,11 @@ def main():
         previous = target
     assert len(patches) == 34
     assert hashes == {name: sha(ROOT / name) for name in hashes}
-    report = dict(wasm_sha256=sha(directory / 'full.wasm'), parent=base['wasm_sha256'],
+    api = generate_candid(directory / 'full.wasm', directory / 'service.did')
+    report = dict(api=api, wasm_sha256=sha(directory / 'full.wasm'), parent=base['wasm_sha256'],
                   command=command, patches=patches, source_hashes=hashes,
                   dependency_hashes=base['dependency_hashes'],
-                  public_queries=True, prefix_tokens=27,
+                  public_queries=True, prefix_tokens=prefix_tokens,
                   all34_projection_bodies_equal_to_validated_parent=True,
                   scope='Build only. Optimized parent retained; combined prefix27 inference and instruction counts require fresh verification. No deployment.',
                   full_inference_verified=False)

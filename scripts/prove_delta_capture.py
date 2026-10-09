@@ -65,7 +65,7 @@ def main():
      t.command(cmd)
     for name in names:
      record=fixture[{'617':0,'620':1,'653':2}[name]];assert record['token_ids'][:prefix]==metadata['token_ids']
-     case=directory/name;case.mkdir();cmd=dict(op='update_infer_start',ids=record['token_ids'][prefix:],options=record['options']);previous=0
+     case=directory/name;case.mkdir();cmd=dict(diagnostics=True,op='update_infer_start',ids=record['token_ids'][prefix:],options=record['options']);previous=0
      while True:
       reply=t.command(cmd);progress=reply['ok']['progress'];stage=progress['stage'];assert stage==previous+1
       write(case/f'stage-{stage:02d}.json',reply);previous=stage
@@ -78,7 +78,7 @@ def main():
        captures.append(result);write(cd/'verified.json',result);write(D/'captures.json',captures)
        print(json.dumps(dict(case=name,layer=layer,dense_state_bit_equal=True,output_bit_equal=True)),flush=True)
       if progress['done']:break
-      cmd=dict(op='update_infer_continue',id=progress['id'],stage=stage)
+      cmd=dict(diagnostics=True,op='update_infer_continue',id=progress['id'],stage=stage)
      old=ROOT/f'artifacts/boomdao-current-v1/{name}-r1'
      for i in range(32):
       p=old/'queries'/f'layer-{i:02d}.npy'

@@ -37,9 +37,9 @@ POCでは常駐モデルの維持費を運営負担として扱い、利用件�
 
 ## 設定の利用
 
-設定ファイルは`examples/paid-inference-caller/poc-config.json`。初期状態の料金版は3で、既存canisterへ適用するときは現在の版より大きい値にする。`reserve_cycles=2T`はローカルPOC用の追加運営余裕で、本番運用の残高設計を確定した値ではない。
+設定ファイルは`examples/paid-inference-caller/poc-config.json`。`reserve_cycles=2T`はローカルPOC用の追加運営余裕で、本番運用の残高設計を確定した値ではない。
 
-重みとprefixを準備した通常のpaid版canisterへ、owner identity `imajev-local`で次を実行する。対象principalと新しい出力directoryを指定する。スクリプトはlocal専用で、現在の料金版を読み、版を増やして設定し、設定のreadbackを確認する。受付も有効になるため、モデル準備を終えてから使う。
+重みとprefixを準備した通常のpaid版canisterへ、owner identity `imajev-local`で次を実行する。対象principalと新しい出力directoryを指定する。スクリプトはlocal専用で、現在の設定を読み、料金を設定してreadbackを確認する。受付も有効になるため、モデル準備を終えてから使う。
 
 ```sh
 python3 scripts/configure_paid_poc.py --canister <paid-canister-id> --directory artifacts/poc-price-apply-01
@@ -49,14 +49,16 @@ python3 scripts/configure_paid_poc.py --canister <paid-canister-id> --directory 
 
 ## 証拠と再実行
 
-- 初回費用測定：`scripts/measure_paid_pricing_poc.py`、`artifacts/paid-pricing-poc-v1/verified.json`。
-- 最終料金の検証：`scripts/measure_paid_pricing_poc_final.py`、`artifacts/paid-pricing-poc-v2/`。
+- 初回費用測定：`scripts/measure_paid_pricing_poc.py`（実行終了・過去記録）、`artifacts/paid-pricing-poc-v1/verified.json`。
+- 最終料金の検証：`scripts/measure_paid_pricing_poc_final.py`（実行終了・過去記録）、`artifacts/paid-pricing-poc-v2/`。
 - raw Candid再検証：`scripts/report_paid_pricing_poc.py`。最終版は引数`artifacts/paid-pricing-poc-v2`を指定する。
 
-最終設定の4推論は全て完走し、追加の短文は13B、617/620/653は178B/154B/181Bを正確に受領した。各回の余剰12,345,678 cyclesは返却された。既存3問の判定・確率・logitsは元モデルとbit一致し、内部workerは5/4/5回。料金不足、古い料金版、保持中の同一request ID再送でも受領ゼロを確認した。
+最終設定の4推論は全て完走し、追加の短文は13B、617/620/653は178B/154B/181Bを正確に受領した。各回の余剰12,345,678 cyclesは返却された。既存3問の判定・確率・logitsは元モデルとbit一致し、内部workerは5/4/5回。料金不足、当時のAPIにおける古い料金版、保持中の同一request ID再送でも受領ゼロを確認した。現在のAPIは料金版を使用せず、受付時の必要額と添付額を比較する。
 
 最終通常版のraw Candid 14応答を再decodeして独立に検証した。初回測定も24応答を検証済み。最終4件のローカル推論側の残高消費は短文8.31B、617が145.84B、620が125.70B、653が146.60B cycles。新料金はこれらと初回6形状で、測定消費の120%＋1Bを覆った。これは有限のPOC測定の結果であり、全入力や常駐費回収の保証ではない。
 
 Pythonスクリプトの構文確認と設定用CLIのhelpを確認した。`configure_paid_poc.py`自体の適用コマンドは今回実行していないが、同じ公開APIによる設定・版更新・readbackは推論測定スクリプトで実行済み。失敗時全額返金の既存実装は変更せず、以前の[返金検証](PAID_UPDATE_INFERENCE_MEASURED.md)を根拠としている。
 
 測定スクリプトは比較canisterをsnapshotで保存し、終了時に元のmodule・重み・prefix cacheへ復元し、snapshotを削除し、試験relayを停止した。復元・停止はstatusでも再確認した。再実行時はスクリプトの出力directoryを新しい名前に変え、既存artifactを上書きしない。mainnetとdefault canisterは変更していない。通常運用へ設定を反映する作業とは分ける。
+
+現行の5-token構成の実行検証と料金推定は [PAID_PREFIX5_VERIFICATION.md](PAID_PREFIX5_VERIFICATION.md) の手順を使う。旧 proof・測定スクリプトは過去記録として残し、新 API への互換経路は設けない。

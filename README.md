@@ -155,3 +155,5 @@ chmod 600 artifacts/imajev-local.pem artifacts/imajev-local.seed
 mainnet、push、PR作成は行っていません。
 
 初期のupload検証用の追加canisterは `4qggx-l3777-77775-aaaca-cai`（同じ8001）。`check_upload.py` がpack全体hash拒否と再準備を確認した。既にseal済みのcanisterではこの初回検証を再実行せず、別の新規canisterを指定してください。
+
+Canister の公開 method 名と互換名の対応は [API の命名](docs/CANISTER_API_NAMES.md) を参照してください。

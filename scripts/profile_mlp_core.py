@@ -10,7 +10,7 @@ t=Transport(m['model'],'http://localhost:8001/',a.canister,str(ROOT/'artifacts/i
 try:
  verify_module(t,wasm)
  for layer in [0,1,3]:
-  request=source/f'{layer:02d}-full-mlp.request.bin';expected=source/f'{layer:02d}-full-mlp.response.bin';out=d/f'{layer:02d}.response.bin';r=t.command(dict(op='profile',input=str(request),output=str(out)));assert out.read_bytes()==expected.read_bytes();cases.append(dict(layer=layer,input_sha256=sha(request.read_bytes()),output_sha256=sha(out.read_bytes()),profile=r));print(json.dumps(cases[-1]),flush=True)
+  request=source/f'{layer:02d}-full-mlp.request.bin';expected=source/f'{layer:02d}-full-mlp.response.bin';out=d/f'{layer:02d}.response.bin';r=t.command(dict(diagnostics=True,op='profile',input=str(request),output=str(out)));assert out.read_bytes()==expected.read_bytes();cases.append(dict(layer=layer,input_sha256=sha(request.read_bytes()),output_sha256=sha(out.read_bytes()),profile=r));print(json.dumps(cases[-1]),flush=True)
  verify_module(t,wasm);assert hashes=={str(p.relative_to(ROOT)):sha(p.read_bytes())for p in paths};result=dict(scope=__doc__,canister=a.canister,wasm_sha256=wasm,source_hashes=hashes,cases=cases,ordinary_queries=3)
  (d/'report.json').write_text(json.dumps(result,indent=2)+'\n')
  with zipfile.ZipFile(d/'validated-source.zip','w',zipfile.ZIP_DEFLATED)as z:

@@ -85,7 +85,7 @@ try:
             if label == '617' and layer == 0:
                 for index in frames:
                     out = d / f'{index:06d}.profile.response.bin'
-                    metric = t.command(dict(op='profile', input=str(d / f'{index:06d}.request.bin'), output=str(out)))
+                    metric = t.command(dict(diagnostics=True,op='profile', input=str(d / f'{index:06d}.request.bin'), output=str(out)))
                     assert decode(out.read_bytes())[1].tobytes() == decode((d / f'{index:06d}.response.bin').read_bytes())[1].tobytes()
                     profiles.append(metric)
             case = dict(label=label, layer=layer, tokens=n, groups=[16, 6, 10], gated_bitwise_equal=True,

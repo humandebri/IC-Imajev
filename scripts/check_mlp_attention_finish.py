@@ -36,7 +36,7 @@ try:
      if not is_instruction_limit(error):raise
      records.append(dict(label=label,layer=layer,rows=rows,success=False,error=str(error),failed_request=f'{index:06d}.request.bin'));continue
     expected=np.concatenate([expected_mlp[:n*C]if a.compact else expected_mlp,expected_attention]);assert y.tobytes()==expected.tobytes();call=t.measurements[-1]
-    request=d/f'{index:06d}.request.bin';out=d/f'{index:06d}.profile.response.bin';profile=t.command(dict(op='profile',input=str(request),output=str(out)));assert decode(out.read_bytes())[1].tobytes()==expected.tobytes();(d/f'{index:06d}.profile.json').write_text(json.dumps(profile,indent=2)+'\n')
+    request=d/f'{index:06d}.request.bin';out=d/f'{index:06d}.profile.response.bin';profile=t.command(dict(diagnostics=True,op='profile',input=str(request),output=str(out)));assert decode(out.read_bytes())[1].tobytes()==expected.tobytes();(d/f'{index:06d}.profile.json').write_text(json.dumps(profile,indent=2)+'\n')
     old=[control_mlp,control_attention];row=dict(label=label,layer=layer,tokens=n,rows=rows,success=True,full_bitwise_equal=True,call=call,control_calls=old,profile=profile,instruction_saving=sum(c['ok']['instructions']for c in old)-call['ok']['instructions'],candid_saving=sum(c['ok']['request_bytes']+c['ok']['reply_bytes']for c in old)-call['ok']['request_bytes']-call['ok']['reply_bytes']);records.append(row);print(json.dumps(row),flush=True)
  verify_module(t,module)
  if sha(ROOT/a.wasm)!=module or hashes!={str(p.relative_to(ROOT)):sha(p)for p in paths}or any(sha(ROOT/p)!=v for p,v in refs.items()):raise ValueError('Proof bookend changed')

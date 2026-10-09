@@ -16,7 +16,7 @@ def main():
     directory.mkdir(parents=True, exist_ok=False)
     did = directory / 'query.did'
     did.write_text((ROOT / 'canisters/inference/paid-inference.did').read_text().replace(
-        '  clear_weight_cache', '  attention_mlp_front : (blob, nat32) -> (variant { Err:text; Ok:reserved }) query;\n  clear_weight_cache'))
+        '  clearWeightCache', '  runAttentionInferenceStep : (blob, nat32) -> (variant { Err:text; Ok:reserved }) query;\n  clearWeightCache'))
     rows = []
     def call(method, arguments, query, allowed):
         command = ['icp', 'canister', 'call', args.canister, method, arguments,
@@ -32,22 +32,28 @@ def main():
         rows.append(dict(method=method, query=query, allowed=allowed, returncode=result.returncode,
                          stdout=result.stdout, stderr=result.stderr))
         (directory / 'progress.json').write_text(json.dumps(rows, indent=2) + '\n')
-    for method in ['status', 'pack_status', 'weight_cache_status']:
+    for method in ['getModelStatus', 'getWeightCacheStatus']:
         call(method, '()', True, True)
-    for method, value in [('step','(blob "")'), ('decision','(blob "", vec {"yes";"no"})'),
-                          ('decision_fast','(blob "", vec {"yes";"no"})'),
-                          ('terminal_step_decision','(blob "", vec {"yes";"no"})'),
-                          ('mlp_delta_front','(blob "", blob "", 27:nat32, 256:nat32)'),
-                          ('attention_mlp_front','(blob "", 256:nat32)')]:
+    for method, value in [('runInferenceStep','(blob "")'),
+                          ('runFinalInferenceStep','(blob "", vec {"yes";"no"})'),
+                          ('runDeltaInferenceStep','(blob "", blob "", 27:nat32, 256:nat32)'),
+                          ('runAttentionInferenceStep','(blob "", 256:nat32)')]:
         call(method, value, True, True)  # Invalid input must return Err, not fail caller authorization.
         assert 'Err' in rows[-1]['stdout'], rows[-1]
-    for method, value in [('clear_weight_cache','()'), ('prepare','("{}")'),
-                          ('warm_weights','("x")'), ('seal','()'),
-                          ('hash_pack','(1:nat64)'), ('update_prefix','(0:nat32, vec {}, blob "")')]:
+    for method, value in [('clearWeightCache','()'), ('prepareModelUpload','("{}")'),
+                          ('prepareWeightCache','("x")'),
+                          ('verifyModelUpload','(1:nat64)'), ('installInferencePrefix','(0:nat32, vec {}, blob "")')]:
         call(method, value, False, False)
-    call('paid_debug', '()', True, False)
-    call('profile_step', '(blob "")', True, False)
-    call('step', '(blob "")', False, False)
+    call('runInferenceStep', '(blob "")', False, False)
+    call('runPaidInferenceWorker', '(0:nat64, 0:nat64)', False, True)
+    assert 'self only' in rows[-1]['stdout'], rows[-1]
+    call('getInferenceReceipt', '("foreign-or-missing")', True, True)
+    assert 'null' in rows[-1]['stdout'], rows[-1]
+    call('retryInferenceRefund', '("foreign-or-missing")', False, True)
+    assert 'missing receipt' in rows[-1]['stdout'], rows[-1]
+    request = 'record {model="' + 'a'*64 + '";version=1:nat32;token_ids=vec {1:nat32};options=vec {"yes";"no"}}'
+    call('runPaidInference', '(' + request + ', "anonymous-test")', False, True)
+    assert 'caller/request ID' in rows[-1]['stdout'], rows[-1]
     (directory / 'report.json').write_text(json.dumps(dict(canister=args.canister,
         network='local', anonymous_checks=len(rows), checks=rows,
         scope='Access and malformed-input checks only. No model weights installed, no full inference claim.'), indent=2) + '\n')

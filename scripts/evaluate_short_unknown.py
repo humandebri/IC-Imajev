@@ -43,13 +43,13 @@ def main():
         assert call(dict(op='module_hash'))['ok']['module_hash']==report['module_sha256']
         for inp in inputs:
             cd=d/f"{inp['index']:02d}-{inp['variant']}"; cd.mkdir(); rows=[]
-            cmd=dict(op='update_infer_start', ids=inp['token_ids'][len(prefix):], options=inp['options'])
+            cmd=dict(diagnostics=True,op='update_infer_start', ids=inp['token_ids'][len(prefix):], options=inp['options'])
             while True:
                 r=call(cmd); rows.append(r); progress=r['ok']['progress']
                 (cd/f'{len(rows):02d}.json').write_text(json.dumps(r,indent=2)+'\n')
                 print(json.dumps(dict(index=inp['index'],variant=inp['variant'],call=len(rows),stage=progress['stage'])),flush=True)
                 if progress['done']: break
-                cmd=dict(op='update_infer_continue',id=progress['id'],stage=progress['stage'])
+                cmd=dict(diagnostics=True,op='update_infer_continue',id=progress['id'],stage=progress['stage'])
             decision=progress['decision']; prediction='__unknown__' if decision['abstained'] else decision['value']
             row=dict(index=inp['index'],case=inp['case'],offset=inp['offset'],variant=inp['variant'],gold=inp['gold'],prediction=prediction,correct=None if inp['gold'] is None else prediction==inp['gold'],tokens=len(inp['token_ids']),suffix_tokens=len(inp['token_ids'])-len(prefix),update_calls=len(rows),total_handler_instructions=sum(x['ok']['progress']['instructions'] for x in rows),max_handler_instructions=max(x['ok']['progress']['instructions'] for x in rows),wall_seconds=sum(x['wall_seconds'] for x in rows),decision=decision)
             report['cases'].append(row); (d/'report.json').write_text(json.dumps(report,indent=2)+'\n'); print(json.dumps(row),flush=True)

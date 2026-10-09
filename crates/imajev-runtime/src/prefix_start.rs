@@ -10,7 +10,7 @@ fn shape(r: &Request) -> Result<(usize, usize)> {
         || r.dims.len() != 2 || !r.aux.is_empty() || !r.scalars.is_empty()
     { return Err("prefix start metadata".into()); }
     let (n, p) = (r.dims[0], r.dims[1]);
-    if !(1..=89).contains(&n) || !(1..=132).contains(&p) || n+p>512
+    if !(1..=91).contains(&n) || !(1..=132).contains(&p) || n+p>512
     { return Err("prefix start shape".into()); }
     Ok((n,p))
 }
@@ -94,13 +94,13 @@ impl PreparedPrefixStart {
     use super::*;
     fn request(n:usize)->Request {serde_json::from_value(serde_json::json!({"version":1,"model":"a".repeat(64),"pack_hash":"b".repeat(64),"input_hash":"c".repeat(64),"step":0,"op":"prefix_start_integer","tensor":EMBED,"encoding":NAME,"dims":[n,45],"scalars":[]})).unwrap()}
     #[test] fn bounded_reply_preserves_all_bits_without_relaxing_generic_limit() {
-        for n in [1,80,87,89] {
+        for n in [1,80,87,89,91] {
             let r=request(n);let mut x=vec![-0.;reply_count(&r).unwrap()];x[n*C]=1.0000001;
             let frame=crate::encode(&r,&x).unwrap();let(_,y)=crate::decode(&frame).unwrap();
             assert!(x.iter().zip(y).all(|(a,b)|a.to_bits()==b.to_bits()));
             assert!(crate::decode_query(&frame).is_err());
         }
-        for n in [0,90,usize::MAX] {assert!(reply_count(&request(n)).is_err());}
+        for n in [0,92,usize::MAX] {assert!(reply_count(&request(n)).is_err());}
         assert!(crate::block_codec::decode(&((crate::MAX_FLOATS+1) as u32).to_le_bytes()).is_err());
     }
     #[test] fn invalid_request_rejects_before_read() {

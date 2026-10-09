@@ -2,8 +2,7 @@
 use crate::{prepared_weights::WeightBuffer, Manifest, Request, Result, MAX_FLOATS};
 
 const C: usize = 2560;
-const PREFIX: usize = 27;
-const HEADS: usize = 8;
+const PREFIX: usize = 5;
 
 /// Preserve the ordinary full-head path whenever both its buffers and work fit.
 pub fn needs_split(n: usize, offset: usize, last: bool) -> bool {
@@ -14,14 +13,25 @@ pub fn needs_split(n: usize, offset: usize, last: bool) -> bool {
         || 16 * (qn * (qn + 1) / 2 + qn * (offset + n - qn)) * 256 > 75_000_000
 }
 
+// Preserve the validated eight-head path while it fits. Four query heads
+// share one KV head, so this is also the smallest group without repeated KV.
+fn group_fits(n: usize, total: usize, heads: usize) -> bool {
+    let kv = 2 * (heads / 4) * total * 256;
+    n * heads * 256 + kv <= MAX_FLOATS
+        && heads * (n * (n + 1) / 2 + n * (total - n)) * 256 <= 75_000_000
+}
+fn group_heads(n: usize, total: usize) -> usize {
+    if group_fits(n,total,8) {8} else {4}
+}
+
 // Prefix is head-major; previous and current suffix KV are token-major.
 fn group_history(prefix: &[f32], keys: &[f32], values: &[f32], current: &[f32],
-                 n: usize, total: usize, first: usize) -> Vec<f32> {
+                 n: usize, total: usize, first: usize, heads: usize) -> Vec<f32> {
     let seen = keys.len() / 1024;
-    let mut out = Vec::with_capacity(2 * (HEADS / 4) * total * 256);
+    let mut out = Vec::with_capacity(2 * (heads / 4) * total * 256);
     for part in 0..2 {
         let previous = if part == 0 { keys } else { values };
-        for head in first / 4..(first + HEADS) / 4 {
+        for head in first / 4..(first + heads) / 4 {
             let at = part * PREFIX * 1024 + head * PREFIX * 256;
             out.extend_from_slice(&prefix[at..at + PREFIX * 256]);
             for token in 0..seen {
@@ -46,8 +56,8 @@ where F: FnMut(u64, usize) -> Result<B>, B: WeightBuffer {
         return Err("server Attention metadata/scope".into());
     }
     let (n, offset, last) = (r.dims[0], r.dims[1], r.dims[2]);
-    if !(1..=57).contains(&n) || !(PREFIX..=512).contains(&offset)
-        || offset + n > 512 || last > 1 || norm.len() != n * C
+    if !(1..=57).contains(&n) || !(PREFIX..=crate::MAX_SEQUENCE_TOKENS).contains(&offset)
+        || offset + n > crate::MAX_SEQUENCE_TOKENS || last > 1 || norm.len() != n * C
         || prefix.len() != PREFIX * 2048 || keys.len() != (offset - PREFIX) * 1024
         || values.len() != keys.len()
         || [norm, prefix, keys, values].iter().any(|x| !x.iter().all(|v| v.is_finite())) {
@@ -91,19 +101,21 @@ where F: FnMut(u64, usize) -> Result<B>, B: WeightBuffer {
     };
     let total = offset + n;
     let mut qr = r.clone(); qr.op = "attention_q_gqa_integer".into();
-    qr.dims = vec![qn, total, total - qn, 0, HEADS];
+    let heads = group_heads(qn,total);
+    if !group_fits(qn,total,heads) {return Err("server Attention group limits".into());}
+    qr.dims = vec![qn, total, total - qn, 0, heads];
     let (ax, used) = crate::attention_fusion::prepare_q_a(&qr, qnorm, m, read)?; bytes += used;
     let mut gated = vec![0.; qn * 4096];
-    for first in [0, HEADS] {
-        let payload = group_history(prefix, keys, values, &kv, n, total, first);
+    for first in (0..16).step_by(heads) {
+        let payload = group_history(prefix, keys, values, &kv, n, total, first, heads);
         qr.dims[3] = first;
         let (part, used) = crate::attention_fusion::evaluate_shared_with_a(
             &qr, &payload, m, read, Some(prepared), Some(&ax))?;
         bytes += used;
-        if part.len() != qn * HEADS * 256 { return Err("server Attention group output".into()); }
+        if part.len() != qn * heads * 256 { return Err("server Attention group output".into()); }
         for token in 0..qn {
             let at = token * 4096 + first * 256;
-            gated[at..at + HEADS * 256].copy_from_slice(&part[token * HEADS * 256..(token + 1) * HEADS * 256]);
+            gated[at..at + heads * 256].copy_from_slice(&part[token * heads * 256..(token + 1) * heads * 256]);
         }
     }
     let mut out = r.clone(); out.op = "lora_integer".into();
@@ -120,6 +132,59 @@ where F: FnMut(u64, usize) -> Result<B>, B: WeightBuffer {
 mod tests {
     use super::*;
     #[test]
+    fn every_supported_tile_has_a_bounded_group() {
+        for suffix in 90..=crate::MAX_SEQUENCE_TOKENS-PREFIX {
+            for begin in (0..suffix).step_by(57) {
+                let n=(suffix-begin).min(57);let total=PREFIX+begin+n;
+                for qn in [n,1] {
+                    let heads=group_heads(qn,total);
+                    assert!(group_fits(qn,total,heads), "{qn}/{total}/{heads}");
+                    if total<=512 {assert_eq!(heads,8);}
+                }
+            }
+        }
+        assert_eq!(group_heads(57,1024),4);
+        assert_eq!(group_heads(1,1024),4);
+    }
+    #[test]
+    fn four_head_history_keeps_all_tokens_at_1024() {
+        let n=57;let total=1024;let seen=total-PREFIX-n;
+        let prefix:Vec<_>=(0..PREFIX*2048).map(|v|v as f32).collect();
+        let keys:Vec<_>=(0..seen*1024).map(|v|1_000_000.+v as f32).collect();
+        let values:Vec<_>=(0..seen*1024).map(|v|2_000_000.+v as f32).collect();
+        let current:Vec<_>=(0..n*2048).map(|v|3_000_000.+v as f32).collect();
+        for first in [0,4,8,12] {
+            let x=group_history(&prefix,&keys,&values,&current,n,total,first,4);
+            assert_eq!(x.len(),2*total*256);
+            for part in 0..2 {for token in 0..total {
+                let head=first/4;
+                let want=if token<PREFIX {&prefix[(part*4+head)*PREFIX*256+token*256..(part*4+head)*PREFIX*256+(token+1)*256]}
+                    else if token<PREFIX+seen {let previous=if part==0{&keys}else{&values};let at=(token-PREFIX)*1024+head*256;&previous[at..at+256]}
+                    else {let at=part*n*1024+(token-PREFIX-seen)*1024+head*256;&current[at..at+256]};
+                assert_eq!(&x[(part*total+token)*256..(part*total+token+1)*256],want);
+            }}
+        }
+    }
+    #[test]
+    fn gqa_at_1024_matches_individual_head_queries() {
+        // Independent scalar-head requests also exercise the fallback path
+        // when attention-views is not enabled by the test configuration.
+        let n=2;let total=1024;let width=256;let heads=4;
+        let q:Vec<_>=(0..heads*n*width).map(|i|crate::bf((i%17)as f32/128.-0.0625)).collect();
+        let k:Vec<_>=(0..total*width).map(|i|crate::bf((i%23)as f32/128.-0.09375)).collect();
+        let v:Vec<_>=(0..total*width).map(|i|crate::bf((i%29)as f32/128.-0.109375)).collect();
+        let mut r:Request=serde_json::from_value(serde_json::json!({"version":1,"model":"a","pack_hash":"b","input_hash":"c","step":0,
+            "op":"gqa_suffix_bf16","encoding":"bf16-block256-exact-v1","tensor":"","dims":[n,width,heads,total-n],"scalars":[]})).unwrap();
+        let mut input=q.clone();input.extend_from_slice(&k);input.extend_from_slice(&v);
+        let grouped=crate::execute(&r,&input,&[]).unwrap();
+        r.op="attention_suffix_bf16".into();r.dims=vec![n,width,total-n];
+        for head in 0..heads {
+            let mut input=q[head*n*width..(head+1)*n*width].to_vec();input.extend_from_slice(&k);input.extend_from_slice(&v);
+            let scalar=crate::execute(&r,&input,&[]).unwrap();
+            assert!(scalar.iter().zip(&grouped[head*n*width..(head+1)*n*width]).all(|(a,b)|a.to_bits()==b.to_bits()));
+        }
+    }
+    #[test]
     fn only_large_tiles_need_extra_groups() {
         for suffix in 90..=229 {
             for begin in (0..suffix).step_by(57) {
@@ -134,13 +199,13 @@ mod tests {
     }
     #[test]
     fn grouped_history_keeps_every_prefix_and_suffix_token_at_512() {
-        let n=29; let seen=456; let total=512;
+        let n=29; let total=512; let seen=total-PREFIX-n;
         let prefix:Vec<_>=(0..PREFIX*2048).map(|v|v as f32).collect();
         let keys:Vec<_>=(0..seen*1024).map(|v|1_000_000.+v as f32).collect();
         let values:Vec<_>=(0..seen*1024).map(|v|2_000_000.+v as f32).collect();
         let kv:Vec<_>=(0..n*2048).map(|v|3_000_000.+v as f32).collect();
         for first in [0,8] {
-            let x=group_history(&prefix,&keys,&values,&kv,n,total,first);
+            let x=group_history(&prefix,&keys,&values,&kv,n,total,first,8);
             assert_eq!(x.len(),2*2*total*256); assert!(x.len()<MAX_FLOATS);
             for part in 0..2 {for local in 0..2 {
                 let head=first/4+local; let base=(part*2+local)*total*256;
@@ -158,7 +223,7 @@ mod tests {
         let m=Manifest{version:1,model:"a".repeat(64),pack_hash:"b".repeat(64),bytes:0,tensors:vec![]};
         let mut r:Request=serde_json::from_value(serde_json::json!({"version":1,"model":m.model,"pack_hash":m.pack_hash,"input_hash":"c".repeat(64),"step":0,"op":"attention_full_integer","tensor":"model.language_model.layers.3.self_attn.q_proj.weight","dims":[1,27,0],"scalars":[],"aux":[],"encoding":"bf16-block256-exact-v1"})).unwrap();
         let norm=vec![0.;C]; let prefix=vec![0.;PREFIX*2048];
-        for dims in [vec![],vec![58,27,0],vec![1,512,0],vec![1,26,0],vec![1,27,1],vec![usize::MAX,27,0]] {
+        for dims in [vec![],vec![58,27,0],vec![1,512,0],vec![1,PREFIX-1,0],vec![1,27,1],vec![usize::MAX,27,0]] {
             r.dims=dims; assert!(evaluate(&r,&norm,&prefix,&[],&[],&m,&mut|_,_|->Result<Vec<u8>>{panic!("invalid read")}).is_err());
         }
         r.dims=vec![1,28,0];assert!(evaluate(&r,&norm,&prefix,&[],&[],&m,&mut|_,_|->Result<Vec<u8>>{panic!("missing history read")}).is_err());

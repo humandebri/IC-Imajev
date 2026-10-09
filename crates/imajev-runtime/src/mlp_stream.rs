@@ -25,7 +25,7 @@ fn shape(r: &Request) -> Result<(usize, usize, usize)> {
     }
     let (n, begin, count) = (r.dims[0], r.dims[1], r.dims[2]);
     if n == 0
-        || n > 89
+        || n > 91
         || begin > H
         || begin % STEP != 0
         || count % STEP != 0
@@ -547,7 +547,7 @@ mod tests {
     #[cfg(feature="experimental-direct-mlp-reply")]
     #[test]
     fn direct_reply_is_byte_identical_and_bound_to_every_request_field() {
-        for n in [1,7,87,89] {
+        for n in [1,7,87,89,91] {
             for done in [128,4096,6016,H] {
                 if done%STEP!=0 {continue;}
                 let parts=||Parts {residual:vec![-0.;n*C],q:QuantizedRows::from_bytes(n,C,&vec![127;n*C],&vec![0.0123;n*C/256]).unwrap(),
@@ -578,7 +578,7 @@ mod tests {
     #[cfg(feature = "experimental-mlp-half")]
     #[test]
     fn half_chunks_keep_original_block256_quantization_and_wire_bits() {
-        for n in [1,7,87,89] {
+        for n in [1,7,87,89,91] {
             let input: Vec<f32> = (0..n*H).map(|i| {
                 let x = ((i*71 % 1023) as f32 - 511.) / 32.;
                 f32::from_bits(x.to_bits() & 0xffff0000)
@@ -634,7 +634,7 @@ mod tests {
     }
     #[test]
     fn maximum_carry_is_lossless_and_bounded() {
-        for n in [1, 7, 87, 89] {
+        for n in [1, 7, 87, 89, 91] {
             let mut r = request();
             r.dims[0] = n;
             let done = 9216;
@@ -726,7 +726,7 @@ mod tests {
         for dims in [
             vec![],
             vec![0, 0, 256],
-            vec![90, 0, 256],
+            vec![92, 0, 256],
             vec![1, 1, 256],
             vec![1, 8192, 2048],
             vec![1, 256, usize::MAX],

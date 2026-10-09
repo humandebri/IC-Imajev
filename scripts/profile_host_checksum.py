@@ -13,7 +13,7 @@ try:
  for layer in [0,1,3]:
   source=ROOT/'artifacts/quantize_scan/mlp-frames'/f'{layer:02d}-full-mlp.request.bin';h,x=decode(source.read_bytes());expected=decode(source.with_name(f'{layer:02d}-full-mlp.response.bin').read_bytes())[1];profiles={}
   for version in [2,3]:
-   req=d/f'{layer:02d}-v{version}.request.bin';out=d/f'{layer:02d}-v{version}.response.bin';atomic(req,encode(dict(h,version=version),x));r=t.command(dict(op='profile',input=str(req),output=str(out)));rh,y=decode(out.read_bytes());assert rh==dict(h,version=version,step=h['step']+1) and y.tobytes()==expected.tobytes();profiles[str(version)]=r
+   req=d/f'{layer:02d}-v{version}.request.bin';out=d/f'{layer:02d}-v{version}.response.bin';atomic(req,encode(dict(h,version=version),x));r=t.command(dict(diagnostics=True,op='profile',input=str(req),output=str(out)));rh,y=decode(out.read_bytes());assert rh==dict(h,version=version,step=h['step']+1) and y.tobytes()==expected.tobytes();profiles[str(version)]=r
   rows.append(dict(layer=layer,bitwise_equal=True,profiles=profiles));print(json.dumps(rows[-1]),flush=True)
  verify_module(t,sha((ROOT/a.wasm).read_bytes()))
 finally:t.close()

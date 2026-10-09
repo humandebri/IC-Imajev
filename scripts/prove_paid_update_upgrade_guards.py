@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """Exercise real pre_upgrade guards and failed-receipt persistence without weights."""
+
+from historical_paid_proof import historical_only
+historical_only()
 import hashlib,json,subprocess,sys,time
 from pathlib import Path
 R=Path(__file__).resolve().parents[1];sys.path.insert(0,str(R/'client'))
@@ -27,7 +30,7 @@ def main():
   icp('install',T,'--mode','upgrade','--wasm',str(B/'full.wasm'),'--yes');icp('start',T)
   did=D/'probe.did';did.write_text('service:{paid_upgrade_probe:(bool,nat32)->();}')
   def fixture(active,state):icp('call',T,'paid_upgrade_probe',f'({str(active).lower()}, {state}:nat32)','--candid',str(did))
-  wire=PaidTransport(D/'calls',T)
+  wire=PaidTransport(D/'calls',T,helper=R/'artifacts/paid-update-v1/tools/args')
   for label,active,state,reason in [('active',True,0,'paid inference active'),('refund',False,2,'refund in flight')]:
    fixture(active,state)
    p=icp('install',T,'--mode','upgrade','--wasm',str(R/'artifacts/paid-update-v1/tools/upgrade-probe.wasm'),'--yes',check=False)

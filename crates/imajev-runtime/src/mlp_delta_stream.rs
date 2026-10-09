@@ -26,7 +26,7 @@ fn metadata(r: &Request) -> Result<(usize, usize, usize, usize, usize, usize)> {
         return Err("pair metadata".into());
     }
     let (n, b, c, h, p) = (r.dims[0], r.dims[1], r.dims[2], r.dims[3], r.dims[4]);
-    if !(1..=89).contains(&n)
+    if !(1..=91).contains(&n)
         || (if plain(r) {b!=0}else{b==0 && !is_follow(r)})
         || c == 0
         || b % crate::mlp_stream::STEP != 0

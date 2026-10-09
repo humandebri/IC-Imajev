@@ -33,7 +33,7 @@ try:
     shutil.copyfile(d/f'{index:06d}.request.bin',d/f'failed-{label}-layer{layer}-first.request.bin')
     cases.append(dict(label=label,layer=layer,tokens=n,stage='mlp_complete_kv',success=False,error=str(error),request_sha256=sha(d/f'{index:06d}.request.bin')));continue
    assert y[:2*n*C].tobytes()==both.tobytes();assert y[2*n*C:n*(2*C+KV)].tobytes()==kv.tobytes();first=t.measurements[-1]
-   out=d/f'{index:06d}.profile.response.bin';profile=t.command(dict(op='profile',input=str(d/f'{index:06d}.request.bin'),output=str(out)));assert decode(out.read_bytes())[1].tobytes()==y.tobytes()
+   out=d/f'{index:06d}.profile.response.bin';profile=t.command(dict(diagnostics=True,op='profile',input=str(d/f'{index:06d}.request.bin'),output=str(out)));assert decode(out.read_bytes())[1].tobytes()==y.tobytes()
    for begin in map(int,a.begins.split(',')):
     bh=dict(mh,version=3,step=t.index,encoding=NAME,op='attention_finish_mlp_front_q4'if a.q4 else'attention_finish_mlp_front',dims=[n,begin,45]);bi=t.index;bp=encode_request(bh,y,prefix)
     try:result=t._run_encoded(bh,bp)
@@ -44,7 +44,7 @@ try:
     call=t.measurements[-1];assert result[-n*KV:].tobytes()==kv.tobytes();state=result[:-n*KV]
     expected=t.run('mlp_stream_prepare',mx,[n,0,begin],[2.,1e-6],tensor=mh['tensor'],aux=mh['aux'],input_hash=mh['input_hash']);assert state.tobytes()==expected.tobytes()
     final=t.run('mlp_stream_complete',state,[n,begin,9216-begin],[2.,1e-6],tensor=mh['tensor'],aux=mh['aux'],input_hash=mh['input_hash']);assert final.tobytes()==next_both.tobytes()
-    out=d/f'{bi:06d}.profile.response.bin';second=t.command(dict(op='profile',input=str(d/f'{bi:06d}.request.bin'),output=str(out)));assert decode(out.read_bytes())[1].tobytes()==result.tobytes()
+    out=d/f'{bi:06d}.profile.response.bin';second=t.command(dict(diagnostics=True,op='profile',input=str(d/f'{bi:06d}.request.bin'),output=str(out)));assert decode(out.read_bytes())[1].tobytes()==result.tobytes()
     row=dict(label=label,layer=layer+1,tokens=n,begin=begin,success=True,kv_bitwise_equal=True,prepared_mlp_bitwise_equal=True,finished_hidden_norm_bitwise_equal=True,first_call=first,first_profile=profile,call=call,profile=second,source_hashes={str(p.relative_to(ROOT)):sha(p)for p in [req,res,areq,ares,mreq,mres]});cases.append(row);print(json.dumps(row),flush=True)
  verify_module(t,module);assert hashes=={str(p.relative_to(ROOT)):sha(p)for p in paths}
  (d/'report.json').write_text(json.dumps(dict(module_sha256=module,q4=a.q4,front=a.front,source_hashes=hashes,cases=cases,ordinary_queries=len(t.measurements),whole_inference_reduction_verified=False),indent=2)+'\n')

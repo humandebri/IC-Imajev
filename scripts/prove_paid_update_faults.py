@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """Snapshot-protected paid inference proof using an actual caller canister."""
+
+from historical_paid_proof import historical_only
+historical_only()
 import hashlib,json,subprocess,sys,time,zipfile,concurrent.futures
 from pathlib import Path
 import numpy as np
@@ -48,7 +51,7 @@ def main():
     print(json.dumps(dict(stage='prefix-bank-ready',bank=bank)),flush=True)
   finally:t.close()
   write(D/'prefix-registration.json',prefix_rows)
-  wire=PaidTransport(D/'calls',TARGET);config=dict(enabled=True,version=2,base_fee=100_000_000_000,fee_per_token=3_000_000_000,reserve_cycles=2_000_000_000_000)
+  wire=PaidTransport(D/'calls',TARGET,helper=ROOT/'artifacts/paid-update-v1/tools/args');config=dict(enabled=True,version=2,base_fee=100_000_000_000,fee_per_token=3_000_000_000,reserve_cycles=2_000_000_000_000)
   assert 'Ok'in wire.call('configure_paid',config)['result']
   records=json.loads((ROOT/'artifacts/text-short-v2/inputs.json').read_text())['records'];requests=[dict(model=manifest['model'],version=1,token_ids=r['token_ids'],options=r['options'])for r in records[:3]]
   quotes=[wire.call('quote',r)['result']['Ok']for r in requests]
@@ -74,7 +77,7 @@ def main():
    checks.extend([dict(name=name+'-refund-retry',row=retry),dict(name=name+'-no-double-refund',row=again),dict(name=name+'-foreign-refund',row=foreign)])
    print(json.dumps(dict(check=name,refund=error['refund'],loss=loss)),flush=True);write(D/'checks.json',checks)
   fault(None)
-  background=PaidTransport(D/'busy-background',TARGET)
+  background=PaidTransport(D/'busy-background',TARGET,helper=ROOT/'artifacts/paid-update-v1/tools/args')
   with concurrent.futures.ThreadPoolExecutor(max_workers=1)as pool:
    future=pool.submit(background.call,'infer',request('busy-primary'),relay=callers[0],cycles=fee)
    current=None

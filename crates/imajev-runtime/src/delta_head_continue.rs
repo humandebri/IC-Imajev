@@ -22,7 +22,7 @@ impl Preparation {
         B: WeightBuffer,
     {
         let n = r.dims[0];
-        if !(1..=89).contains(&n) || norm.len() != n * C || !crate::bf16_codec::all_bf16(norm) {
+        if !(1..=91).contains(&n) || norm.len() != n * C || !crate::bf16_codec::all_bf16(norm) {
             return Err("head preparation norm".into());
         }
         let root = r
@@ -54,7 +54,7 @@ impl Preparation {
     }
     pub(crate) fn restore(n: usize, integers: &[u8], rest: &[f32]) -> Result<Self> {
         if n == 0
-            || n > 89
+            || n > 91
             || rest.len() != n * (C / 256 + 2 * R + 64)
             || !rest.iter().all(|v| v.is_finite())
             || !rest[n * (C / 256 + 2 * R)..]
@@ -97,7 +97,7 @@ where
     F: FnMut(u64, usize) -> Result<B>,
     B: WeightBuffer,
 {
-    if !(1..=89).contains(&n)
+    if !(1..=91).contains(&n)
         || h == 0
         || h > 32
         || h % 2 != 0

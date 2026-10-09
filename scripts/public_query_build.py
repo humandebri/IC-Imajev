@@ -1,8 +1,8 @@
 """Apply the current public-query policy to the archived optimized runtime."""
 import re
+from canister_api_names import rename_directory_api_methods
 
-PUBLIC = ('step', 'terminal_step_decision', 'decision_fast', 'decision',
-          'status', 'pack_status', 'weight_cache_status')
+PUBLIC = ('step', 'terminal_step_decision', 'pack_status', 'weight_cache_status')
 GUARD = '''// Ordinary queries are public. Replicated execution remains an owner operation.
 fn query_access() {
     if ic_cdk::api::in_replicated_execution() { owner(); }
@@ -30,3 +30,5 @@ def expose_public_queries(directory):
                              ('query_attention_mlp_front.rs', 'attention_mlp_front')]:
         path = directory / filename
         path.write_text(expose(path.read_text(), [method]))
+
+    rename_directory_api_methods(directory)
