@@ -22,7 +22,11 @@
     "prepare:candid": "node --experimental-strip-types scripts/prepare-public-candid.mjs",
     "test:candid": "node --experimental-strip-types scripts/prepare-public-candid.mjs --check",
     "prepare:examples": "../.venv/bin/python -B ../scripts/prepare_browser_examples.py",
-    "test:examples": "../.venv/bin/python -B ../scripts/test_browser_examples.py && ../.venv/bin/python -B ../scripts/prepare_browser_examples.py --check && node --experimental-strip-types scripts/check-browser-examples.mjs"
+    "test:examples": "../.venv/bin/python -B ../scripts/test_browser_examples.py && ../.venv/bin/python -B ../scripts/prepare_browser_examples.py --check && node --experimental-strip-types scripts/check-browser-examples.mjs",
+    "refresh:boom-ledger": "node scripts/refresh-boom-ledger.mjs && npm run prepare:examples",
+    "test:boom-live": "node scripts/check-boom-examples-live.mjs",
+    "refresh:boom-neurons": "../.venv/bin/python -B ../scripts/refresh_boom_neurons.py && npm run prepare:examples",
+    "test:boom617-live": "node scripts/check-boom617-live.mjs"
   },
   "dependencies": {
     "@huggingface/tokenizers": "^0.2.0",

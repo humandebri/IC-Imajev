@@ -2,7 +2,7 @@
 
 この後、同じ整数方式の数値を保った追加改善で0.847兆命令・868 queryへ削減した。[最新の計測・改善](BOTTLENECKS.md)。以下は整数方式導入時の履歴。
 
-2026-10-01。ユーザーの演算方式変更許可に基づき、固定INT8 baseのI32 dotを全dense射影へ接続した。専用local canisterのみ使用し、Layaのソース・Git・canisterは参照だけ。通信は可逆BF16のままにして、既存のINT8通信誤差と混ぜない。
+2026-10-01。固定INT8 baseのI32 dotを全dense射影へ接続した。専用local canisterのみ使用し、Layaのソース・Git・canisterは参照だけ。通信は可逆BF16のままにして、既存のINT8通信誤差と混ぜない。
 
 ## 全32層実測
 

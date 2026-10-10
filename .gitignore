@@ -44,3 +44,6 @@ __pycache__/
 # Local frontend quality-gate and Cloudflare CLI state.
 /.vlmkit/
 /.cloudflare/
+
+# Private drafts and environment-specific operation/validation sources.
+/.local-only/

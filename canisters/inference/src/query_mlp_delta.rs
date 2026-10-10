@@ -9,13 +9,13 @@ pub(super) struct MlpDeltaMeasurement {
     spans:Vec<(String,u64)>,
 }
 fn bf16_bytes(v:&[f32])->Vec<u8> {v.iter().flat_map(|v|((v.to_bits()>>16)as u16).to_le_bytes()).collect()}
-#[ic_cdk::query]
+#[ic_cdk::query(name = "runDeltaInferenceStep")]
 fn mlp_delta_front(state:StateBytes,prefix:StateBytes,p:u32,front:u32)->Result<MlpDeltaMeasurement,String> {
     query_access();let start=ic_cdk::api::performance_counter(0);
     if state.len()+prefix.len()>1_990_000 || !(1..=27).contains(&p) || front==0 || front>=H as u32 || front%256!=0 {return Err("bridge input bounds".into());}
     let(r,input)=decode_query(&state)?;
     let layer=r.tensor.strip_prefix("model.language_model.layers.").and_then(|s|s.strip_suffix(".post_attention_layernorm.weight")).and_then(|s|s.parse::<usize>().ok()).ok_or("bridge layer")?;
-    if r.op!="mlp_stream_complete" || r.encoding!="mlp-stream-exact-v1" || r.dims.len()!=3 || !(1..=69).contains(&r.dims[0]) || layer>=30 || (layer+2)%4==0 {return Err("bridge scope".into());}
+    if r.op!="mlp_stream_complete" || r.encoding!="mlp-stream-exact-v1" || r.dims.len()!=3 || !(1..=91).contains(&r.dims[0]) || layer>=30 || (layer+2)%4==0 {return Err("bridge scope".into());}
     let n=r.dims[0];let p=p as usize;let bf=24576+p*2048;
     if prefix.len()!=2*bf+4*p*4128 {return Err("bridge prefix shape".into());}
     let mut values=Vec::with_capacity(bf+p*4128);

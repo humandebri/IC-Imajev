@@ -50,7 +50,7 @@ try:
    # Measure preparation/reuse separately on the exact same state frames.
    if chunks==[4608,4608]:
     for index in frames:
-     req=d/f'{index:06d}.request.bin';out=d/f'{index:06d}.profile.response.bin';metric=t.command(dict(op='profile',input=str(req),output=str(out)));assert decode(out.read_bytes())[1].tobytes()==decode((d/f'{index:06d}.response.bin').read_bytes())[1].tobytes();row['profile_diagnostics'].append(metric)
+     req=d/f'{index:06d}.request.bin';out=d/f'{index:06d}.profile.response.bin';metric=t.command(dict(diagnostics=True,op='profile',input=str(req),output=str(out)));assert decode(out.read_bytes())[1].tobytes()==decode((d/f'{index:06d}.response.bin').read_bytes())[1].tobytes();row['profile_diagnostics'].append(metric)
    cases.append(row);print(json.dumps(row),flush=True)
  verify_module(t,wasm);assert hashes=={str(p.relative_to(ROOT)):sha(p)for p in paths};assert all(sha(ROOT/p)==v for p,v in references.items())
  result=dict(scope=__doc__,source_case=a.source_case,wasm_sha256=wasm,source_hashes=hashes,reference_hashes=references,half_boundaries=a.half,cases=cases,regular_diagnostic_queries=len(t.measurements),profile_diagnostic_queries=sum(len(c["profile_diagnostics"])for c in cases),goal_50_verified=False)

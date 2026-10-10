@@ -21,7 +21,7 @@ try:
    index=q['index'];req=root/'queries'/f'{index:06d}.request.bin';res=root/'queries'/f'{index:06d}.response.bin';raw=req.read_bytes();h=json.loads(raw[4:4+int.from_bytes(raw[:4],'little')]);n,p,rows=h['dims'];layer=int(h['tensor'].split('.')[3]);_,state=decode((root/'queries'/f'{index-1:06d}.response.bin').read_bytes());_,expected=decode(res.read_bytes())
    with np.load(ROOT/a.prefix/f'states/layer-{layer+1:02d}.npz',allow_pickle=False)as z:cv=z['conv'].copy();log=z['delta_log'].copy()
    h.update(step=t.index,encoding=HUFFMAN_NAME);packet=encode_request(h,state[:n*11876],cv,log);query_index=t.index;y=t._run_encoded(h,packet);assert y.tobytes()==expected.tobytes();call=t.measurements[-1]
-   output=d/f'{query_index:06d}.profile.response.bin';profile=t.command(dict(op='profile',input=str(d/f'{query_index:06d}.request.bin'),output=str(output)));assert decode(output.read_bytes())[1].tobytes()==y.tobytes()
+   output=d/f'{query_index:06d}.profile.response.bin';profile=t.command(dict(diagnostics=True,op='profile',input=str(d/f'{query_index:06d}.request.bin'),output=str(output)));assert decode(output.read_bytes())[1].tobytes()==y.tobytes()
    row=dict(label=label,layer=layer,tokens=n,down_rows=rows,original_call=q,call=call,profile=profile,request_sha256=sha(req),response_sha256=sha(res),bitwise_equal=True);cases.append(row);print(json.dumps(row),flush=True)
  verify_module(t,module);assert hashes=={str(p.relative_to(ROOT)):sha(p)for p in paths}
  (d/'report.json').write_text(json.dumps(dict(module_sha256=module,source_hashes=hashes,ordinary_queries=len(t.measurements),profile_queries=len(cases),whole_inference_reduction_verified=False,cases=cases),indent=2)+'\n')

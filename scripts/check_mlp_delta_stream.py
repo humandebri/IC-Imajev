@@ -74,7 +74,7 @@ try:
      row=dict(layer=layer,tokens=n,begin=begin,success=False,stage='start_query',instruction_limit=True,error=str(error),failed_request_sha256=sha(failed));cases.append(row);print(json.dumps(row),flush=True);continue
     start_call=t.measurements[-1];state=sy[:-CONV]
     with np.load(ROOT/f'artifacts/output-pairs-v2-{a.source_case}/queries/states'/f'layer-{layer:02d}.npz',allow_pickle=False)as z:assert sy[-CONV:].tobytes()==z['conv'].ravel().tobytes()
-    po=d/f'{si:06d}.profile.response.bin';start_profile=t.command(dict(op='profile',input=str(d/f'{si:06d}.request.bin'),output=str(po)));assert decode(po.read_bytes())[1].tobytes()==sy.tobytes()
+    po=d/f'{si:06d}.profile.response.bin';start_profile=t.command(dict(diagnostics=True,op='profile',input=str(d/f'{si:06d}.request.bin'),output=str(po)));assert decode(po.read_bytes())[1].tobytes()==sy.tobytes()
    t.wire_codec=MLP_NAME;expected_start=t.run('mlp_stream_prepare',x,[n,0,begin],[2.,1e-6],tensor=head['tensor'],aux=head['aux'],input_hash=head['input_hash'])
    if a.start_first:assert state.tobytes()==expected_start.tobytes()
    else:state=expected_start
@@ -132,7 +132,7 @@ try:
      else:finished=t.run('mlp_down_norm_prepared',fy[:n*(C+H+100)],[n,C],[2.,1e-6],tensor=nh['tensor'],aux=nh['aux'],input_hash=nh['input_hash'])
      assert finished.tobytes()==next_expected.tobytes()
      row.update(finish_call=t.measurements[-1],partial_down_rows=a.down_rows,follow_prepared_bitwise_equal=True,follow_history_bitwise_equal=True,follow_finished_hidden_norm_bitwise_equal=True,next_mlp_request_sha256=sha(nextreq),next_mlp_response_sha256=sha(nextres))
-     finish_index=t.measurements[-1]['index'];fo=d/f'{finish_index:06d}.profile.response.bin';row['finish_profile']=t.command(dict(op='profile',input=str(d/f'{finish_index:06d}.request.bin'),output=str(fo)));assert decode(fo.read_bytes())[1].tobytes()==finished.tobytes()
+     finish_index=t.measurements[-1]['index'];fo=d/f'{finish_index:06d}.profile.response.bin';row['finish_profile']=t.command(dict(diagnostics=True,op='profile',input=str(d/f'{finish_index:06d}.request.bin'),output=str(fo)));assert decode(fo.read_bytes())[1].tobytes()==finished.tobytes()
      if a.finish_next_delta:
       from mlp_delta_carry import NAME as CARRY_NAME,encode_request as encode_finish
       dl=next_layer+1
@@ -141,10 +141,10 @@ try:
       dq=next(q for q in report['queries']if q['op']=='mlp_full_integer'and f'.layers.{dl}.'in q['tensor']);_,di=decode((source/'queries'/f"{dq['index']:06d}.request.bin").read_bytes());assert dv[:n*C].tobytes()==finished[:n*C].tobytes();assert dv[n*C:2*n*C].tobytes()==di[n*C:].tobytes()
       with np.load(ROOT/f'artifacts/output-pairs-v2-{a.source_case}/queries/states'/f'layer-{dl:02d}.npz',allow_pickle=False)as z:assert dv[2*n*C:].tobytes()==z['conv'].ravel().tobytes()
       row['finish_delta_bitwise_equal']=True
-     out=d/f'{follow_index:06d}.profile.response.bin';row['follow_profile']=t.command(dict(op='profile',input=str(d/f'{follow_index:06d}.request.bin'),output=str(out)));assert decode(out.read_bytes())[1].tobytes()==fy.tobytes()
+     out=d/f'{follow_index:06d}.profile.response.bin';row['follow_profile']=t.command(dict(diagnostics=True,op='profile',input=str(d/f'{follow_index:06d}.request.bin'),output=str(out)));assert decode(out.read_bytes())[1].tobytes()==fy.tobytes()
     row.update(success=True,hidden_bitwise_equal=True,prepared_bitwise_equal=True,history_bitwise_equal=True,base_carry_bitwise_equal=True,A_carry_bitwise_equal=True)
     if layer==0 and begin==5120:
-     out=d/f'{index:06d}.profile.response.bin';row['profile']=t.command(dict(op='profile',input=str(d/f'{index:06d}.request.bin'),output=str(out)));assert decode(out.read_bytes())[1].tobytes()==y.tobytes()
+     out=d/f'{index:06d}.profile.response.bin';row['profile']=t.command(dict(diagnostics=True,op='profile',input=str(d/f'{index:06d}.request.bin'),output=str(out)));assert decode(out.read_bytes())[1].tobytes()==y.tobytes()
     cases.append(row);print(json.dumps(row),flush=True)
  verify_module(t,wasm);assert hashes=={str(p.relative_to(ROOT)):sha(p)for p in paths}
  result=dict(scope=__doc__,wasm_sha256=wasm,source_case=a.source_case,source_hashes=hashes,cases=cases,regular_successful_diagnostic_queries=len(t.measurements),instruction_limit_diagnostic_queries=sum(c.get('instruction_limit',False)for c in cases),frame_limit_cases=sum(c.get('frame_limit',False)for c in cases),goal_50_verified=False)

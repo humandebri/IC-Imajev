@@ -14,7 +14,7 @@ def main():
   let(state,_)=read_inference_state(cmd["input"].as_str().ok_or("input")?)?;
   let(_,bound)=read_inference_state(cmd["expected"].as_str().ok_or("expected reply identity")?)?;
   let front=u32::try_from(cmd["front"].as_u64().ok_or("front")?)?;
-  let arg=Encode!(&state,&front)?;let b=agent.query(&canister,"attention_mlp_front").with_arg(arg.clone()).call().await?;
+  let arg=Encode!(&state,&front)?;let b=agent.query(&canister,"runAttentionInferenceStep").with_arg(arg.clone()).call().await?;
   let m=Decode!(&b,Result<AttentionMlpFrontMeasurement,String>)?.map_err(io::Error::other)?;
   store_inference_reply(cmd["output"].as_str().ok_or("output")?,m.state,bound)?;
   fs::write(cmd["hidden"].as_str().ok_or("hidden output")?,m.previous_hidden)?;fs::write(cmd["kv"].as_str().ok_or("kv output")?,m.kv)?;

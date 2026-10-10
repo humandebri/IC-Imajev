@@ -48,11 +48,23 @@ export interface RealWorldSample {
   sourceUrl: string;
   input: DecisionInput;
   originalState: string;
+  originalQuestion: string;
   sourceStateSha256: string;
   tokens: number;
-  audit: { kind: string; identifiers: { alias: string; value: string }[] };
+  audit: { kind: string; identifiers: { alias: string; value: string }[];
+    participation_snapshot?: {
+      sourceUrl: string; sourceKind: string; startedAt: string; completedAt: string;
+      referenceTimestampSeconds: number; totalNeurons: number; sha256: string; scenario: string; semantics: string;
+      analysis: { before: { count: number; largest_share_bps_floor: number | null };
+        after: { count: number; largest_share_bps_floor: number | null };
+        excluded_neurons: number; excluded_percent_bps_floor: number | null };
+    };
+    derived?: { share_percent_bounds: number[]; formula: string };
+    ledger_snapshot?: { ledgerCanisterId: string; recipient: string; startedAt: string; completedAt: string;
+      decimals: number; totalSupplyE8s: string; recipientBalanceE8s: string; scenario: string };
+  };
 }
 
-// Build-generated exact compaction of the three retained original excerpts.
+// Build-generated proposal excerpts; ledger evidence uses enclosing numeric ranges.
 // Free input never passes through this transformation.
 export const realWorldSamples: RealWorldSample[] = boomExamples;

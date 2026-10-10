@@ -86,7 +86,7 @@ fn metadata(r: &Request) -> Result<(usize, usize, usize, usize)> {
     let n = r.dims[0];
     let b = r.dims[1];
     let p = r.dims[if complete { 3 } else { 2 }];
-    if !(1..=89).contains(&n)
+    if !(1..=91).contains(&n)
         || b == 0
         || b >= 9216
         || b % crate::mlp_stream::STEP != 0
@@ -496,7 +496,7 @@ mod tests {
         for dims in [
             vec![],
             vec![0, 4608, 45],
-            vec![90, 4608, 45],
+            vec![92, 4608, 45],
             vec![1, 9216, 45],
             vec![1, 4609, 45],
             vec![1, 4608, 133],

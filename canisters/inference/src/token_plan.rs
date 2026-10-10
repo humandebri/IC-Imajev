@@ -32,7 +32,7 @@ pub(super) fn schedule(n:usize)->Vec<Tile> {
 #[cfg(test)]mod tests {
     use super::*;
     #[test]fn all_supported_lengths_cover_each_operator_exactly_once() {
-        for n in 90..=485 {
+        for n in 90..=super::super::paid_inference::INPUT_LIMIT-super::super::paid_inference::COMMON_PREFIX.len() {
             let plan=schedule(n);
             assert_eq!(plan.len() as u64,stages(n));
             let mut at=0;

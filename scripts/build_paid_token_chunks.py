@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-"""Build 512-token paid inference retaining validated optimized kernels."""
+"""Build 1024-token paid inference retaining validated optimized kernels."""
 import argparse
 import json
 import os
 import shutil
 import subprocess
 from pathlib import Path
+from build_prefix_contract import align_prefix_contract
+from build_paid_contract import copy_paid_sources, align_upgrade_metadata
+from build_sequence_contract import align_sequence_contract
+from canister_api_names import rename_directory_api_methods
+from generate_wasm_candid import generate_candid
 from build_paid_message_checkpoint import projection_bodies, sha
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -73,11 +78,28 @@ impl ServerDeltaPrefix {
     path.write_text(path.read_text() + '\n' + live[begin:])
     for p in parent.glob('*.rs'):
         shutil.copyfile(p, d / p.name)
-    for name in ['paid_inference.rs', 'paid_types.rs', 'chunked_update.rs', 'token_plan.rs']:
+    copy_paid_sources(d, ROOT / 'canisters/inference/src')
+    for name in ['chunked_update.rs', 'token_plan.rs']:
         shutil.copyfile(ROOT / 'canisters/inference/src' / name, d / name)
     path = d / 'lib.rs'
     path.write_text(replace_once(path.read_text(), 'mod update_inference;', 'mod update_inference;\n#[cfg(feature="experimental-update-token-chunks")]\nmod chunked_update;\n#[cfg(feature="experimental-update-token-chunks")]\nmod token_plan;'))
+    # Match the browser's five-token cache and its 91-token query continuation.
+    for name in ('mlp_stream.rs', 'delta_mlp_start.rs', 'attention_mlp_stream.rs',
+                 'mlp_attention_finish.rs', 'mlp_pipeline.rs', 'mlp_delta_stream.rs',
+                 'delta_head_continue.rs', 'delta_full_log.rs', 'attention_full.rs', 'prefix_start.rs'):
+        path = d / 'runtime' / name
+        text = path.read_text().replace('1..=89', '1..=91').replace('n > 89', 'n > 91').replace('n>89', 'n>91').replace('*n<=89', '*n<=91').replace('n>90', 'n>91')
+        if name == 'mlp_attention_finish.rs':
+            text = text.replace('!(1..=91).contains(&n)', '!(1..=if stream(r){91}else{89}).contains(&n)')
+        path.write_text(text)
+    for name in ('query_mlp_delta.rs', 'query_attention_mlp_front.rs'):
+        path = d / name
+        path.write_text(path.read_text().replace('1..=69', '1..=91'))
+    path = d / 'lib.rs'
+    path.write_text(path.read_text().replace('|| r.dims.len() != 3 || !(1..=89).contains(&r.dims[0])',
+                                          '|| r.dims.len() != 3 || !(1..=91).contains(&r.dims[0])'))
     path = d / 'update_inference.rs'
+    path.write_text(path.read_text().replace('if p!=27', 'if p!=5'))
     text = replace_once(path.read_text(), 'const STOP: u64 = 34_000_000_000;', 'pub(super) const WORKER_BUDGET: u64 = 30_000_000_000;').replace('<STOP', '<WORKER_BUDGET')
     text = replace_once(text, 'pub(super) fn start(ids: Vec<u32>, options: Vec<String>) -> Result<UpdateProgress,String> {',
                         'pub(super) fn start(ids: Vec<u32>, options: Vec<String>) -> Result<UpdateProgress,String> {\n    if busy(){return Err("inference already active".into());}\n    if ids.len()>89 {return crate::chunked_update::start(ids,options);}')
@@ -89,7 +111,7 @@ impl ServerDeltaPrefix {
 pub(super) fn progress_limit(n:usize)->u64 {if n>89 {crate::token_plan::stages(n)}else{64}}
 pub(super) fn stream_prefix(layer:usize)->Result<(Vec<f32>,Option<imajev_runtime::ServerDeltaStream>),String> {
  GRAPH.with(|g|{let g=g.borrow();let b=g.banks.get(g.selected).ok_or("prefix bank missing")?;
-  if b.tokens!=27 {return Err("stream prefix identity".into());}
+  if b.tokens!=5 {return Err("stream prefix identity".into());}
   let p=b.prefix.get(layer).ok_or("prefix layer missing")?;
   let stream=if layer%4==3 {None}else{Some(p.prepared.as_ref().ok_or("prefix state missing")?.stream())};
   Ok((p.values.clone(),stream))
@@ -97,6 +119,10 @@ pub(super) fn stream_prefix(layer:usize)->Result<(Vec<f32>,Option<imajev_runtime
 }
 '''
     path.write_text(text)
+    align_upgrade_metadata(d)
+    prefix_tokens = align_prefix_contract(d)
+    align_sequence_contract(d, canonical, reference=a.diagnostics)
+    rename_directory_api_methods(d)
     env = dict(os.environ, CARGO_MANIFEST_DIR=str(d), CARGO_PKG_NAME='imajev-inference', CARGO_PKG_VERSION='0.1.0',
                CARGO_PKG_VERSION_MAJOR='0', CARGO_PKG_VERSION_MINOR='1', CARGO_PKG_VERSION_PATCH='0',
                CARGO_PKG_VERSION_PRE='', CARGO_CRATE_NAME='imajev_inference')
@@ -115,8 +141,9 @@ pub(super) fn stream_prefix(layer:usize)->Result<(Vec<f32>,Option<imajev_runtime
         runtime_command += ['--cfg', 'feature="experimental-adaptive-token-tiles"']
         command += ['--cfg', 'feature="experimental-adaptive-token-tiles"']
     if a.diagnostics:
+        runtime_command += ['--cfg', 'feature="experimental-attention-reference"']
         command += ['--cfg', 'feature="paid-update-diagnostics"']
-    files = list(d.glob('*.rs')) + list((d / 'runtime').glob('*.rs')) + [d / 'build-script.py']
+    files = list(d.glob('*.rs')) + list((d / 'runtime').glob('*.rs')) + [d / 'build-script.py', ROOT / 'scripts/build_paid_contract.py', ROOT / 'scripts/build_prefix_contract.py', ROOT / 'scripts/build_sequence_contract.py', ROOT / 'scripts/canister_api_names.py', ROOT / 'scripts/check_canister_api_exports.py', ROOT / 'scripts/generate_wasm_candid.py']
     hashes = {str(p): sha(p) for p in files}
     with (d / 'compiler.log').open('w') as log:
         for cmd in [runtime_command, command]:
@@ -131,12 +158,16 @@ pub(super) fn stream_prefix(layer:usize)->Result<(Vec<f32>,Option<imajev_runtime
                        str(previous), str(donor_path), str(output), entry['export']], text=True))
         assert row['wasmparser_validation'] and row['replacement_body_sha256'] == entry['replacement_body_sha256']
         patches.append(row)
+        # Retain the final module and provenance, not 34 full intermediate modules.
+        previous.unlink()
+        donor_path.unlink()
         previous = output
     assert len(patches) == 34
     assert hashes == {p: sha(Path(p)) for p in hashes}
-    report = dict(module=sha(d / 'full.wasm'), runtime_command=runtime_command, command=command, patches=patches,
+    api = generate_candid(d / 'full.wasm', d / 'service.did', diagnostics=a.diagnostics)
+    report = dict(prefix_tokens=prefix_tokens, api=api, module=sha(d / 'full.wasm'), runtime_command=runtime_command, command=command, patches=patches,
                   sources=hashes, parent=base['wasm_sha256'], dependencies=rt['dependency_hashes'],
-                  local_only=True, input_limit=512, token_chunk=57, attention_group_heads=8,
+                  local_only=True, input_limit=1024, token_chunk=57, attention_group_heads=[8,4],
                   adaptive_token_tiles=a.adaptive_token_tiles, dense_token_chunk=89 if a.adaptive_token_tiles else 57,
                   diagnostics=a.diagnostics,
                   extra_attention_groups_only_above_256=True, all34_projection_bodies_equal=True)

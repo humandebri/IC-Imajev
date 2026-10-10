@@ -1,0 +1,160 @@
+type AttentionMlpFrontMeasurement = record {
+  kv : blob;
+  instructions : nat64;
+  spans : vec record { text; nat64 };
+  state : blob;
+  stable_read_bytes : nat64;
+  previous_hidden : blob;
+  stable_pages : nat64;
+  heap_pages : nat64;
+};
+type ChoiceResult = record {
+  abstained : bool;
+  unknown_probability : float32;
+  probabilities : vec float32;
+  value : opt text;
+  calibration_version : text;
+  instructions : nat64;
+  raw_logits : vec float32;
+};
+type Config = record {
+  base_fee : nat;
+  fee_per_token : nat;
+  reserve_cycles : nat;
+};
+type Decision = record {
+  abstained : bool;
+  unknown_probability : float32;
+  probabilities : vec float32;
+  value : opt text;
+  calibration_version : text;
+  instructions : nat64;
+  raw_logits : vec float32;
+};
+type InferError = variant {
+  Invalid : text;
+  Failed : record { job_id : nat64; reason : text; refund : Refund };
+  Busy;
+  IdConflict;
+  NotReady;
+  InsufficientCycles : record { required : nat };
+  ReceiptCapacity;
+  InProgress : record { job_id : nat64 };
+};
+type InferRequest = record {
+  model : text;
+  version : nat32;
+  token_ids : vec nat32;
+  options : vec text;
+};
+type InferenceResult = record {
+  paid_cycles : nat;
+  decision : ChoiceResult;
+  job_id : nat64;
+  prefix_tokens : nat32;
+  workers : vec WorkerMetric;
+  suffix_tokens : nat32;
+};
+type Measurement = record {
+  instructions : nat64;
+  state : blob;
+  stable_read_bytes : nat64;
+  stable_pages : nat64;
+  heap_pages : nat64;
+};
+type MlpDeltaMeasurement = record {
+  conv : blob;
+  instructions : nat64;
+  spans : vec record { text; nat64 };
+  state : blob;
+  stable_read_bytes : nat64;
+  previous_hidden : blob;
+  stable_pages : nat64;
+  heap_pages : nat64;
+};
+type PackStatus = record {
+  model : text;
+  hashed : nat64;
+  bytes : nat64;
+  chunks : vec nat64;
+  pack_hash : text;
+  received : nat64;
+  ready : bool;
+};
+type Quote = record {
+  fee : nat;
+  estimated_steps : nat32;
+  max_steps : nat32;
+  prefix_tokens : nat32;
+  suffix_tokens : nat32;
+};
+type Receipt = record {
+  request_id : text;
+  time : nat64;
+  quote : Quote;
+  state : ReceiptState;
+  job_id : nat64;
+  caller : principal;
+  input_hash : text;
+  refund : Refund;
+};
+type ReceiptState = variant {
+  Failed : text;
+  Running;
+  Completed : InferenceResult;
+};
+type Refund = variant { Done; None; InFlight; Pending };
+type Result = variant { Ok; Err : text };
+type Result_1 = variant { Ok : Quote; Err : InferError };
+type Result_10 = variant { Ok : StepResult; Err : text };
+type Result_11 = variant { Ok : nat64; Err : text };
+type Result_12 = variant { Ok : record { nat64; bool }; Err : text };
+type Result_2 = variant { Ok : record { nat32; nat64; nat64 }; Err : text };
+type Result_3 = variant { Ok : WeightCacheInfo; Err : text };
+type Result_4 = variant { Ok : Refund; Err : text };
+type Result_5 = variant { Ok : AttentionMlpFrontMeasurement; Err : text };
+type Result_6 = variant { Ok : MlpDeltaMeasurement; Err : text };
+type Result_7 = variant { Ok : TerminalDecisionMeasurement; Err : text };
+type Result_8 = variant { Ok : Measurement; Err : text };
+type Result_9 = variant { Ok : InferenceResult; Err : InferError };
+type StepResult = record { done : bool; stage : nat64; job_id : nat64 };
+type TerminalDecisionMeasurement = record {
+  decision : ChoiceResult;
+  measurement : Measurement;
+};
+type WeightCacheInfo = record {
+  activation_bytes : opt nat64;
+  rope_bytes : opt nat64;
+  paired_weight_bytes : opt nat64;
+  names : vec text;
+  preparation_instructions : nat64;
+  bytes : nat64;
+};
+type WorkerMetric = record {
+  instructions : nat64;
+  stage : nat64;
+  heap_pages : nat64;
+};
+service : (principal) -> {
+  clearWeightCache : () -> (WeightCacheInfo);
+  configurePaidInference : (Config) -> (Result);
+  getInferenceQuote : (InferRequest) -> (Result_1) query;
+  getInferenceReceipt : (text) -> (opt Receipt) query;
+  getModelStatus : () -> (PackStatus) query;
+  getPaidInferenceConfig : () -> (Config) query;
+  getWeightCacheStatus : () -> (WeightCacheInfo) query;
+  installInferencePrefix : (nat32, vec float32, blob) -> (Result);
+  prepareFixedPrefixCache : (blob, blob) -> (Result_2);
+  prepareModelUpload : (text) -> (Result);
+  // Prepare only immutable weights. Upgrade drops this optional heap cache.
+  prepareWeightCache : (text) -> (Result_3);
+  retryInferenceRefund : (text) -> (Result_4);
+  runAttentionInferenceStep : (blob, nat32) -> (Result_5) query;
+  runDeltaInferenceStep : (blob, blob, nat32, nat32) -> (Result_6) query;
+  runFinalInferenceStep : (blob, vec text) -> (Result_7) query;
+  runInferenceStep : (blob) -> (Result_8) query;
+  runPaidInference : (InferRequest, text) -> (Result_9);
+  runPaidInferenceWorker : (nat64, nat64) -> (Result_10);
+  uploadModelChunk : (nat64, blob, blob) -> (Result_11);
+  verifyModelUpload : (nat64) -> (Result_12);
+}

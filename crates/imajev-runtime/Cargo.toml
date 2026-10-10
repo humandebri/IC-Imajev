@@ -18,6 +18,8 @@ experimental-update-token-chunks = ["experimental-prefix-hybrid", "experimental-
 experimental-single-quad = ["experimental-strassen-raw"]
 experimental-terminal-stream = ["experimental-mlp-attention-finish", "experimental-terminal-attention"]
 experimental-attention-views = []
+# Verification only; never enabled in the production optimized builder.
+experimental-attention-reference = ["experimental-attention-views"]
 experimental-mlp-attention-finish = ["experimental-mlp-delta-fusion", "experimental-attention-full", "experimental-mlp-stream"]
 experimental-prefix-update-hoist = []
 experimental-attention-mlp-stream = ["experimental-mlp-stream", "experimental-attention-full"]

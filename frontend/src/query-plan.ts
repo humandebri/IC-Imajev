@@ -9,17 +9,21 @@ export interface QueryPlan {
   fronts: number[];
   completions: number[];
 }
-export const MAX_SUFFIX = profiles.maxSuffix;
+export const MAX_SUFFIX = 91;
+// One aligned opaque chunk covers the maximum legal gap (8960 - 256 rows).
+export const MLP_CHUNK_ROWS = 8704;
 export const MAX_TOKENS = P + MAX_SUFFIX;
 export function baselinePlan(suffix: number): QueryPlan {
+  // Conservative schedule used to measure this release before selecting plans.
+  const split = suffix > 45;
   return { moduleHash: release.module_hash, suffix,
-    fronts: Array.from({ length: 32 }, (_, layer) => front(layer)),
-    completions: Array.from({ length: 31 }, (_, layer) => front(layer)) };
+    fronts: Array.from({ length: 32 }, (_, layer) => split ? 256 : front(layer)),
+    completions: Array.from({ length: 31 }, (_, layer) => split ? 8960 : front(layer)) };
 }
 export function validatePlan(plan: QueryPlan, suffix: number) {
   const aligned = (n: number) => Number.isInteger(n) && n > 0 && n < H && n % 256 === 0;
   if (plan.moduleHash !== release.module_hash || plan.suffix !== suffix ||
-      !Number.isInteger(suffix) || suffix < 1 || suffix > 69 ||
+      !Number.isInteger(suffix) || suffix < 1 || suffix > 91 ||
       plan.fronts.length !== 32 || plan.completions.length !== 31 ||
       !plan.fronts.every(aligned) || !plan.completions.every((n, layer) => aligned(n) && n >= plan.fronts[layer])) {
     throw new Error("Invalid query execution plan or runtime mismatch.");
@@ -27,7 +31,7 @@ export function validatePlan(plan: QueryPlan, suffix: number) {
 }
 export function queryCount(plan: QueryPlan) {
   validatePlan(plan, plan.suffix);
-  return 32 + plan.completions.filter((n, layer) => n > plan.fronts[layer]).length;
+  return 32 + plan.completions.reduce((sum, n, layer) => sum + Math.ceil((n - plan.fronts[layer]) / MLP_CHUNK_ROWS), 0);
 }
 export function selectPlan(suffix: number, moduleHash = release.module_hash): QueryPlan {
   if (moduleHash !== release.module_hash || profiles.moduleHash !== moduleHash) throw new Error("Query plans do not match the inference runtime.");

@@ -10,3 +10,15 @@ serde_json.workspace = true
 sha2.workspace = true
 candid.workspace = true
 imajev-runtime = { path = "../imajev-runtime" }
+
+[[example]]
+name = "paid_update_args"
+path = "../../scripts/paid_update_args.rs"
+
+[[example]]
+name = "prefix_state_args"
+path = "../../scripts/prefix_state_args.rs"
+
+[[example]]
+name = "paid_raw_call"
+path = "../../scripts/paid_raw_call.rs"

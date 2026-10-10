@@ -18,7 +18,7 @@ fn metadata(r: &Request) -> Result<(usize, usize, usize)> {
     }
     if terminal(r)&&!cfg!(feature="experimental-terminal-stream"){return Err("terminal stream disabled".into());}
     let (n, p, rows) = (r.dims[0], r.dims[1], r.dims[2]);
-    if !(1..=89).contains(&n) || p > 132 || !(if stream(r){rows>0&&rows<H&&rows%crate::mlp_stream::STEP==0}else{crate::mlp_pipeline::valid_partial_rows(rows)})
+    if !(1..=if stream(r){91}else{89}).contains(&n) || p > 132 || !(if stream(r){rows>0&&rows<H&&rows%crate::mlp_stream::STEP==0}else{crate::mlp_pipeline::valid_partial_rows(rows)})
         || front(r) && (r.dims[3]==0 || r.dims[3]>=H || r.dims[3]%crate::mlp_stream::STEP!=0) {
         return Err("MLP attention finish bounds".into());
     }

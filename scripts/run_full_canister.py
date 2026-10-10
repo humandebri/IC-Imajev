@@ -66,6 +66,7 @@ def main():
  if args.fuse_terminal_tail and (not args.fuse_terminal_attention or not args.fuse_terminal_decision or not args.fuse_mlp_full or args.layers!=32):raise SystemExit('terminal tail requires terminal decision/attention, full MLP and 32 layers')
  session['fuse_terminal_attention']=bool(args.fuse_terminal_attention)
  session['fuse_terminal_decision']=bool(args.fuse_terminal_decision)
+ if args.layers==32 and not session['fuse_terminal_decision']:raise SystemExit('full inference requires --fuse-terminal-decision and its fused graph options; standalone decision API was removed')
  if session['fuse_terminal_decision'] and (not args.fuse_terminal_attention or args.layers!=32):raise SystemExit('terminal decision requires final fused attention and 32 layers')
  if args.fuse_delta_input:session['fuse_delta_input']='qkv-gates-v1'
  if args.fuse_delta:session['fuse_delta']='projection-gates-conv-recurrence-v2'
@@ -92,12 +93,7 @@ def main():
   if args.arithmetic=='int8':report['activation_precision']='Per-token block256 INT8 activation only inside base integer projections; F32 input preserved for LoRA, recurrent states and readout; lossless wire'
   if args.layers==32:
    np.save(directory/'final-hidden.npy',hidden)
-   h=dict(version=t.frame_version,model=m['model'],pack_hash=m['pack_hash'],input_hash=input_hash,step=t.index,op='matmul',tensor='readout-f32',dims=[1,256,2560],scalars=[]);state=directory/'decision.request.bin'
-   if args.wire_codec=='int8-block256-v1':h['encoding']=args.wire_codec
-   if t.fuse_terminal_decision:
-    decision=dict(ok=dict(decision=t.terminal_decision,request_bytes=0,reply_bytes=0),included_in_terminal_query=True)
-   else:
-    atomic(state,encode(h,hidden[-1]));decision=t.command(dict(op='decision',method='decision_fast',input=str(state),options=record['options']))
+   decision=dict(ok=dict(decision=t.terminal_decision,request_bytes=0,reply_bytes=0),included_in_terminal_query=True)
    report['decision_query']=decision
    result=validate_decision(decision['ok']['decision'],list(record['options']))
    report['comparison']=dict(value=result['value'],typed_output_valid=bool(len(result['probabilities'])==len(record['options']) and (result['value'] is None or result['value'] in record['options']) and result['abstained']==(result['value'] is None) and abs(sum(result['probabilities'])+result['unknown_probability']-1)<1e-5),gold=record.get('gold'))

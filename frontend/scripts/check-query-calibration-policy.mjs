@@ -12,10 +12,10 @@ const cli = (...args) => spawnSync(process.execPath, ["--experimental-strip-type
 const catalogURL = new URL("../src/query-profiles.json", import.meta.url);
 const before = await readFile(catalogURL);
 const catalog = JSON.parse(before);
-const suffix = 69, plan = catalog.plans[suffix], evidence = catalog.evidence[suffix];
+const suffix = 91, plan = catalog.plans[suffix], evidence = catalog.evidence[suffix];
 assertApprovedProfile(decisions, catalog.moduleHash, suffix, plan, evidence);
 // Retain the approved report hash and query count while changing only the schedule.
-for (const edit of [p => p.fronts[0] = 5120, p => p.completions[0] -= 256]) {
+for (const edit of [p => p.fronts[0] += 256, p => p.completions[0] -= 256]) {
   const changed = structuredClone(plan); edit(changed);
   const full = { ...changed, moduleHash: catalog.moduleHash, suffix };
   validatePlan(full, suffix);
@@ -32,11 +32,11 @@ assert.throws(() => assertApprovedProfile({ ...decisions, approvedProfiles: {} }
 assert.equal(profileDigest(catalog.moduleHash, suffix, plan, evidence),
   profileDigest(catalog.moduleHash, suffix, { completions: plan.completions, fronts: plan.fronts },
     Object.fromEntries(Object.entries(evidence).reverse())), "Object property order must not change approval");
-const accepted = cli("scripts/prepare-query-profiles.mjs", "--balanced", "--through=68", "--check");
+const accepted = cli("scripts/prepare-query-profiles.mjs", "--check");
 assert.equal(accepted.status, 0, accepted.stderr);
-const rejected = cli("scripts/prepare-query-profiles.mjs", "--balanced");
-assert.notEqual(rejected.status, 0);
-assert.match(rejected.stderr, /Rejected query plan:.*96-token61-query/);
+const rejectedBytes = Buffer.from("rejected measurement");
+const rejectedDigest = (await import("node:crypto")).createHash("sha256").update(rejectedBytes).digest("hex");
+assert.throws(() => assertApprovedReport({...decisions, rejectedReports: {[rejectedDigest]: {reason: "query budget exceeded"}}}, decisions.moduleHash, suffix, rejectedBytes), /Rejected query plan:.*query budget exceeded/);
 assert.deepEqual(await readFile(catalogURL), before, "A rejected candidate must never modify the catalog");
 assert.throws(() => assertApprovedReport(decisions, decisions.moduleHash, 58, Buffer.from("unreviewed measurement")), /Unreviewed query report/);
 assert.throws(() => assertApprovedReport(decisions, "other-module", 58, Buffer.from("x")), /runtime/);

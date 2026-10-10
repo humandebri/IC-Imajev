@@ -25,7 +25,7 @@ t=Transport(m['model'],'http://localhost:8001/',args.canister,str(ROOT/'artifact
 try:
  for q in chosen:
   i=q['index'];request=source/f'{i:06d}.request.bin';normal=dest/f'{i:06d}.normal.bin';profile=dest/f'{i:06d}.profile.bin'
-  h,_=decode(request.read_bytes());a=t.command(dict(op='step',input=str(request),output=str(normal)));b=t.command(dict(op='profile',input=str(request),output=str(profile))) if not args.normal_only else a
+  h,_=decode(request.read_bytes());a=t.command(dict(op='step',input=str(request),output=str(normal)));b=t.command(dict(diagnostics=True,op='profile',input=str(request),output=str(profile))) if not args.normal_only else a
   if 'ok' not in a or 'ok' not in b:raise RuntimeError((a,b))
   _,x=decode(normal.read_bytes());_,y=decode((source/f'{i:06d}.response.bin').read_bytes());_,z=decode(profile.read_bytes() if not args.normal_only else normal.read_bytes());assert np.array_equal(x.view(np.uint32),y.view(np.uint32)) and np.array_equal(x.view(np.uint32),z.view(np.uint32)),i
   c=dict(index=i,op=q['op'],tensor=q['tensor'],dims=h['dims'],bitwise_equal=True,baseline_instructions=q['ok']['instructions'],normal=a['ok'],profile=b['ok'],profile_overhead=b['ok']['instructions']-a['ok']['instructions'],profiling_enabled=not args.normal_only,normal_wall_seconds=a.get('wall_seconds'),profile_wall_seconds=b.get('wall_seconds'));cases.append(c);print(q['op'],h['dims'],a['ok']['instructions'],b['ok'].get('spans',[]),flush=True)

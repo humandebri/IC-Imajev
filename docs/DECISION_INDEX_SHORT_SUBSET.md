@@ -40,7 +40,7 @@ MODEL_LOCK.jsonで固定したImajev 4B。INT8ベース、F32 LoRA/readout、BF1
 
 query数・通信量は推論本体のもの。共有prefixの初回準備、module_hashなどの検証callは含まない。通信量はCandidのrequest+reply、decimal MB。HTTP/CBOR/署名は含まない。命令数はhandler内部で計測し、Candidのdecode/encodeは含まない。ローカルの時間値はメモリ負荷や並列実行の影響があり、本番の遅延やClefのGPU実行時間と比較しない。
 
-元の長文を含む100問の計画は、ユーザーの指示で途中停止した。48問の途中結果はartifacts/decision-index-v1/partial-report.jsonに残した。その数字を今回の短文100問の集計に混ぜていない。元の評価と入力が一致する問題では、今回の新規推論の確率が前回とビット一致することも確認した。
+元の長文を含む100問の評価は48問までの途中結果であり、完了した評価ではない。48問の途中結果はartifacts/decision-index-v1/partial-report.jsonに残した。その数字を今回の短文100問の集計に混ぜていない。元の評価と入力が一致する問題では、今回の新規推論の確率が前回とビット一致することも確認した。
 
 ## 保存先と再実行
 

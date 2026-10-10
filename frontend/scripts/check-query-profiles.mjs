@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import profiles from "../src/query-profiles.json" with { type: "json" };
 import release from "../src/inference-release.json" with { type: "json" };
-import { selectPlan, queryCount } from "../src/query-plan.ts";
+import { selectPlan, queryCount, MAX_SUFFIX } from "../src/query-plan.ts";
 import decisions from "./query-plan-decisions.json" with { type: "json" };
 import { assertApprovedProfile } from "./query-calibration-policy.mjs";
 assert.equal(profiles.moduleHash,release.module_hash);
 assert.equal(decisions.moduleHash,release.module_hash);
-assert(Number.isInteger(profiles.maxSuffix)&&profiles.maxSuffix>=57&&profiles.maxSuffix<=69);
+assert.equal(profiles.maxSuffix, MAX_SUFFIX);
+assert.equal(profiles.maxSuffix + release.prefix_tokens, release.max_tokens);
 assert.equal(profiles.targetInstructions,4_000_000_000);
 assert.equal(Object.keys(profiles.plans).length,profiles.maxSuffix);
 assert.equal(Object.keys(profiles.evidence).length,profiles.maxSuffix);

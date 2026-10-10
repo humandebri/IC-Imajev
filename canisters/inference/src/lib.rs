@@ -71,7 +71,7 @@ struct Measurement {
     heap_pages: u64,
     stable_pages: u64,
 }
-#[ic_cdk::update]
+#[ic_cdk::update(name = "prepareModelUpload")]
 fn prepare(manifest: String) -> std::result::Result<(), String> {
     owner();
     let m: Manifest = serde_json::from_str(&manifest).map_err(|e| e.to_string())?;
@@ -120,40 +120,6 @@ fn prepare(manifest: String) -> std::result::Result<(), String> {
         Ok(())
     })
 }
-#[ic_cdk::update]
-fn upload(offset: u64, bytes: Vec<u8>, sha: Vec<u8>) -> std::result::Result<u64, String> {
-    owner();
-    if bytes.is_empty() || bytes.len() > 1_800_000 || Sha256::digest(&bytes).as_slice() != sha {
-        return Err("chunk checksum/size".into());
-    }
-    STORE.with(|s| {
-        let mut s = s.borrow_mut();
-        let m = s.manifest.as_ref().ok_or("not prepared")?;
-        if s.ready
-            || !s.chunks.is_empty()
-            || offset.checked_add(bytes.len() as u64).is_none()
-            || offset + bytes.len() as u64 > m.bytes
-        {
-            return Err("upload range".into());
-        }
-        if offset < s.received {
-            let mut existing = vec![0; bytes.len()];
-            ic_cdk::api::stable_read(offset, &mut existing);
-            if existing == bytes {
-                return Ok(s.received);
-            }
-            return Err("retry mismatch".into());
-        }
-        if offset != s.received {
-            return Err("upload order".into());
-        }
-        ic_cdk::api::stable_write(offset, &bytes);
-        s.digest.update(&bytes);
-        s.received += bytes.len() as u64;
-        s.hashed = s.received;
-        Ok(s.received)
-    })
-}
 const CHUNK: u64 = 1_800_000;
 #[derive(CandidType, Deserialize)]
 struct PackStatus {
@@ -165,7 +131,7 @@ struct PackStatus {
     ready: bool,
     chunks: Vec<u64>,
 }
-#[ic_cdk::query]
+#[ic_cdk::query(name = "getModelStatus")]
 fn pack_status() -> PackStatus {
     query_access();
     STORE.with(|s| {
@@ -189,7 +155,7 @@ fn pack_status() -> PackStatus {
         }
     })
 }
-#[ic_cdk::update]
+#[ic_cdk::update(name = "uploadModelChunk")]
 fn upload_chunk(offset: u64, bytes: Vec<u8>, sha: Vec<u8>) -> std::result::Result<u64, String> {
     owner();
     if bytes.is_empty() || bytes.len() as u64 > CHUNK || Sha256::digest(&bytes).as_slice() != sha {
@@ -223,7 +189,7 @@ fn upload_chunk(offset: u64, bytes: Vec<u8>, sha: Vec<u8>) -> std::result::Resul
         Ok(s.received)
     })
 }
-#[ic_cdk::update]
+#[ic_cdk::update(name = "verifyModelUpload")]
 fn hash_pack(max_bytes: u64) -> std::result::Result<(u64, bool), String> {
     owner();
     if max_bytes == 0 || max_bytes > 8_000_000 {
@@ -261,29 +227,7 @@ fn hash_pack(max_bytes: u64) -> std::result::Result<(u64, bool), String> {
         Ok((s.hashed, s.ready))
     })
 }
-#[ic_cdk::update]
-fn seal() -> std::result::Result<(), String> {
-    owner();
-    STORE.with(|s| {
-        let mut s = s.borrow_mut();
-        if s.received != s.manifest.as_ref().ok_or("not prepared")?.bytes {
-            return Err("incomplete".into());
-        }
-        let actual = s
-            .digest
-            .clone()
-            .finalize()
-            .iter()
-            .map(|b| format!("{b:02x}"))
-            .collect::<String>();
-        if actual != s.manifest.as_ref().unwrap().pack_hash {
-            return Err("pack hash mismatch".into());
-        }
-        s.ready = true;
-        Ok(())
-    })
-}
-#[ic_cdk::query]
+#[ic_cdk::query(name = "runInferenceStep")]
 fn step(state: StateBytes) -> std::result::Result<Measurement, String> {
     query_access();
     let start = ic_cdk::api::performance_counter(0u32);
@@ -312,12 +256,14 @@ fn step(state: StateBytes) -> std::result::Result<Measurement, String> {
         stable_pages: ic_cdk::api::stable_size(),
     })
 }
+#[cfg(feature="paid-update-diagnostics")]
 #[derive(CandidType, Deserialize)]
 struct ProfileMeasurement {
     measurement: Measurement,
     spans: Vec<(String, u64, u64)>,
 }
-#[ic_cdk::query]
+#[cfg(feature="paid-update-diagnostics")]
+#[ic_cdk::query(name = "profileInferenceStep")]
 fn profile_step(state: StateBytes) -> std::result::Result<ProfileMeasurement, String> {
     owner();
     if !cfg!(feature = "instruction-profile") {
@@ -420,7 +366,7 @@ fn validate_terminal_decision(r: &imajev_runtime::Request, options: &[String]) -
         if !cfg!(feature="experimental-terminal-stream")
             || r.tensor != "model.language_model.layers.30.post_attention_layernorm.weight"
             || r.encoding != "mlp-attention-finish-exact-v1"
-            || r.dims.len() != 3 || !(1..=89).contains(&r.dims[0])
+            || r.dims.len() != 3 || !(1..=91).contains(&r.dims[0])
             || r.dims[1] > 132 || r.dims[2] == 0 || r.dims[2] >= 9216 || r.dims[2] % step != 0
             || r.aux != ["model.language_model.layers.31.input_layernorm.weight"]
             || r.scalars.len() != 2 || r.scalars[0].to_bits() != 2f32.to_bits()
@@ -440,11 +386,11 @@ fn validate_terminal_decision(r: &imajev_runtime::Request, options: &[String]) -
         || r.step == u64::MAX {
         return Err("terminal decision metadata".into());
     }
-    // The same checked option contract used by the dedicated decision query.
+    // Validate the candidate option contract before running the final query.
     imajev_runtime::decide_candidates(options, &vec![0.; options.len().min(7)+1], 1.3051569717552742)?;
     Ok(())
 }
-#[ic_cdk::query]
+#[ic_cdk::query(name = "runFinalInferenceStep")]
 fn terminal_step_decision(state: StateBytes, options: Vec<String>) -> Result<TerminalDecisionMeasurement, String> {
     query_access();
     let start = ic_cdk::api::performance_counter(0);
@@ -483,35 +429,6 @@ fn terminal_step_decision(state: StateBytes, options: Vec<String>) -> Result<Ter
         instructions:ic_cdk::api::performance_counter(0)-start, stable_read_bytes:read,
         heap_pages, stable_pages:ic_cdk::api::stable_size()}, decision})
 }
-#[ic_cdk::query]
-fn decision_fast(
-    state: Vec<u8>,
-    options: Vec<String>,
-) -> std::result::Result<ChoiceResult, String> {
-    query_access();
-    let start = ic_cdk::api::performance_counter(0u32);
-    let (mut r, x) = decode(&state)?;
-    if r.op != "matmul"
-        || !matches!(r.tensor.as_str(), "readout-f32" | "readout-int8")
-        || r.dims != vec![1, 256, 2560]
-        || x.len() != 2560
-        || !(2..=7).contains(&options.len())
-    {
-        return Err("expected dedicated readout request/options".into());
-    }
-    r.dims = vec![1, options.len() + 1, 2560, 0];
-    let (logits, _) = evaluate(&r, &x)?;
-    let d = imajev_runtime::decide_candidates(&options, &logits, 1.3051569717552742)?;
-    Ok(ChoiceResult {
-        value: d.value,
-        probabilities: d.probabilities,
-        unknown_probability: d.unknown_probability,
-        abstained: d.abstained,
-        raw_logits: d.raw_logits,
-        instructions: ic_cdk::api::performance_counter(0u32) - start,
-        calibration_version: "p3-r2-s000291-authored".into(),
-    })
-}
 #[derive(CandidType, Deserialize, serde::Serialize, Clone)]
 struct ChoiceResult {
     value: Option<String>,
@@ -521,30 +438,6 @@ struct ChoiceResult {
     raw_logits: Vec<f32>,
     instructions: u64,
     calibration_version: String,
-}
-#[ic_cdk::query]
-fn decision(state: StateBytes, options: Vec<String>) -> std::result::Result<ChoiceResult, String> {
-    query_access();
-    let (r, x) = decode(&state)?;
-    if r.op != "matmul"
-        || !matches!(r.tensor.as_str(), "readout-f32" | "readout-int8")
-        || r.dims != vec![1, 256, 2560]
-        || x.len() != 2560
-    {
-        return Err("expected dedicated readout request".into());
-    }
-    let measured = step(state.into())?;
-    let (_, logits) = decode(&measured.state)?;
-    let result = imajev_runtime::decide(&options, &logits, 1.3051569717552742)?;
-    Ok(ChoiceResult {
-        value: result.value,
-        probabilities: result.probabilities,
-        unknown_probability: result.unknown_probability,
-        abstained: result.abstained,
-        raw_logits: result.raw_logits,
-        instructions: measured.instructions,
-        calibration_version: "p3-r2-s000291-authored".into(),
-    })
 }
 #[derive(CandidType, Deserialize)]
 struct WeightCacheInfo {
@@ -571,7 +464,7 @@ fn cache_info(s: &Store, instructions: u64) -> WeightCacheInfo {
     WeightCacheInfo { bytes: s.weight_cache.bytes(), names: s.weight_cache.names(), preparation_instructions: instructions, rope_bytes, activation_bytes, paired_weight_bytes }
 }
 /// Prepare only immutable weights. Upgrade drops this optional heap cache.
-#[ic_cdk::update]
+#[ic_cdk::update(name = "prepareWeightCache")]
 fn warm_weights(name: String) -> std::result::Result<WeightCacheInfo, String> {
     owner();
     if name.len() > 256 { return Err("weight name length".into()); }
@@ -611,7 +504,7 @@ fn warm_weights(name: String) -> std::result::Result<WeightCacheInfo, String> {
         Ok(cache_info(&s, ic_cdk::api::performance_counter(0) - start))
     })
 }
-#[ic_cdk::update]
+#[ic_cdk::update(name = "clearWeightCache")]
 fn clear_weight_cache() -> WeightCacheInfo {
     owner();
     #[cfg(feature="experimental-prepared-rope")]
@@ -620,15 +513,10 @@ fn clear_weight_cache() -> WeightCacheInfo {
     imajev_runtime::prepared_activation::clear();
     STORE.with(|s| { let mut s = s.borrow_mut(); s.weight_cache.clear(); cache_info(&s, 0) })
 }
-#[ic_cdk::query]
+#[ic_cdk::query(name = "getWeightCacheStatus")]
 fn weight_cache_status() -> WeightCacheInfo {
     query_access();
     STORE.with(|s| cache_info(&s.borrow(), 0))
-}
-#[ic_cdk::query]
-fn status() -> (u64, bool) {
-    query_access();
-    STORE.with(|s| (s.borrow().received, s.borrow().ready))
 }
 // Metadata survives upgrades separately from weight bytes. Restore only after compatible upgrade.
 #[ic_cdk::pre_upgrade]
@@ -642,6 +530,7 @@ fn owner_guardless_persist() {
         if let Some(m) = &s.manifest {
             let metadata =
                 serde_json::to_vec(&(s.owner.unwrap().to_text(), m, s.received, s.ready, paid_metadata())).unwrap();
+            assert!(metadata.len() < 2_000_000, "upgrade metadata size");
             let end = (m.bytes + 65535) / 65536 * 65536;
             let needed = (metadata.len() as u64 + 16 + 65535) / 65536;
             let total = end / 65536 + needed;
@@ -653,7 +542,7 @@ fn owner_guardless_persist() {
             }
             ic_cdk::api::stable_write(end, &(metadata.len() as u64).to_le_bytes());
             ic_cdk::api::stable_write(end + 8, &metadata);
-            ic_cdk::api::stable_write(total * 65536 - 8, &end.to_le_bytes());
+            ic_cdk::api::stable_write(ic_cdk::api::stable_size() * 65536 - 8, &end.to_le_bytes());
         }
     })
 }
@@ -692,7 +581,6 @@ fn post_upgrade() {
 #[cfg(feature="paid-update-inference")]mod paid_types;
 #[cfg(feature="paid-update-inference")]mod paid_inference;
 #[cfg(feature="paid-update-inference")]use paid_types::*;
-ic_cdk::export_candid!();
 pub fn get_candid_pointer_for_tests() -> String {
     __export_service()
 }
@@ -774,7 +662,7 @@ mod terminal_decision_tests {
         for options in [vec![],vec!["yes".into()],vec!["yes".into(),"yes".into()],vec!["".into(),"no".into()],vec!["__unknown__".into(),"no".into()],vec!["x".repeat(129),"no".into()],vec!["yes".into();8]] {
             assert!(validate_terminal_decision(&r,&options).is_err());
         }
-        assert!(__export_service().contains("terminal_step_decision"));
+        assert!(__export_service().contains("runFinalInferenceStep"));
     }
 }
 
@@ -786,10 +674,13 @@ mod paid_interface_tests {
     #[test]
     fn exported_interface_contains_paid_entrypoints() {
         let service = super::__export_service();
-        for method in ["infer :", "quote :", "configure_paid :", "inference_step :", "inference_status :", "retry_inference_refund :"] {
+        for method in ["runPaidInference :", "getInferenceQuote :", "configurePaidInference :", "runPaidInferenceWorker :", "getInferenceReceipt :", "retryInferenceRefund :"] {
             assert!(service.contains(method), "missing {method}");
         }
         #[cfg(not(feature = "paid-update-diagnostics"))]
-        assert!(!service.contains("paid_fault :") && !service.contains("paid_probe_step :") && !service.contains("paid_upgrade_probe :"));
+        assert!(!service.contains("setPaidInferenceFault :") && !service.contains("probePaidInferenceWorker :") && !service.contains("preparePaidInferenceUpgradeProbe :"));
     }
 }
+
+// Export after every entrypoint and module declaration.
+ic_cdk::export_candid!();

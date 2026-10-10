@@ -6,7 +6,7 @@ const CONV:usize=3*8192;
 pub(crate) fn metadata(r:&Request)->Result<(usize,usize,usize,usize)> {
     if r.encoding!=NAME || !matches!(r.op.as_str(),"delta_mlp_stream_prepare"|"delta_mlp_stream_start_ids") || r.dims.len()!=3 || r.aux.len()!=1 || r.scalars.len()!=2 || r.scalars[0].to_bits()!=2f32.to_bits() || r.scalars[1].to_bits()!=1e-6f32.to_bits() {return Err("Delta MLP start metadata".into());}
     let(n,b,p)=(r.dims[0],r.dims[1],r.dims[2]);
-    if !(1..=89).contains(&n) || b==0 || b>9216 || b%256!=0 || !(1..=132).contains(&p) {return Err("Delta MLP start bounds".into());}
+    if !(1..=91).contains(&n) || b==0 || b>9216 || b%256!=0 || !(1..=132).contains(&p) {return Err("Delta MLP start bounds".into());}
     let s=r.tensor.strip_prefix("model.language_model.layers.").and_then(|s|s.strip_suffix(".post_attention_layernorm.weight")).ok_or("Delta MLP start layer")?;
     let layer:usize=s.parse().map_err(|_|"Delta MLP start layer")?;
     if (r.op=="delta_mlp_stream_start_ids" && layer!=0) || layer>30 || layer==30&&!cfg!(feature="experimental-terminal-stream") || layer.to_string()!=s || (layer+1)%4==0 || r.aux[0]!=format!("model.language_model.layers.{}.input_layernorm.weight",layer+1) {return Err("Delta MLP start scope".into());}
@@ -117,7 +117,7 @@ pub(crate) fn decode_reply(r:&Request,payload:&[u8])->Result<Vec<f32>> {
   let state=PreparedDeltaMlpStart::decode(&r,&raw).unwrap();let mut wrong=r.clone();wrong.dims[1]=5120;
   let m=Manifest{version:1,model:r.model.clone(),pack_hash:r.pack_hash.clone(),bytes:0,tensors:vec![]};
   assert_eq!(state.evaluate(&wrong,&m,&mut|_,_|->Result<Vec<u8>>{panic!("identity read")}).unwrap_err(),"Delta MLP start identity");
-  for dims in [vec![],vec![0,4864,45],vec![90,4864,45],vec![1,0,45],vec![1,4865,45],vec![1,4864,133],vec![usize::MAX,4864,45]] {let mut bad=r.clone();bad.dims=dims;assert!(metadata(&bad).is_err());}
+  for dims in [vec![],vec![0,4864,45],vec![92,4864,45],vec![1,0,45],vec![1,4865,45],vec![1,4864,133],vec![usize::MAX,4864,45]] {let mut bad=r.clone();bad.dims=dims;assert!(metadata(&bad).is_err());}
   raw[size-4..].copy_from_slice(&1.1f32.to_le_bytes());assert!(PreparedDeltaMlpStart::decode(&r,&raw).is_err());raw[0]=0;assert!(PreparedDeltaMlpStart::decode(&r,&raw).is_err());
  }
 }
@@ -135,7 +135,7 @@ mod direct_tests {
   let mut payload=vec![];crate::mlp_stream::append(&mut payload,&mr,&v).unwrap();(mr,v,payload)
  }
  #[test]fn outer_typed_reply_preserves_entire_frame() {
-  for n in [1,7,80,87,89] {for b in [4096,4352,9216] {
+  for n in [1,7,80,87,89,91] {for b in [4096,4352,9216] {
    let mut r=request(n,b);let(mr,mut values,payload)=carry(&r);let history=vec![-0.;CONV];values.extend(&history);
    for version in [1,2,3] {
     if version==2 && !cfg!(feature="experimental-blake3") {continue;}

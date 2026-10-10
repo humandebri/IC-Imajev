@@ -14,7 +14,7 @@ async function showResult(
     contentType: "text/javascript",
     body: `
       export async function countTokens() {
-        return {total:64, prefix:27, suffix:37, paidPrefix:27, paidSuffix:37};
+        return {total:64, prefix:5, suffix:59, paidPrefix:5, paidSuffix:59};
       }
       export function infer(input, progress) {
         const selectedIndex = ${JSON.stringify(selectedIndex)};

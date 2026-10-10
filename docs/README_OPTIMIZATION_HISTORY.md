@@ -94,6 +94,6 @@ Imajev-4Bのテキスト判断をInternet Computerの通常queryで全32層実�
 
 既存INT8通信は可逆BF16通信版から候補確率が最大約0.121変わる別の量子化です。[通信INT8の条件](ACTIVATION_INT8.md)。全モデルの構成・重み準備は [docs/FULL_INFERENCE.md](FULL_INFERENCE.md)。旧最適化の測定履歴は [docs/EXACT_OPTIMIZATION.md](EXACT_OPTIMIZATION.md)、[docs/LAYA_COST_ANALYSIS.md](LAYA_COST_ANALYSIS.md)。
 
-測定と残作業は [docs/STATUS.md](STATUS.md)。採用revision、ファイル容量、SHA256、tensor形状は [MODEL_LOCK.json](../MODEL_LOCK.json)。`PLAN.md` の当初計画を残しています。
+測定と残作業は [docs/STATUS.md](STATUS.md)。採用revision、ファイル容量、SHA256、tensor形状は [MODEL_LOCK.json](../MODEL_LOCK.json)。[設計と検証の入口](../PLAN.md)を参照してください。
 
 追加の整数dot・Delta state store削減と89-token MLP統合は [docs/KERNEL_UNROLL.md](KERNEL_UNROLL.md) を参照。主問題の命令は9.07%減、最大変更は383→352 query。目標50/32 queryは未達。

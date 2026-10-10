@@ -30,9 +30,6 @@ def main():
   verify_module(t,module)
   output=dest/'separate-terminal.response.bin';step=t.command(dict(op='step',input=str(request),output=str(output)))
   assert output.read_bytes()==expected.read_bytes();rows.append(dict(method='step',**step))
-  h,y=decode(output.read_bytes());dr=dict(version=h['version'],model=h['model'],pack_hash=h['pack_hash'],input_hash=h['input_hash'],step=h['step'],op='matmul',tensor='readout-f32',dims=[1,256,2560],scalars=[])
-  hidden=dest/'decision.request.bin';atomic(hidden,encode(dr,y[2560:5120]));separate=t.command(dict(op='decision',method='decision_fast',input=str(hidden),options=options));rows.append(dict(method='decision_fast',**separate))
-  assert all(separate['ok']['decision'][key]==decision[key]for key in keys)
   output=dest/'fused-terminal.response.bin';fused=t.command(dict(op='terminal_step_decision',input=str(request),output=str(output),options=options));rows.append(dict(method='terminal_step_decision',**fused))
   assert output.read_bytes()==expected.read_bytes();assert all(fused['ok']['decision'][key]==decision[key]for key in keys)
   errors=[]
@@ -58,9 +55,9 @@ def main():
  except ValueError:pass
  else:raise AssertionError('changed option order accepted on replay')
  assert hashes=={str(p.relative_to(ROOT)):sha(p.read_bytes())for p in files};assert binary==sha((ROOT/'target/release/imajev-client').read_bytes())
- data=dict(scope=__doc__,wasm_sha256=module,canister=a.canister,source_report_sha256=sha((source/'report.json').read_bytes()),request_sha256=sha(request.read_bytes()),client_binary_sha256=binary,source_hashes=hashes,ordinary_queries=5,successful_control_queries=3,rejected_invalid_queries=errors,cases=rows,state_byte_equal=True,decision_equal=True,replay_without_query=True,changed_options_replay_rejected=True)
+ data=dict(scope=__doc__,wasm_sha256=module,canister=a.canister,source_report_sha256=sha((source/'report.json').read_bytes()),request_sha256=sha(request.read_bytes()),client_binary_sha256=binary,source_hashes=hashes,ordinary_queries=4,successful_control_queries=2,rejected_invalid_queries=errors,cases=rows,state_byte_equal=True,decision_equal=True,replay_without_query=True,changed_options_replay_rejected=True)
  (dest/'report.json').write_text(json.dumps(data,indent=2)+'\n')
  with zipfile.ZipFile(dest/'validated-source.zip','w',zipfile.ZIP_DEFLATED)as z:
   for p in files:z.write(p,str(p.relative_to(ROOT)))
- print(json.dumps(dict(state_byte_equal=True,decision_equal=True,replay_without_query=True,ordinary_queries=5)))
+ print(json.dumps(dict(state_byte_equal=True,decision_equal=True,replay_without_query=True,ordinary_queries=4)))
 if __name__=='__main__':main()

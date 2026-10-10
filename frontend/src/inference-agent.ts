@@ -17,14 +17,14 @@ const result = (type: IDL.Type) => IDL.Variant({ Ok: type, Err: IDL.Text });
 const bridge = (field: string) => IDL.Record({ ...measurementFields, previous_hidden: blob,
   [field]: blob, spans: IDL.Vec(IDL.Tuple(IDL.Text, IDL.Nat64)) });
 export const methods: Record<string, { args: IDL.Type[]; reply: IDL.Type[] }> = {
-  step: { args: [blob], reply: [result(measurement)] },
-  mlp_delta_front: { args: [blob, blob, IDL.Nat32, IDL.Nat32], reply: [result(bridge("conv"))] },
-  attention_mlp_front: { args: [blob, IDL.Nat32], reply: [result(bridge("kv"))] },
-  terminal_step_decision: { args: [blob, IDL.Vec(IDL.Text)], reply: [result(IDL.Record({ measurement, decision }))] },
-  pack_status: { args: [], reply: [IDL.Record({ model: IDL.Text, pack_hash: IDL.Text,
+  runInferenceStep: { args: [blob], reply: [result(measurement)] },
+  runDeltaInferenceStep: { args: [blob, blob, IDL.Nat32, IDL.Nat32], reply: [result(bridge("conv"))] },
+  runAttentionInferenceStep: { args: [blob, IDL.Nat32], reply: [result(bridge("kv"))] },
+  runFinalInferenceStep: { args: [blob, IDL.Vec(IDL.Text)], reply: [result(IDL.Record({ measurement, decision }))] },
+  getModelStatus: { args: [], reply: [IDL.Record({ model: IDL.Text, pack_hash: IDL.Text,
     bytes: IDL.Nat64, received: IDL.Nat64, hashed: IDL.Nat64, ready: IDL.Bool,
     chunks: IDL.Vec(IDL.Nat64) })] },
-  weight_cache_status: { args: [], reply: [IDL.Record({ bytes: IDL.Nat64, names: IDL.Vec(IDL.Text),
+  getWeightCacheStatus: { args: [], reply: [IDL.Record({ bytes: IDL.Nat64, names: IDL.Vec(IDL.Text),
     preparation_instructions: IDL.Nat64, rope_bytes: IDL.Opt(IDL.Nat64),
     activation_bytes: IDL.Opt(IDL.Nat64), paired_weight_bytes: IDL.Opt(IDL.Nat64) })] },
 };

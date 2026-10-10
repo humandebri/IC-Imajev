@@ -1,3 +1,5 @@
+> Historical prefix27 procedure. Use [PAID_PREFIX5_VERIFICATION.md](PAID_PREFIX5_VERIFICATION.md) for current execution; the commands below are retained as a record.
+
 # 27-token common prefix専用構成
 
 現行ソースの有料update推論は、全入力に共通する固定27 tokenの状態だけを保持する。`update_prefix`は27-token状態だけを受け付け、32層が揃うまで新規推論は受け付けない。38-token voting bankの準備と選択は不要。

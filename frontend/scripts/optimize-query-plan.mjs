@@ -56,3 +56,30 @@ export function optimizeQueryPlan(baseline, split, probeBase, probeSplit, makePl
   const result = states.get(0);
   return {...makePlan(n), fronts: result.fronts, completions: result.completions};
 }
+
+/** Predict a multi-chunk schedule from a fresh conservative run; remeasure before adoption. */
+export function optimizeStreamQueryPlan(reference, makePlan) {
+  assert(reference.complete);
+  const n = reference.n, plan = makePlan(n);
+  assert(n > 45 && n <= 91);
+  const chunks = reference.queries.filter(q => q.op === "mlp_stream_next");
+  assert(chunks.length > 0);
+  const unit = Math.max(...chunks.map(q => q.instructions / q.dims[2])) * 1.03;
+  const target = 3_750_000_000;
+  const floor = x => Math.floor(x / 256) * 256;
+  const ceil = x => Math.ceil(x / 256) * 256;
+  plan.fronts[0] = Math.max(256, Math.min(8960, floor(256 + (target - reference.queries[0].instructions) / unit)));
+  for (let layer = 0; layer <= 30; layer++) {
+    const q = reference.queries.find(q => q.layer === layer && q.op.startsWith("mlp_stream_complete"));
+    assert(q, `Missing bridge measurement at layer ${layer}`);
+    const done = Math.max(plan.fronts[layer], Math.min(8960, ceil(8960 - (target - q.instructions) / unit)));
+    plan.completions[layer] = done;
+    if (layer < 30) {
+      const attention = layer % 4 === 2;
+      const replyCap = floor(((1_970_000 - (attention ? 0 : 49_152)) / n - (attention ? 17_704 : 13_608)) / 1.015625);
+      plan.fronts[layer + 1] = Math.max(256, Math.min(8960, replyCap,
+        floor(256 + done - 8960 + (target - q.instructions) / unit)));
+    }
+  }
+  return plan;
+}

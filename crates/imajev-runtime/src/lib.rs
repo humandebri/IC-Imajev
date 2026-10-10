@@ -38,6 +38,11 @@ mod carry_planes;
 mod mlp_delta_fusion;
 #[cfg(feature="experimental-prefix-hybrid")]
 pub mod prefix_hybrid_codec;
+// Exercise the cache source used by the optimized builder with this crate's
+// real restore/codec implementations. Production cache insertion is owner-only.
+#[cfg(all(test, feature="experimental-delta-state-layout", feature="experimental-blake3"))]
+#[path="../../../scripts/prefix_state_cache.rs"]
+mod prefix_state_cache;
 #[cfg(feature="experimental-prefix-hybrid")]
 mod delta_hybrid;
 #[cfg(feature="experimental-prepared-output-pairs")]
@@ -97,6 +102,12 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 pub type Result<T> = std::result::Result<T, String>;
 pub const MAX_FLOATS: usize = inference_core::MAX_FLOATS;
+// Sequence positions may exceed a tile's row count; keep those bounds separate.
+#[cfg(feature="experimental-attention-reference")]
+mod attention_reference;
+#[cfg(feature="experimental-attention-reference")]
+pub use attention_reference::{enabled as attention_reference_enabled,set as set_attention_reference};
+pub const MAX_SEQUENCE_TOKENS: usize = if cfg!(feature="experimental-update-token-chunks") {1024} else {512};
 pub fn lossless_encoding(encoding: &str) -> bool {
     matches!(encoding,"bf16-exact"|"bf16-block256-exact-v1") || {
         #[cfg(feature="experimental-mlp-pipeline")] {encoding==mlp_pipeline::NAME}
@@ -1193,8 +1204,8 @@ pub fn execute(r: &Request, x: &[f32], weight: &[f32]) -> Result<Vec<f32>> {
             if !crate::lossless_encoding(&r.encoding)
                 || n == 0
                 || n > 512
-                || prefix > 512
-                || n + prefix > 512
+                || prefix > MAX_SEQUENCE_TOKENS
+                || n + prefix > MAX_SEQUENCE_TOKENS
                 || width == 0
                 || width > 256
                 || heads == 0
@@ -1214,6 +1225,12 @@ pub fn execute(r: &Request, x: &[f32], weight: &[f32]) -> Result<Vec<f32>> {
                 let mut out = Vec::with_capacity(heads * stride);
                 for head in 0..heads {
                     let group = head / 4;
+                    #[cfg(feature="experimental-attention-reference")]
+                    if attention_reference::enabled() {
+                        out.extend(attention_reference::head(&queries[head*stride..(head+1)*stride],
+                            &keys[group*kv_stride..(group+1)*kv_stride],&values[group*kv_stride..(group+1)*kv_stride],n,width,prefix));
+                        continue;
+                    }
                     out.extend(crate::profile::measure("gqa_head_views", || attention_views::head(
                         &queries[head * stride..(head + 1) * stride],
                         &keys[group * kv_stride..(group + 1) * kv_stride],
@@ -1318,8 +1335,8 @@ pub fn execute(r: &Request, x: &[f32], weight: &[f32]) -> Result<Vec<f32>> {
                 && d[0] <= 512
                 && d[1] > 0
                 && d[1] <= 256
-                && d.get(2).copied().unwrap_or(0) <= 512
-                && d[0] + d.get(2).copied().unwrap_or(0) <= 512
+                && d.get(2).copied().unwrap_or(0) <= MAX_SEQUENCE_TOKENS
+                && d[0] + d.get(2).copied().unwrap_or(0) <= MAX_SEQUENCE_TOKENS
                 && x.len() == (3 * d[0] + 2 * d.get(2).copied().unwrap_or(0)) * d[1] =>
         {
             let (n, h) = (d[0], d[1]);

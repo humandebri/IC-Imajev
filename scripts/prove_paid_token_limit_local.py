@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """Measure paid token boundaries on a snapshot-protected LOCAL canister."""
+
+from historical_paid_proof import historical_only
+historical_only()
 import argparse
 import hashlib
 import json
@@ -160,7 +163,7 @@ def main():
         write(d / 'prefix-registration.json', prefix_rows)
         wire = PaidTransport(d / 'calls', TARGET)
         caller_wire = PaidTransport(d / 'caller-balance', caller)
-        config = dict(enabled=True, version=2, base_fee=100_000_000_000,
+        config = dict(base_fee=100_000_000_000,
                       fee_per_token=3_000_000_000, reserve_cycles=2_000_000_000_000)
         assert 'Ok' in wire.call('configure_paid', config)['result']
         denied = wire.call('inference_step', dict(job_id=1, stage=0))['result']
@@ -186,7 +189,7 @@ def main():
             quoted = wire.call('quote', req)['result']
             if n > a.expected_limit:
                 assert 'Invalid' in quoted.get('Err', {}), quoted
-                rejected = wire.call('infer', dict(request=req, request_id=f'length-{n}', quote_version=2), relay=caller, cycles=100_000_000_000)
+                rejected = wire.call('infer', dict(request=req, request_id=f'length-{n}'), relay=caller, cycles=100_000_000_000)
                 assert 'Invalid' in rejected['result'].get('Err', {}), rejected
                 assert rejected['forward']['refunded'] == 100_000_000_000
                 report['cases'].append(dict(tokens=n, success=False, rejected_before_payment=True, full_cycles_returned=True, call=rejected))
@@ -194,7 +197,7 @@ def main():
                 print(f'{n} rejected before payment', flush=True)
                 continue
             quote = quoted['Ok']
-            payload = dict(request=req, request_id=f'length-{n}', quote_version=quote['version'])
+            payload = dict(request=req, request_id=f'length-{n}')
             balance_before = caller_wire.call('balance')['result']
             inference_before = int(json.loads(icp('status', TARGET, '--json'))['cycles'].replace('_', ''))
             row = wire.call('infer', payload, relay=caller, cycles=quote['fee'] + 12345)
@@ -240,7 +243,7 @@ def main():
             successful=next(c for c in report['cases'] if c['tokens']==n)
             stage=successful['call']['result']['Ok']['workers'][0]['stage']
             wire.call('paid_fault', dict(stage=stage, trap=True, refund_fail=False))
-            payload=dict(request=requests[n], request_id='carry-fault', quote_version=2)
+            payload=dict(request=requests[n], request_id='carry-fault')
             fee=successful['quote']['fee']
             fault_balance_before=caller_wire.call('balance')['result']
             failed=wire.call('infer',payload,relay=caller,cycles=fee)
@@ -252,7 +255,7 @@ def main():
             wire.call('paid_fault',dict(stage=None, trap=False, refund_fail=False))
             repeated=wire.call('infer',payload,relay=caller,cycles=fee)
             assert repeated['result']==failed['result'] and repeated['forward']['refunded']==fee
-            recovery=wire.call('infer',dict(request=requests[84],request_id='after-carry-fault',quote_version=2),relay=caller,
+            recovery=wire.call('infer',dict(request=requests[84],request_id='after-carry-fault'),relay=caller,
                                cycles=next(c for c in report['cases'] if c['tokens']==84)['quote']['fee'])
             got=recovery['result']['Ok']['decision']
             want=next(c for c in report['cases'] if c['tokens']==84)['call']['result']['Ok']['decision']
@@ -282,7 +285,7 @@ def main():
                 assert previous['input_sha256']==current['input_sha256']
                 # Hash includes the entire public request: model, version, IDs and options.
                 old_inputs = list((candidate / 'calls').glob('*.input.json'))
-                assert any(json.loads(p.read_text())==dict(request=req,request_id=f'length-{n}',quote_version=2) for p in old_inputs)
+                assert any(json.loads(p.read_text())==dict(request=req,request_id=f'length-{n}') for p in old_inputs)
                 debug=debug_by_length[n]
                 origin=candidate / f'query-reference-{n}'
                 for layer in range(32):
@@ -327,6 +330,9 @@ def main():
                                       delta_head_cap=16, attention_head_cap=4, compact_heads=True, compact_lossless=True,
                                       retain_terminal_state=False, terminal_readout=True, fuse_add_norm=True,
                                       fuse_mlp=True, fuse_mlp_norm=True, fuse_norm_rope=True, fuse_delta=True, fuse_attention=False)
+                # Production decisions are returned by the final query itself.
+                t.fuse_terminal_decision = n <= 116
+                t.decision_options = req['options']
                 hidden = graph.forward(req['token_ids'])
                 debug = debug_by_length[n]
                 assert bits(hidden[-1]) == bits(debug['final_hidden']), (n, 'final hidden')
@@ -336,17 +342,16 @@ def main():
                     with np.load(qd / 'states' / f'layer-{layer:02d}.npz', allow_pickle=False) as z:
                         state = np.concatenate([z['keys'][27:].ravel(), z['values'][27:].ravel()]) if layer % 4 == 3 else z['conv'].ravel()
                         assert bits(state) == debug['state_hashes'][layer], (n, layer, 'state')
-                path = qd / 'decision.request.bin'
-                header = dict(version=1, model=manifest['model'], pack_hash=manifest['pack_hash'],
-                              input_hash=t.input_hash, step=t.index, op='matmul', tensor='readout-f32', dims=[1, 256, 2560], scalars=[])
-                atomic(path, encode(header, hidden[-1]))
-                result = t.command(dict(op='decision', method='decision_fast', input=str(path), options=req['options']))['ok']['decision']
-                write(qd / 'decision.json', result)
                 np.save(qd / 'final-hidden.npy', hidden[-1])
+                result = getattr(t, 'terminal_decision', None)
                 paid = next(c for c in report['cases'] if c['tokens'] == n)['call']['result']['Ok']['decision']
-                assert {k: v for k, v in result.items() if k != 'instructions'} == {k: v for k, v in paid.items() if k != 'instructions'}
+                if result is not None:
+                    write(qd / 'decision.json', result)
+                    assert {k: v for k, v in result.items() if k != 'instructions'} == {k: v for k, v in paid.items() if k != 'instructions'}
                 comparison = dict(tokens=n, all32_hidden_and_state_equal=True, final_hidden_equal=True,
-                                  decision_probabilities_logits_equal=True, ordinary_queries=len(t.measurements) + 1)
+                                  decision_probabilities_logits_equal=result is not None, ordinary_queries=len(t.measurements))
+                if result is None:
+                    comparison['decision_comparison_unavailable'] = 'Unfused long reference graph has no final decision query; use an independent saved reference for probability comparison.'
                 report['query_comparisons'].append(comparison)
                 write(qd / 'comparison.json', comparison)
                 write(d / 'report.json', report)

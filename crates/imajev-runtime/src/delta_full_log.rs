@@ -28,7 +28,7 @@ pub(super) fn evaluate_retaining_state<F,B>(r:&Request,x:&[f32],m:&Manifest,read
 where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
  if r.op!="delta_full_log_integer" || !crate::lossless_encoding(&r.encoding) || r.dims.len()!=4 || !r.aux.is_empty() || !r.scalars.is_empty() {return Err("full Delta metadata".into());}
  let(n,h,p,keep)=(r.dims[0],r.dims[1],r.dims[2],r.dims[3]);
- if n==0 || n>90 || h!=32 || p>132 || keep>1 || (keep==1 && p!=0) {return Err("full Delta shape".into());}
+ if n==0 || n>91 || h!=32 || p>132 || keep>1 || (keep==1 && p!=0) {return Err("full Delta shape".into());}
  if let Some(state)=initial.as_ref() {if p==0 || keep!=0 || state.values().len()!=H*DK*DK || !state.values().iter().all(|v|v.is_finite()) {return Err("full Delta prepared state".into());}}
  let input=n*COLS+HISTORY+if initial.is_some(){0}else{p*LOG_ROW};let output=n*COLS+HISTORY+if keep==1 {n*LOG_ROW}else{0};
  if input>MAX_FLOATS || output>MAX_FLOATS || x.len()!=input || !x.iter().all(|v|v.is_finite()) || !crate::bf16_codec::all_bf16(&x[..n*COLS+HISTORY]) || (initial.is_none() && p>0 && !crate::bf16_codec::all_bf16(&x[n*COLS+HISTORY..n*COLS+HISTORY+p*16*128])) {return Err("full Delta input bounds/precision".into());}

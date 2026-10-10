@@ -54,11 +54,11 @@
 
 ```sh
 python3 scripts/build_paid_token_limit_probe.py \
-  --source-root /Volumes/KINGSTON/ICP/IC-Imajev \
+  --source-root "$PWD" \
   --directory artifacts/paid-token-limit-local-v2/build
 
 python3 scripts/prove_paid_token_limit_local.py \
-  --source-root /Volumes/KINGSTON/ICP/IC-Imajev \
+  --source-root "$PWD" \
   --build artifacts/paid-token-limit-local-v2/build \
   --directory artifacts/paid-token-limit-local-v2/proof
 ```

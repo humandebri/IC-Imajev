@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """Snapshot-protected paid inference proof using an actual caller canister."""
+
+from historical_paid_proof import historical_only
+historical_only()
 import hashlib,json,subprocess,sys,time,zipfile,concurrent.futures
 from pathlib import Path
 import numpy as np
@@ -48,7 +51,7 @@ def main():
     print(json.dumps(dict(stage='prefix-bank-ready',bank=bank)),flush=True)
   finally:t.close()
   write(D/'prefix-registration.json',prefix_rows)
-  wire=PaidTransport(D/'calls',TARGET);config=dict(enabled=True,version=2,base_fee=100_000_000_000,fee_per_token=3_000_000_000,reserve_cycles=2_000_000_000_000)
+  wire=PaidTransport(D/'calls',TARGET,helper=ROOT/'artifacts/paid-update-v1/tools/args');config=dict(enabled=True,version=2,base_fee=100_000_000_000,fee_per_token=3_000_000_000,reserve_cycles=2_000_000_000_000)
   assert 'Ok'in wire.call('configure_paid',config)['result']
   typed=subprocess.check_output(['icp','canister','call',TARGET,'paid_config','--network','local','--identity','imajev-local','--candid',str(ROOT/'canisters/inference/paid-inference.did'),'()','--query','--output','hex'],cwd=ROOT,text=True)
   typed_path=D/'typed-config.reply.hex';typed_path.write_text(typed);assert wire.decode('paid_config',typed_path)==config
@@ -78,8 +81,8 @@ def main():
   row=wire.call('inference_status','boom-617-1',relay=callers[1]);assert row['result'] is None;checks.append(dict(name='status-authority',row=row))
   write(D/'checks.json',checks)
   # Use a tiny replacement module so upload time cannot hide an active upgrade.
-  background=PaidTransport(D/'upgrade-background',TARGET)
-  secondary=PaidTransport(D/'busy-secondary',TARGET)
+  background=PaidTransport(D/'upgrade-background',TARGET,helper=ROOT/'artifacts/paid-update-v1/tools/args')
+  secondary=PaidTransport(D/'busy-secondary',TARGET,helper=ROOT/'artifacts/paid-update-v1/tools/args')
   active_request=dict(request=requests[0],request_id='upgrade-primary',quote_version=2)
   with concurrent.futures.ThreadPoolExecutor(max_workers=3)as pool:
    primary_future=pool.submit(background.call,'infer',active_request,relay=callers[0],cycles=quotes[0]['fee'])

@@ -12,7 +12,7 @@ for (const [width, height] of [
     await page.setViewportSize({ width, height });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
-    await expect(page.locator(".token-counts dd")).toHaveText("51", { timeout: 15000 });
+    await expect(page.locator(".token-counts dd")).toHaveText("30", { timeout: 15000 });
     const dimensions = await page.evaluate(() => ({
       width: document.documentElement.scrollWidth,
       height: document.documentElement.scrollHeight,
@@ -36,7 +36,7 @@ test("short viewports keep content below the header and allow natural scrolling"
   await page.setViewportSize({ width: 1280, height: 600 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await expect(page.locator(".token-counts dd")).toHaveText("51", { timeout: 15000 });
+  await expect(page.locator(".token-counts dd")).toHaveText("30", { timeout: 15000 });
   const header = (await page.locator(".site-header").boundingBox())!;
   const main = (await page.locator("main").boundingBox())!;
   expect(main.y).toBeGreaterThanOrEqual(header.y + header.height);

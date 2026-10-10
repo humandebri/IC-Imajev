@@ -36,7 +36,7 @@ def main():
  try:
   verify_module(t,module)
   for label,index,request,response,frozen,h,expected in inputs:
-   output=d/f'{label}-{index:06d}.response.bin';result=t.command(dict(op='profile',input=str(frozen),output=str(output)))
+   output=d/f'{label}-{index:06d}.response.bin';result=t.command(dict(diagnostics=True,op='profile',input=str(frozen),output=str(output)))
    assert decode(output.read_bytes())[1].tobytes()==expected
    row=dict(label=label,index=index,op=h['op'],tensor=h.get('tensor'),request_sha256=refs[str(request.relative_to(ROOT))],response_sha256=refs[str(response.relative_to(ROOT))],profile=result,bitwise_equal=True);rows.append(row);print(json.dumps(row),flush=True)
   verify_module(t,module)

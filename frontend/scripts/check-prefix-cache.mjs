@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { loadPrefix, prefixCacheBytes } from "../src/prefix-assets.ts";
+import { createPrefixLoader } from "../src/prefix-loader.ts";
+import { sha } from "../src/query-codec.ts";
 import release from "../src/inference-release.json" with { type: "json" };
 
-const root = new URL("../public/inference/prefix27-v1/", import.meta.url);
+const root = new URL("../public/inference/prefix5-v1/", import.meta.url);
 const manifestBytes = await readFile(new URL("manifest.json", root));
 const manifest = JSON.parse(manifestBytes);
 const files = new Map(await Promise.all(Object.values(manifest.assets).map(async entry => [entry.file, await readFile(new URL(entry.file, root))])));
@@ -30,6 +32,17 @@ globalThis.fetch = async (url, init) => {
   } finally { active--; }
 };
 try {
+  // Even an otherwise valid manifest cannot bind another runtime/layout or token boundary.
+  for (const change of [{ module_hash: "0".repeat(64) }, { prompt_layout: "old-layout" }, { prefix: [...manifest.prefix, 330] }]) {
+    const changed = new TextEncoder().encode(JSON.stringify({ ...manifest, ...change }));
+    const loader = createPrefixLoader(await sha(changed));
+    respond = async url => url.endsWith("manifest.json") ? new Response(changed) : undefined;
+    const start = requests.length;
+    await assert.rejects(loader.load("https://mixed-release.test/", new AbortController().signal), /runtime or prompt layout mismatch/);
+    assert.equal(requests.length, start + 1, "Reject a mixed release before fetching layer states");
+    assert.equal(loader.cachedBytes(), 0);
+  }
+  respond = undefined; requests = [];
   const base = `https://offline.test/inference/immutable/${release.manifest_sha256}/`;
   const signal = new AbortController().signal;
   const events = [];
@@ -43,7 +56,7 @@ try {
     assert.deepEqual(Buffer.from(await prefix.asset(layer)), files.get(manifest.assets[layer].file));
   }
   assert.ok(peak <= 3, "at most current layer and two future layers for sequential inference");
-  assert.equal(prefixCacheBytes(), 15_418_368);
+  assert.equal(prefixCacheBytes(), 3_816_448);
   assert.equal(events.filter(e => e.phase === "prefix-fetch").length, 33);
   assert.equal(events.filter(e => e.phase === "prefix-hash").length, 33);
   const before = requests.length;
@@ -60,9 +73,9 @@ try {
   for (let layer = 0; layer < 32; layer++) {
     const [first, second] = await Promise.all([concurrentA.asset(layer), concurrentB.asset(layer)]);
     assert.strictEqual(first, second);
-    assert(prefixCacheBytes() <= 15_418_368);
+    assert(prefixCacheBytes() <= 3_816_448);
   }
-  assert.equal(prefixCacheBytes(), 15_418_368, "duplicate fetches cannot double-count retained bytes");
+  assert.equal(prefixCacheBytes(), 3_816_448, "duplicate fetches cannot double-count retained bytes");
 
   corrupt = true;
   const bad = await loadPrefix(`${base}bad/`, signal);

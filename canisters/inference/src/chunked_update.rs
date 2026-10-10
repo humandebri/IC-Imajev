@@ -3,7 +3,7 @@ use super::*;
 use imajev_runtime::{Request, ServerDeltaStream};
 const CHUNK:usize=57;
 const C:usize=2560;
-const PREFIX:usize=27;
+const PREFIX:usize=super::paid_inference::COMMON_PREFIX.len();
 struct Session {
     id:u64, stage:u64, n:usize, plan:Vec<crate::token_plan::Tile>, request:Request, options:Vec<String>,
     hidden:Vec<f32>, norm:Vec<f32>, attention:Vec<f32>,
@@ -27,7 +27,7 @@ fn template()->Result<Request,String> {
                    step:0,op:String::new(),tensor:String::new(),dims:vec![],scalars:vec![],aux:vec![],encoding:"bf16-block256-exact-v1".into()})})
 }
 pub(super) fn start(ids:Vec<u32>,options:Vec<String>)->Result<UpdateProgress,String> {
-    if !(90..=485).contains(&ids.len()) || ids.iter().any(|&v|v>=248320){return Err("chunked suffix bounds".into());}
+    if !(90..=super::paid_inference::INPUT_LIMIT-PREFIX).contains(&ids.len()) || ids.iter().any(|&v|v>=248320){return Err("chunked suffix bounds".into());}
     if super::update_inference::busy(){return Err("inference already active".into());}
     if !super::update_inference::bank_ready(PREFIX){return Err("prefix incomplete".into());}
     imajev_runtime::decide_candidates(&options,&vec![0.;options.len().min(7)+1],1.3051569717552742)?;
@@ -87,7 +87,7 @@ fn history(s:&Session)->Vec<f32> {
 }
 fn run(mut s:Session,start:u64,mut reads:u64)->Result<UpdateProgress,String> {
     let end=s.plan.len() as u64;let mut operations=vec![];
-    while s.stage<end && ic_cdk::api::performance_counter(0)-start<super::update_inference::WORKER_BUDGET {
+    while s.stage<end && ic_cdk::api::performance_counter(0)-start<super::paid_inference::worker_budget() {
         let tile=s.plan[s.stage as usize];let layer=tile.layer;let phase=usize::from(tile.mlp);
         let begin=tile.begin;let count=tile.count;
         let root=format!("model.language_model.layers.{layer}");

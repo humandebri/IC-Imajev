@@ -37,7 +37,7 @@ def run(h,payload,scope):
  (d/f'{index:06d}.metric.json').write_text(json.dumps(metric,indent=2)+'\n')
  return result,metric,d/f'{index:06d}.request.bin'
 def profile(record,expected):
- _,_,req=record;out=req.with_name(req.stem+'.profile.response.bin');r=t.command(dict(op='profile',input=str(req),output=str(out)));assert decode(out.read_bytes())[1].tobytes()==expected.tobytes();req.with_name(req.stem+'.profile.json').write_text(json.dumps(r,indent=2)+'\n');return r
+ _,_,req=record;out=req.with_name(req.stem+'.profile.response.bin');r=t.command(dict(diagnostics=True,op='profile',input=str(req),output=str(out)));assert decode(out.read_bytes())[1].tobytes()==expected.tobytes();req.with_name(req.stem+'.profile.json').write_text(json.dumps(r,indent=2)+'\n');return r
 try:
  verify_module(t,module)
  for label in labels:

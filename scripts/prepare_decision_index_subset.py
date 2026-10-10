@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Freeze 100 eligible source-suite questions before observing any prediction."""
 import collections, hashlib, json, pathlib, subprocess, sys
-from prepare_text import TextPreparer
+from prepare_text_legacy import TextPreparer
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 D = ROOT / 'artifacts/decision-index-v1'
 KIT = D / 'source/decision-index'
@@ -72,7 +72,7 @@ def main():
                     adaptation='One choice field per request; preserve state, instructions, option keys and descriptions; current short prompt and reserved unknown',
                     official_kit_commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=KIT,text=True).strip(),
                     model_lock_sha256=sha(ROOT/'MODEL_LOCK.json'), records=records, inventory=inventory,
-                    source_hashes={str(p.relative_to(ROOT)):sha(p) for p in [source,selected_path,KIT/'hub/excluded-questions.json',ROOT/'scripts/prepare_text.py',pathlib.Path(__file__)]})
+                    source_hashes={str(p.relative_to(ROOT)):sha(p) for p in [source,selected_path,KIT/'hub/excluded-questions.json',ROOT/'scripts/prepare_text.py',ROOT/'scripts/prepare_text_legacy.py',pathlib.Path(__file__)]})
     target.write_text(json.dumps(manifest,indent=2,ensure_ascii=False)+'\n')
     print(json.dumps(dict(inventory=inventory, total=len(records), min_tokens=min(len(r['token_ids']) for r in records), max_tokens=max(len(r['token_ids']) for r in records))))
 

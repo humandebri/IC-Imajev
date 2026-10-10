@@ -10,26 +10,25 @@ type ChoiceResult = record {
 type Config = record {
   base_fee : nat;
   fee_per_token : nat;
-  version : nat64;
-  enabled : bool;
   reserve_cycles : nat;
 };
-type DebugResult = record {
-  state_hashes : vec text;
-  final_hidden : vec float32;
-  job_id : nat64;
-  hidden_hashes : vec text;
+type Decision = record {
+  abstained : bool;
+  unknown_probability : float32;
+  probabilities : vec float32;
+  value : opt text;
+  calibration_version : text;
+  instructions : nat64;
+  raw_logits : vec float32;
 };
 type InferError = variant {
   Invalid : text;
   Failed : record { job_id : nat64; reason : text; refund : Refund };
-  Paused;
   Busy;
   IdConflict;
   NotReady;
   InsufficientCycles : record { required : nat };
   ReceiptCapacity;
-  QuoteChanged : record { current : nat64 };
   InProgress : record { job_id : nat64 };
 };
 type InferRequest = record {
@@ -45,7 +44,6 @@ type InferenceResult = record {
   prefix_tokens : nat32;
   workers : vec WorkerMetric;
   suffix_tokens : nat32;
-  quote_version : nat64;
 };
 type Measurement = record {
   instructions : nat64;
@@ -73,15 +71,10 @@ type PackStatus = record {
   received : nat64;
   ready : bool;
 };
-type ProfileMeasurement = record {
-  measurement : Measurement;
-  spans : vec record { text; nat64; nat64 };
-};
 type Quote = record {
   fee : nat;
   estimated_steps : nat32;
   max_steps : nat32;
-  version : nat64;
   prefix_tokens : nat32;
   suffix_tokens : nat32;
 };
@@ -102,36 +95,20 @@ type ReceiptState = variant {
 };
 type Refund = variant { Done; None; InFlight; Pending };
 type Result = variant { Ok; Err : text };
-type Result_1 = variant { Ok : ChoiceResult; Err : text };
-type Result_10 = variant { Ok : TerminalDecisionMeasurement; Err : text };
-type Result_11 = variant { Ok : UpdateProgress; Err : text };
-type Result_12 = variant { Ok : nat64; Err : text };
-type Result_13 = variant { Ok : WeightCacheInfo; Err : text };
-type Result_2 = variant { Ok : record { nat64; bool }; Err : text };
-type Result_3 = variant { Ok : InferenceResult; Err : InferError };
-type Result_4 = variant { Ok : StepResult; Err : text };
-type Result_5 = variant { Ok : MlpDeltaMeasurement; Err : text };
-type Result_6 = variant { Ok : ProfileMeasurement; Err : text };
-type Result_7 = variant { Ok : Quote; Err : InferError };
-type Result_8 = variant { Ok : Refund; Err : text };
-type Result_9 = variant { Ok : Measurement; Err : text };
+type Result_1 = variant { Ok : Quote; Err : InferError };
+type Result_10 = variant { Ok : record { nat64; bool }; Err : text };
+type Result_2 = variant { Ok : WeightCacheInfo; Err : text };
+type Result_3 = variant { Ok : Refund; Err : text };
+type Result_4 = variant { Ok : MlpDeltaMeasurement; Err : text };
+type Result_5 = variant { Ok : TerminalDecisionMeasurement; Err : text };
+type Result_6 = variant { Ok : Measurement; Err : text };
+type Result_7 = variant { Ok : InferenceResult; Err : InferError };
+type Result_8 = variant { Ok : StepResult; Err : text };
+type Result_9 = variant { Ok : nat64; Err : text };
 type StepResult = record { done : bool; stage : nat64; job_id : nat64 };
 type TerminalDecisionMeasurement = record {
   decision : ChoiceResult;
   measurement : Measurement;
-};
-type UpdateProgress = record {
-  id : nat64;
-  decision : opt ChoiceResult;
-  state_hashes : vec text;
-  done : bool;
-  instructions : nat64;
-  final_hidden : vec float32;
-  stage : nat64;
-  operations : vec record { text; nat64 };
-  hidden_hashes : vec text;
-  stable_read_bytes : nat64;
-  heap_pages : nat64;
 };
 type WeightCacheInfo = record {
   activation_bytes : opt nat64;
@@ -147,32 +124,23 @@ type WorkerMetric = record {
   heap_pages : nat64;
 };
 service : (principal) -> {
-  clear_weight_cache : () -> (WeightCacheInfo);
-  configure_paid : (Config) -> (Result);
-  decision : (blob, vec text) -> (Result_1) query;
-  decision_fast : (blob, vec text) -> (Result_1) query;
-  hash_pack : (nat64) -> (Result_2);
-  infer : (InferRequest, text, nat64) -> (Result_3);
-  inference_status : (text) -> (opt Receipt) query;
-  inference_step : (nat64, nat64) -> (Result_4);
-  mlp_delta_front : (blob, blob, nat32, nat32) -> (Result_5) query;
-  pack_status : () -> (PackStatus) query;
-  paid_config : () -> (Config) query;
-  paid_debug : () -> (opt DebugResult) query;
-  prepare : (text) -> (Result);
-  profile_step : (blob) -> (Result_6) query;
-  quote : (InferRequest) -> (Result_7) query;
-  retry_inference_refund : (text) -> (Result_8);
-  seal : () -> (Result);
-  status : () -> (nat64, bool) query;
-  step : (blob) -> (Result_9) query;
-  terminal_step_decision : (blob, vec text) -> (Result_10) query;
-  update_infer_continue : (nat64, nat64) -> (Result_11);
-  update_infer_start : (vec nat32, vec text) -> (Result_11);
-  update_prefix : (nat32, vec float32, blob) -> (Result);
-  upload : (nat64, blob, blob) -> (Result_12);
-  upload_chunk : (nat64, blob, blob) -> (Result_12);
+  clearWeightCache : () -> (WeightCacheInfo);
+  configurePaidInference : (Config) -> (Result);
+  getInferenceQuote : (InferRequest) -> (Result_1) query;
+  getInferenceReceipt : (text) -> (opt Receipt) query;
+  getModelStatus : () -> (PackStatus) query;
+  getPaidInferenceConfig : () -> (Config) query;
+  getWeightCacheStatus : () -> (WeightCacheInfo) query;
+  installInferencePrefix : (nat32, vec float32, blob) -> (Result);
+  prepareModelUpload : (text) -> (Result);
   // Prepare only immutable weights. Upgrade drops this optional heap cache.
-  warm_weights : (text) -> (Result_13);
-  weight_cache_status : () -> (WeightCacheInfo) query;
+  prepareWeightCache : (text) -> (Result_2);
+  retryInferenceRefund : (text) -> (Result_3);
+  runDeltaInferenceStep : (blob, blob, nat32, nat32) -> (Result_4) query;
+  runFinalInferenceStep : (blob, vec text) -> (Result_5) query;
+  runInferenceStep : (blob) -> (Result_6) query;
+  runPaidInference : (InferRequest, text) -> (Result_7);
+  runPaidInferenceWorker : (nat64, nat64) -> (Result_8);
+  uploadModelChunk : (nat64, blob, blob) -> (Result_9);
+  verifyModelUpload : (nat64) -> (Result_10);
 }

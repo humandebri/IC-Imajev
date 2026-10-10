@@ -8,7 +8,7 @@ const canonical = new URL("../../canisters/inference/public-query.did", import.m
 const output = new URL("../public/api/public-query.did", import.meta.url);
 // Keep an explicit allowlist so adding an owner API to the agent cannot
 // silently publish it or mislabel an update method as a query.
-const names = ["attention_mlp_front", "mlp_delta_front", "pack_status", "step", "terminal_step_decision", "weight_cache_status"];
+const names = ["runAttentionInferenceStep", "runDeltaInferenceStep", "getModelStatus", "runInferenceStep", "runFinalInferenceStep", "getWeightCacheStatus"];
 const declarations = names.map(name => {
   const schema = methods[name];
   return `  ${name} : ${IDL.Func(schema.args, schema.reply, ["query"]).display().replaceAll("→", "->").replaceAll("vec nat8", "blob")};`;
@@ -16,7 +16,7 @@ const declarations = names.map(name => {
 const text = `// Public browser inference query subset; owner/update APIs are excluded.
 // Canister: ${release.canister}
 // Module hash: ${release.module_hash}
-// Opaque blobs require the Prefix27 frame/carry protocol, not plain text.
+// Opaque blobs require the five-token prefix frame/carry protocol, not plain text.
 service : {
 ${declarations.join("\n")}
 }

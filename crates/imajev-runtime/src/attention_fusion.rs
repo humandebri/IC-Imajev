@@ -52,7 +52,7 @@ where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
         if ax.is_some(){return Err("attention KV cannot carry Q A".into());}
         if r.dims.len()!=2 {return Err("attention KV dims".into());}
         let (n,offset)=(r.dims[0],r.dims[1]);
-        if n==0 || n>132 || offset>512 || n+offset>512 || x.len()!=n*COLS {return Err("attention KV bounds".into());}
+        if n==0 || n>132 || offset>crate::MAX_SEQUENCE_TOKENS || n+offset>crate::MAX_SEQUENCE_TOKENS || x.len()!=n*COLS {return Err("attention KV bounds".into());}
         let prefix=r.tensor.strip_suffix(".self_attn.k_proj.weight").ok_or("attention KV tensor")?;
         let root=format!("{prefix}.self_attn");
         let k=projection(r,m,r.tensor.clone(),n,1024,0)?;
@@ -69,7 +69,7 @@ where F:FnMut(u64,usize)->Result<B>,B:WeightBuffer {
     }
     if r.op!="attention_q_gqa_integer" || r.dims.len()!=5 {return Err("attention Q dims".into());}
     let (n,total,offset,first,heads)=(r.dims[0],r.dims[1],r.dims[2],r.dims[3],r.dims[4]);
-    if n==0 || n>132 || total<n || total>512 || offset!=total-n || first%4!=0 || heads==0 || heads>16 || heads%4!=0 || first.checked_add(heads).is_none_or(|end|end>16) {return Err("attention Q bounds".into());}
+    if n==0 || n>132 || total<n || total>crate::MAX_SEQUENCE_TOKENS || offset!=total-n || first%4!=0 || heads==0 || heads>16 || heads%4!=0 || first.checked_add(heads).is_none_or(|end|end>16) {return Err("attention Q bounds".into());}
     if prepared.is_some_and(|q|q.rows()!=n || q.cols()!=COLS){return Err("attention shared quantization shape".into());}
     if ax.is_some_and(|a|a.len()!=n*64 || !a.iter().all(|v|v.is_finite())){return Err("attention shared Q A shape/finite".into());}
     let groups=heads/4;let kv=groups*total*256;

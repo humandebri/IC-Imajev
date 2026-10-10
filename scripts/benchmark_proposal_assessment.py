@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT / 'tools'))
 from proposal_assessment.core import assess, make_tasks, run_advisory
 from proposal_assessment.vote import make_vote_task, predict_vote
 from proposal_assessment.evaluation import evaluate
-from prepare_text import TextPreparer
+from prepare_text_legacy import TextPreparer
 from evaluate_prompt_accuracy import base_flags, MODULE
 sys.path.insert(0, str(ROOT / 'client'))
 from decision_validation import validate_decision
@@ -77,7 +77,7 @@ def prepare(directory):
                     raise
                 entry.update(status='unavailable', reason=str(error) + '; no truncation')
             tasks[key] = entry
-    paths = [ROOT / 'scripts/proposal_snapshots.py', ROOT / 'MODEL_LOCK.json', ROOT / 'scripts/prepare_text.py', pathlib.Path(__file__),
+    paths = [ROOT / 'scripts/proposal_snapshots.py', ROOT / 'MODEL_LOCK.json', ROOT / 'scripts/prepare_text.py', ROOT / 'scripts/prepare_text_legacy.py', pathlib.Path(__file__),
              ROOT / 'scripts/run_prefix_canister.py', ROOT / 'scripts/evaluate_prompt_accuracy.py',
              ROOT / 'artifacts/query-packing-v3/build/full.wasm', ROOT / 'artifacts/query-packing-v3/build/imajev-client',
              ROOT / 'artifacts/decision-index-v1/dense-prefix/queries/cache.json',

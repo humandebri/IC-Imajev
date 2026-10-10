@@ -1,8 +1,9 @@
+import release from "./inference-release.json" with { type: "json" };
 import { sha } from "./query-codec.ts";
 import { timed, type TimingObserver } from "./inference-diagnostics.ts";
 import type { PrefixManifest } from "./inference-agent.ts";
 
-const MAX_PREFIX_BYTES = 15_418_368;
+const MAX_PREFIX_BYTES = 3_816_448;
 type Record = { key: string; manifest: PrefixManifest; assets: Map<number, Uint8Array>; bytes: number };
 
 /** One verified release per Worker. Only completed data is shared across runs. */
@@ -23,6 +24,10 @@ export function createPrefixLoader(manifestHash: string) {
         if (await timed(observe, "prefix-hash", () => sha(bytes)) !== manifestHash) throw new Error("Prefix manifest mismatch.");
         signal.throwIfAborted();
         const manifest = JSON.parse(new TextDecoder().decode(bytes)) as PrefixManifest;
+        if (manifest.module_hash !== release.module_hash || manifest.prompt_layout !== release.prompt_layout ||
+            manifest.prefix.length !== 5 || !manifest.prefix.every((id, i) => id === [248045, 846, 198, 1349, 25][i])) {
+          throw new Error("Prefix runtime or prompt layout mismatch.");
+        }
         const entries = Array.from({ length: 32 }, (_, layer) => manifest.assets[String(layer)]);
         if (Object.keys(manifest.assets).length !== 32 || entries.some(entry => !entry ||
             !Number.isSafeInteger(entry.bytes) || entry.bytes <= 0) ||

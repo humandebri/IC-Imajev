@@ -1,6 +1,6 @@
 # 都度払い・外部1 updateの推論
 
-2026-10-06。承認済みの[計画](PAID_UPDATE_INFERENCE_PLAN.md)を実装し、ローカルICPの実canister間呼び出しで検証した。利用者canisterは必要cyclesを添付して`infer`を1回呼び、最終判定を同じ呼び出しの応答で受け取る。内部workerは自己呼び出しで順に実行する。timerとユーザーごとの前払い残高は使わない。
+2026-10-06。[計画](PAID_UPDATE_INFERENCE_PLAN.md)を実装し、ローカルICPの実canister間呼び出しで検証した。利用者canisterは必要cyclesを添付して`infer`を1回呼び、最終判定を同じ呼び出しの応答で受け取る。内部workerは自己呼び出しで順に実行する。timerとユーザーごとの前払い残高は使わない。
 
 ## 通常推論の実測
 
