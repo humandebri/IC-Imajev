@@ -29,7 +29,7 @@ def main():
             '入力69〜114トークン。stateの形式に応じて26または27トークンの共有prefixを使う。追加69トークン以下では動的なpacked経路、70〜87では既存の短文経路を使う。全問を新たに実行し、保存済みの別問の推論結果で代用していない。', '',
             f"合計query数 {result['execution']['total_queries']:,}、中央値 {result['execution']['median_queries']:g}、最小 {result['execution']['min_queries']}、最大 {result['execution']['max_queries']}。通信量の中央値 {result['execution']['median_candid_bytes']/1e6:.1f} MB。fallback {result['execution']['fallbacks']}、checkpointの再利用query {result['execution']['replayed_queries']}。",'',
             'query数・通信量は推論本体のもの。共有prefixの初回準備、module_hashなどの検証callは含まない。通信量はCandidのrequest+reply、decimal MB。HTTP/CBOR/署名は含まない。命令数はhandler内部で計測し、Candidのdecode/encodeは含まない。ローカルの時間値はメモリ負荷や並列実行の影響があり、本番の遅延やClefのGPU実行時間と比較しない。','',
-            '元の長文を含む100問の計画は、ユーザーの指示で途中停止した。48問の途中結果はartifacts/decision-index-v1/partial-report.jsonに残した。その数字を今回の短文100問の集計に混ぜていない。元の評価と入力が一致する問題では、今回の新規推論の確率が前回とビット一致することも確認した。','',
+            '元の長文を含む100問の評価は48問までの途中結果であり、完了した評価ではない。48問の途中結果はartifacts/decision-index-v1/partial-report.jsonに残した。その数字を今回の短文100問の集計に混ぜていない。元の評価と入力が一致する問題では、今回の新規推論の確率が前回とビット一致することも確認した。','',
             '## 保存先と再実行','',
             '- `artifacts/decision-index-short-v1/inputs.json`: 固定入力・抽出条件・ハッシュ。',
             '- `artifacts/decision-index-short-v1/selected-source-rows.jsonl`: 元の100問と出典・正解。',

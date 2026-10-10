@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generate a four-independent-message SIMD SHA256 compression prototype."""
+import argparse
 import hashlib
 import json
 import re
@@ -7,7 +8,6 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CONSTANTS = Path('/Users/0xhude/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha2-0.10.9/src/consts.rs')
 
 
 def sha(p):
@@ -53,7 +53,11 @@ def big(value, a, b, c):
 
 
 def main():
-    text = CONSTANTS.read_text()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--constants', type=Path, required=True,
+                        help='Path to sha2 0.10.9 src/consts.rs used by this prototype')
+    constants = parser.parse_args().constants
+    text = constants.read_text()
     def numbers(name, count):
         body = re.search(r'pub const ' + name + r'[^=]*=\s*\[([^]]+)\]', text).group(1)
         values = [int(n, 16) for n in re.findall(r'0x[0-9a-f]+', body)]
@@ -100,7 +104,7 @@ def main():
     wat.write_text('\n'.join(lines) + '\n')
     wasm = d / 'sha256-four.wasm'
     subprocess.run([str(ROOT / 'artifacts/wasm-audit-target/release/imajev-wasm-audit'), 'wat', str(wat), str(wasm)], check=True)
-    (d / 'build.json').write_text(json.dumps(dict(complete=True, wasm_sha256=sha(wasm), constants_sha256=sha(CONSTANTS), source_hashes={str(p.relative_to(ROOT)): sha(p) for p in [Path(__file__), wat]}, constants_path=str(CONSTANTS), scope='Four independent equal-length padded streams, ordinary SIMD only. Compression prototype; padding/buffer preparation and IC timing not measured.'), indent=2) + '\n')
+    (d / 'build.json').write_text(json.dumps(dict(complete=True, wasm_sha256=sha(wasm), constants_sha256=sha(constants), source_hashes={str(p.relative_to(ROOT)): sha(p) for p in [Path(__file__), wat]}, constants_path=str(constants), scope='Four independent equal-length padded streams, ordinary SIMD only. Compression prototype; padding/buffer preparation and IC timing not measured.'), indent=2) + '\n')
     print('Four-lane SHA256 Wasm compiled and validated')
 
 

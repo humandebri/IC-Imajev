@@ -23,12 +23,12 @@
 ```sh
 # 標準512-token版。診断endpointは含めない。
 python3 scripts/build_latest_common_prefix27.py \
-  --source-root /Volumes/KINGSTON/ICP/IC-Imajev \
+  --source-root "$PWD" \
   --directory artifacts/adaptive-512-v1/normal
 
 # 互換性確認用の116-token版。
 python3 scripts/build_latest_common_prefix27.py \
-  --source-root /Volumes/KINGSTON/ICP/IC-Imajev --legacy-116 \
+  --source-root "$PWD" --legacy-116 \
   --directory artifacts/adaptive-512-v1/legacy-116
 ```
 

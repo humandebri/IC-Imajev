@@ -42,7 +42,7 @@ def main():
  finally:temporary.unlink(missing_ok=True)
  for name in ['617','620','653']:assert sorted(v['layer']for v in verified if v['case']==name)==[i for i in range(32)if i%4!=3]
  note=D/'progress-note.md'
- if not note.exists():note.write_bytes((ROOT/'docs/UPDATE_INSTRUCTION_TARGET.md').read_bytes())
+ if not note.exists():note.write_text('Delta capture verification: see summary.json for the module, compared cases, evidence hashes and comparison limits. This capture does not establish a performance improvement.\n')
  files=[Path(__file__),ROOT/'scripts/check_delta_capture.py',ROOT/'scripts/prove_delta_capture.py',ROOT/'scripts/delta_capture_args.rs',ROOT/'scripts/delta_capture.rs',ROOT/'scripts/build_delta_capture.py',D/'frozen-builder.py',D/'workflow-hashes.json',D/'build/report.json',P/'report.json',P/'sources.json',P/'restored.json',note]
  summary=dict(complete=True,baseline_restored=True,module=r['module'],cases=verified,dense_state_values_checked=sum(v['dense_values']for v in verified),saved_candid_chunks_redecoded=True,dense_state_bits_equal=True,pre_bf_output_bits_equal=True,runtime_changes_only_capture_hooks=True,ten_kernel_sources_equal=True,evidence_hashes=evidence,workflow_hashes={str(p.relative_to(ROOT)):sha(p)for p in files},missing_historical_hidden_layers=[30],performance_claim=False,goal_complete=False)
  (D/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')

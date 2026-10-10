@@ -14,7 +14,7 @@ proposal評価は型検査・rendering解析・証拠gate・exactな単位変換
 
 ## 測定結果と採用範囲
 
-[測定表と証拠hash](comparison/independent-verification.json)に記録する。旧・新は同一のfixtureソース、Cargo.lock、Rust compiler、release設定を使用した。合成投影は32出力、token数1〜132の全整数、入力幅256・512・2560・9216、通常・最大振幅・ゼロ・subnormal・重み-128の正負極値を含む6patternで比較した。
+以下は実装整理時の測定概要。旧・新は同一のfixtureソース、Cargo.lock、Rust compiler、release設定を使用した。合成投影は32出力、token数1〜132の全整数、入力幅256・512・2560・9216、通常・最大振幅・ゼロ・subnormal・重み-128の正負極値を含む6patternで比較した。
 
 - 最終整理後のWasm/V8比較3,168ケースすべてで、旧block256経路と出力F32 bytesが完全一致した。
 - ローカルICで12条件（token数1/69/87/132、幅256/2560/9216）を各3回測定し、V8で確認した出力hashとも一致した。handler内のquantize＋projectionを`performance_counter(0)`で測る。命令数は全12条件で0.13〜6.01%減少し、heap page数は同じだった。診断replyは両版24bytes。専用canister2個はstop/delete済み。

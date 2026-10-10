@@ -95,13 +95,13 @@ embedding・初期norm・各層のDeltaNet／Attention・MLPを最大57 tokens�
 
 ```sh
 python3 scripts/build_latest_common_prefix27.py \
-  --source-root /Volumes/KINGSTON/ICP/IC-Imajev --legacy-116 \
+  --source-root "$PWD" --legacy-116 \
   --directory artifacts/paid-116-v1/rebuild
 python3 scripts/build_paid_token_chunks.py \
-  --source-root /Volumes/KINGSTON/ICP/IC-Imajev \
+  --source-root "$PWD" \
   --directory artifacts/paid-512-v1/rebuild --fixed-token-tiles --diagnostics
 python3 scripts/prove_paid_token_limit_local.py \
-  --source-root /Volumes/KINGSTON/ICP/IC-Imajev \
+  --source-root "$PWD" \
   --build artifacts/paid-512-v1/rebuild \
   --directory artifacts/paid-512-v1/reproof \
   --lengths 84,116,256,359,512,513 \
@@ -114,11 +114,3 @@ python3 scripts/audit_paid_token_proof.py \
 通常116-token版の検証は、対応するbuildを指定し、`--lengths 84,116,117 --expected-limit 116 --reference-lengths 84,116` を使う。通常版にはfault endpointを含めないので `--fault-recovery` を付けない。
 
 旧256-token版は500を拒否した。現在のソースでは追加head分割により512まで受け付ける。512超は、追加の演算・位置範囲・メモリ・命令数の検証が必要で、今回の対象に含めない。
-
-## ローカル保存先の復旧
-
-256-token版の初回試行は推論完了後、外付けドライブへのstate書き込みで `No space left on device` が発生し、PocketICが停止した。これはcanister heapの上限到達とは別の、ホストのディスク容量不足だった。参照計算が終わっていない初回の `artifacts/paid-256-v1/proof/report.json` は不完全な証跡として残す。
-
-復旧時に使ったicp-cli 1.0.2のnetwork startはstateを再作成するため、既存network内のsnapshotは使えなくなった。事前に保存されていたportable baselineのWasm・heap・stable memoryのサイズとSHA256を検証して転送し、同じモデルcanister IDへ復元した。module、全weight cache、全packの一致を確認済み。旧network内の試験callerは復元していない。
-
-保存先をワークツリーから独立した内蔵SSDの `/Users/0xhude/.codex/local-network-data/imajev-8001-20261008` へ移し、元projectのlocal networkパスからsymlinkで参照する。別名で保存した旧ディレクトリやportable backupは削除していない。復旧の証跡は `artifacts/paid-256-v1/recovery`、保存先の記録は `artifacts/paid-256-v1/storage-relocation.json`。再測定ではnetworkを再起動せず、canisterのsnapshotだけで保護・復元する。
