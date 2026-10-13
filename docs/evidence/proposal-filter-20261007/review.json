@@ -1,0 +1,2940 @@
+{
+  "summary": {
+    "reviewed_model_proposals": 50,
+    "distinct_inputs": 18,
+    "extra_tool_hold_proposals": 7,
+    "source_scalar_audit_passed": true,
+    "conditional_reviewer_counts": {
+      "reject": 32,
+      "hold": 16,
+      "approve": 2
+    },
+    "hold_with_substantial_participation_restrictions": [
+      562,
+      566,
+      570,
+      571,
+      574,
+      577,
+      580,
+      586,
+      587,
+      588,
+      590,
+      591,
+      592,
+      593,
+      594,
+      595,
+      596,
+      597,
+      601,
+      598,
+      599,
+      600
+    ],
+    "raw_approve_with_substantial_restrictions": [
+      562,
+      566,
+      587,
+      588
+    ],
+    "differing_proposer_text_in_numeric_groups": [
+      601
+    ],
+    "human_gold": false,
+    "accuracy_measured": false,
+    "new_inference_count": 0,
+    "original_evaluation_changed": false,
+    "judgments": "agent review under existing conditional participation policy",
+    "source_report_sha256": "78d5a726cd3b58689561ab58d372ef637f6c623c26ad3190007ac93f9db35e2c",
+    "source_manifest_sha256": "a7d464faa7f79ef22b132f7c819d1def5a261b5e5ad544eac23376260d7cead4",
+    "script_sha256": "802e120e62c269abe594fc3f1de3525e67a8a7f3d6e3c06233d90ad3f68ab629"
+  },
+  "proposals": [
+    {
+      "proposal_id": 505,
+      "record_index": 0,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-505.json",
+      "snapshot_sha256": "ee03415554cc82dc3596befac57ab237532ac7b6c6e9ec10faff9972cfbe6532",
+      "title": "SNS Changes for Mimic",
+      "summary": "Because of a fee change the token withdrawal failed, so I need to put these SNS changes back, and try not to screw it up this time.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "max_age_bonus_percentage",
+          "previous": 50,
+          "proposed": 0
+        },
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 100000000000000
+        },
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 252460800
+        },
+        {
+          "field": "max_neuron_age_for_age_bonus",
+          "previous": 7889400,
+          "proposed": 63115200
+        },
+        {
+          "field": "max_dissolve_delay_bonus_percentage",
+          "previous": 100,
+          "proposed": 800
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 31557600
+        }
+      ],
+      "current_label": "reject",
+      "raw_binary": "reject",
+      "score": 0.8699362158639922,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→100万tokens、最低投票lock 2→365.25日。参加条件を大幅に厳しくする。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "age bonus 50→0%; lock bonus 100→800%; max lock 30.4375→2922 days; bonus age 91.3125→730.5 days; min voting lock 2→365.25 days; stake 5→1 million tokens; stake requirement increases 200000-fold",
+      "input_tokens": 128,
+      "layout": "compact_ratio"
+    },
+    {
+      "proposal_id": 552,
+      "record_index": 1,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-552.json",
+      "snapshot_sha256": "3ebcf069c2800b5d5386a9aae78c141abbd558e639c41499ec2a6c2d58177de8",
+      "title": "SNS Changes for Mimic",
+      "summary": "Because of a fee change the token withdrawal failed, so I need to put these SNS changes back, and try not to screw it up this time.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "max_age_bonus_percentage",
+          "previous": 25,
+          "proposed": 0
+        },
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 100000000000000
+        },
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 252460800
+        },
+        {
+          "field": "max_neuron_age_for_age_bonus",
+          "previous": 7889400,
+          "proposed": 63115200
+        },
+        {
+          "field": "max_dissolve_delay_bonus_percentage",
+          "previous": 1,
+          "proposed": 800
+        }
+      ],
+      "current_label": "reject",
+      "raw_binary": "reject",
+      "score": 0.8144539316845417,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→100万tokens。bonus増加は新規参加のstake条件を緩めない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "age bonus 25→0%; lock bonus 1→800%; max lock 30.4375→2922 days; bonus age 91.3125→730.5 days; stake 5→1 million tokens; stake requirement increases 200000-fold",
+      "input_tokens": 112,
+      "layout": "compact_ratio"
+    },
+    {
+      "proposal_id": 553,
+      "record_index": 2,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-553.json",
+      "snapshot_sha256": "cc3516e96a0af2b4a86d52c29ec6bb4ea8f5ba29b5c7563e984a0267f4bdb480",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 500000000000000
+        }
+      ],
+      "current_label": "reject",
+      "raw_binary": "reject",
+      "score": 0.6996462611246143,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→500万tokens。新規参加の必要stakeが100万倍。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum stake: 5 -> 5 million tokens; Minimum stake requirement increases 1 million-fold",
+      "input_tokens": 67,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 554,
+      "record_index": 3,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-554.json",
+      "snapshot_sha256": "60dc696aa790f034fb65d2203354d2ace18534a05f8c1591466cd53ff90ff0c9",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 1000000000000000
+        }
+      ],
+      "current_label": "reject",
+      "raw_binary": "reject",
+      "score": 0.7780257218802934,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→1,000万tokens。新規参加の必要stakeが200万倍。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum stake: 5 -> 10 million tokens; Minimum stake requirement increases 2 million-fold",
+      "input_tokens": 68,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 555,
+      "record_index": 4,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-555.json",
+      "snapshot_sha256": "f7cb1120ab848b4e019e5fb832dba6c8a0012cf2ce189dee350a08f0838ab151",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 1500000000000000
+        }
+      ],
+      "current_label": "reject",
+      "raw_binary": "reject",
+      "score": 0.7103135435078235,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→1,500万tokens。新規参加の必要stakeが300万倍。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum stake: 5 -> 15 million tokens; Minimum stake requirement increases 3 million-fold",
+      "input_tokens": 68,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 556,
+      "record_index": 4,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-556.json",
+      "snapshot_sha256": "7d0762aaa67297cb33bd89a9a1bdf264347b92b4de0f9ddccaf236869be72da4",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 1500000000000000
+        }
+      ],
+      "current_label": "reject",
+      "raw_binary": "reject",
+      "score": 0.7103135435078235,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→1,500万tokens。新規参加の必要stakeが300万倍。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum stake: 5 -> 15 million tokens; Minimum stake requirement increases 3 million-fold",
+      "input_tokens": 68,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 559,
+      "record_index": 5,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-559.json",
+      "snapshot_sha256": "f6d9af05b8d5845c44721f00219e18fbda87b86e7518609b18a60a17fc973deb",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 1500000000000000
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        }
+      ],
+      "current_label": "reject",
+      "raw_binary": "reject",
+      "score": 0.7528631412243357,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低投票lock 2→1日は緩和だが、最低stake 5→1,500万tokensの障壁が残る。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum voting lock: 2 -> 1 days; Minimum voting lock requirement decreases 2-fold; Minimum stake: 5 -> 15 million tokens; Minimum stake requirement increases 3 million-fold",
+      "input_tokens": 88,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 563,
+      "record_index": 5,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-563.json",
+      "snapshot_sha256": "ec4e183ec0acac03f63cfd38370d54508bc8d946f7f3d236f058952e67a56d64",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 1500000000000000
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        }
+      ],
+      "current_label": "reject",
+      "raw_binary": "reject",
+      "score": 0.7528631412243357,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低投票lock 2→1日は緩和だが、最低stake 5→1,500万tokensの障壁が残る。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum voting lock: 2 -> 1 days; Minimum voting lock requirement decreases 2-fold; Minimum stake: 5 -> 15 million tokens; Minimum stake requirement increases 3 million-fold",
+      "input_tokens": 88,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 567,
+      "record_index": 5,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-567.json",
+      "snapshot_sha256": "1800e7c1ef85fdefb4b66d83e97ec35e3579741ba03a5593f37b9bbff4b90e94",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 1500000000000000
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        }
+      ],
+      "current_label": "reject",
+      "raw_binary": "reject",
+      "score": 0.7528631412243357,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低投票lock 2→1日は緩和だが、最低stake 5→1,500万tokensの障壁が残る。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum voting lock: 2 -> 1 days; Minimum voting lock requirement decreases 2-fold; Minimum stake: 5 -> 15 million tokens; Minimum stake requirement increases 3 million-fold",
+      "input_tokens": 88,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 562,
+      "record_index": 6,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-562.json",
+      "snapshot_sha256": "50225630d3c5761771ddceabece6926f06f35b79e1002d0fa099918fb35cab39",
+      "title": "SNS Changes for Mimic (NEW - PLEASE VOTE YES)",
+      "summary": "Because of a fee change the token withdrawal failed, so I need to put these SNS changes back, and try not to screw it up this time.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "max_age_bonus_percentage",
+          "previous": 25,
+          "proposed": 0
+        },
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 100000000000000
+        },
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 252460800
+        },
+        {
+          "field": "max_neuron_age_for_age_bonus",
+          "previous": 7889400,
+          "proposed": 63115200
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "max_dissolve_delay_bonus_percentage",
+          "previous": 1,
+          "proposed": 800
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 43200
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 126230400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "approve",
+      "score": 0.5354413478180884,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→100万tokens、最低投票lock 2→1,461日。両方の参加条件が大幅に悪化。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "days: vote period 2→1 max lock 30.4375→2922 bonus age 91.3125→730.5 min voting lock 2→1461(×730.5) bonus%: age 25→0 lock 1→eight hundred tokens: stake 5→1million quiet extension 1day→43200second",
+      "input_tokens": 123,
+      "layout": "unit_grouped_ratio_words"
+    },
+    {
+      "proposal_id": 566,
+      "record_index": 6,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-566.json",
+      "snapshot_sha256": "2fca7d2be8bab88989fe3cb3d82f901af7455b171ccbcc233204349863074879",
+      "title": "SNS Changes for Mimic (NEW - PLEASE VOTE YES)",
+      "summary": "Because of a fee change the token withdrawal failed, so I need to put these SNS changes back, and try not to screw it up this time.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "max_age_bonus_percentage",
+          "previous": 25,
+          "proposed": 0
+        },
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 100000000000000
+        },
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 252460800
+        },
+        {
+          "field": "max_neuron_age_for_age_bonus",
+          "previous": 7889400,
+          "proposed": 63115200
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "max_dissolve_delay_bonus_percentage",
+          "previous": 1,
+          "proposed": 800
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 43200
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 126230400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "approve",
+      "score": 0.5354413478180884,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→100万tokens、最低投票lock 2→1,461日。両方の参加条件が大幅に悪化。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "days: vote period 2→1 max lock 30.4375→2922 bonus age 91.3125→730.5 min voting lock 2→1461(×730.5) bonus%: age 25→0 lock 1→eight hundred tokens: stake 5→1million quiet extension 1day→43200second",
+      "input_tokens": 123,
+      "layout": "unit_grouped_ratio_words"
+    },
+    {
+      "proposal_id": 570,
+      "record_index": 7,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-570.json",
+      "snapshot_sha256": "28800831ba90b822845da24bbd9fcbd7843fa64c6db6a917c3454341e6879d3c",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 1500000000000000
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 43200
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5883258901170477,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→1,500万tokens。投票lockの半減はstake障壁を解消しない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "voting period: 2 -> 1 days; Minimum voting lock: 2 -> 1 days; Minimum voting lock requirement decreases 2-fold; Minimum stake: 5 -> 15 million tokens; Minimum stake requirement increases 3 million-fold; quiet extension: 1 -> 0.5 days",
+      "input_tokens": 110,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 571,
+      "record_index": 7,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-571.json",
+      "snapshot_sha256": "d479511bf0a6923ffd22e01a5cf76eb3f273b5590b93e37601ad54ccff03d7e7",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 1500000000000000
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 43200
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5883258901170477,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→1,500万tokens。投票lockの半減はstake障壁を解消しない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "voting period: 2 -> 1 days; Minimum voting lock: 2 -> 1 days; Minimum voting lock requirement decreases 2-fold; Minimum stake: 5 -> 15 million tokens; Minimum stake requirement increases 3 million-fold; quiet extension: 1 -> 0.5 days",
+      "input_tokens": 110,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 574,
+      "record_index": 7,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-574.json",
+      "snapshot_sha256": "80c752081b9b31b6c87d170ab262626afb33164f12abbd5df482bbfbec376b83",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 1500000000000000
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 43200
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5883258901170477,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→1,500万tokens。投票lockの半減はstake障壁を解消しない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "voting period: 2 -> 1 days; Minimum voting lock: 2 -> 1 days; Minimum voting lock requirement decreases 2-fold; Minimum stake: 5 -> 15 million tokens; Minimum stake requirement increases 3 million-fold; quiet extension: 1 -> 0.5 days",
+      "input_tokens": 110,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 577,
+      "record_index": 7,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-577.json",
+      "snapshot_sha256": "904d7ff5d72475d4e7d0e1c689ad30ed347ffba6c43fa76e56c777800b02e050",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 1500000000000000
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 43200
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5883258901170477,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→1,500万tokens。投票lockの半減はstake障壁を解消しない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "voting period: 2 -> 1 days; Minimum voting lock: 2 -> 1 days; Minimum voting lock requirement decreases 2-fold; Minimum stake: 5 -> 15 million tokens; Minimum stake requirement increases 3 million-fold; quiet extension: 1 -> 0.5 days",
+      "input_tokens": 110,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 580,
+      "record_index": 7,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-580.json",
+      "snapshot_sha256": "f63be101c60502377d36d684811b6e88438e5e7ac69009cda40b0245737f6952",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 1500000000000000
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 43200
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5883258901170477,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→1,500万tokens。投票lockの半減はstake障壁を解消しない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "voting period: 2 -> 1 days; Minimum voting lock: 2 -> 1 days; Minimum voting lock requirement decreases 2-fold; Minimum stake: 5 -> 15 million tokens; Minimum stake requirement increases 3 million-fold; quiet extension: 1 -> 0.5 days",
+      "input_tokens": 110,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 586,
+      "record_index": 8,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-586.json",
+      "snapshot_sha256": "e72a6745f35c42c006dcc3fd613c96523c021fe07b837366f527c9ad27dd5848",
+      "title": "SNS Changes for Mimic",
+      "summary": "Because of a fee change the token withdrawal failed, so I need to put these SNS changes back, and try not to screw it up this time.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "reject_cost_e8s",
+          "previous": 10000000000,
+          "proposed": 1000000000000
+        },
+        {
+          "field": "max_age_bonus_percentage",
+          "previous": 50,
+          "proposed": 0
+        },
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 100000000000000
+        },
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 252460800
+        },
+        {
+          "field": "max_neuron_age_for_age_bonus",
+          "previous": 7889400,
+          "proposed": 63115200
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "max_dissolve_delay_bonus_percentage",
+          "previous": 100,
+          "proposed": 800
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 1
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 126230400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5344267283333254,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→100万tokens、最低投票lock 2→1,461日。reject costも100→1万tokens。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "days: vote period 2→1 max lock 30.4375→2922 bonus age 91.3125→730.5 min voting lock 2→1461(×730.5) bonus%: age 50→0 lock one hundred→eight hundred tokens: stake 5→1million reject cost one hundred→ten thousand quiet extension 1day→1second",
+      "input_tokens": 126,
+      "layout": "unit_grouped_ratio_words"
+    },
+    {
+      "proposal_id": 587,
+      "record_index": 9,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-587.json",
+      "snapshot_sha256": "ce928781e89c8f263578f774835ae9aa6f9429e4c46c3cd0b197c9f5d7eea30d",
+      "title": "SNS Changes for Mimic",
+      "summary": "Because of a fee change the token withdrawal failed, so I need to put these SNS changes back, and try not to screw it up this time.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "reject_cost_e8s",
+          "previous": 10000000000,
+          "proposed": 1000000000000
+        },
+        {
+          "field": "max_age_bonus_percentage",
+          "previous": 25,
+          "proposed": 0
+        },
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 100000000000000
+        },
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 252460800
+        },
+        {
+          "field": "max_neuron_age_for_age_bonus",
+          "previous": 7889400,
+          "proposed": 63115200
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "max_dissolve_delay_bonus_percentage",
+          "previous": 1,
+          "proposed": 800
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 1
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 126230400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "approve",
+      "score": 0.5165161580639837,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→100万tokens、最低投票lock 2→1,461日。bonusの変更では参加条件を緩められない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "days: vote period 2→1 max lock 30.4375→2922 bonus age 91.3125→730.5 min voting lock 2→1461(×730.5) bonus%: age 25→0 lock 1→eight hundred tokens: stake 5→1million reject cost one hundred→ten thousand quiet extension 1day→1second",
+      "input_tokens": 126,
+      "layout": "unit_grouped_ratio_words"
+    },
+    {
+      "proposal_id": 588,
+      "record_index": 10,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-588.json",
+      "snapshot_sha256": "174da7c37987778cb37b0eddc9e42f7a65693d90cb008da378714776c3f14a5e",
+      "title": "SNS Changes for Mimic",
+      "summary": "Because of a fee change the token withdrawal failed, so I need to put these SNS changes back, and try not to screw it up this time.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "reject_cost_e8s",
+          "previous": 10000000000,
+          "proposed": 1000000000000
+        },
+        {
+          "field": "max_age_bonus_percentage",
+          "previous": 25,
+          "proposed": 0
+        },
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 200000000000000
+        },
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 252460800
+        },
+        {
+          "field": "max_neuron_age_for_age_bonus",
+          "previous": 7889400,
+          "proposed": 63115200
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "max_dissolve_delay_bonus_percentage",
+          "previous": 1,
+          "proposed": 800
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 1
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 126230400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "approve",
+      "score": 0.5035638205673265,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→200万tokens、最低投票lock 2→1,461日。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "days: vote period 2→1 max lock 30.4375→2922 bonus age 91.3125→730.5 min voting lock 2→1461(×730.5) bonus%: age 25→0 lock 1→eight hundred tokens: stake 5→2million reject cost one hundred→ten thousand quiet extension 1day→1second",
+      "input_tokens": 126,
+      "layout": "unit_grouped_ratio_words"
+    },
+    {
+      "proposal_id": 590,
+      "record_index": 11,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-590.json",
+      "snapshot_sha256": "24d4c17d48f672416f99ce592d93f4332a7e3b2de51a42f3ad1eead058642de3",
+      "title": "SNS Changes for Mimic",
+      "summary": "Because of a fee change the token withdrawal failed, so I need to put these SNS changes back, and try not to screw it up this time.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "reject_cost_e8s",
+          "previous": 10000000000,
+          "proposed": 1000000000000
+        },
+        {
+          "field": "max_age_bonus_percentage",
+          "previous": 25,
+          "proposed": 400
+        },
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 1500000000000000,
+          "proposed": 600000000000000
+        },
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 252460800
+        },
+        {
+          "field": "max_neuron_age_for_age_bonus",
+          "previous": 7889400,
+          "proposed": 1728000
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "max_dissolve_delay_bonus_percentage",
+          "previous": 1,
+          "proposed": 800
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 1
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 126230400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5498332419517286,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stakeは1,500万→600万tokensへ下がるが、最低投票lockは2→1,461日へ上がる。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "days: vote period 2→1 max lock 30.4375→2922 bonus age 91.3125→20 min voting lock 2→1461(×730.5) bonus%: age 25→four hundred lock 1→eight hundred tokens: stake 15million→6million reject cost one hundred→ten thousand quiet extension 1day→1second",
+      "input_tokens": 126,
+      "layout": "unit_grouped_ratio_words"
+    },
+    {
+      "proposal_id": 591,
+      "record_index": 11,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-591.json",
+      "snapshot_sha256": "efba95ebe6efc1df09b43981ee0ffdf5e1fc65bdcffe2013e279668f4a9346b7",
+      "title": "SNS Changes for Mimic",
+      "summary": "Because of a fee change the token withdrawal failed, so I need to put these SNS changes back, and try not to screw it up this time.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "reject_cost_e8s",
+          "previous": 10000000000,
+          "proposed": 1000000000000
+        },
+        {
+          "field": "max_age_bonus_percentage",
+          "previous": 25,
+          "proposed": 400
+        },
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 1500000000000000,
+          "proposed": 600000000000000
+        },
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 252460800
+        },
+        {
+          "field": "max_neuron_age_for_age_bonus",
+          "previous": 7889400,
+          "proposed": 1728000
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "max_dissolve_delay_bonus_percentage",
+          "previous": 1,
+          "proposed": 800
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 1
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 126230400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5498332419517286,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stakeは1,500万→600万tokensへ下がるが、最低投票lockは2→1,461日へ上がる。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "days: vote period 2→1 max lock 30.4375→2922 bonus age 91.3125→20 min voting lock 2→1461(×730.5) bonus%: age 25→four hundred lock 1→eight hundred tokens: stake 15million→6million reject cost one hundred→ten thousand quiet extension 1day→1second",
+      "input_tokens": 126,
+      "layout": "unit_grouped_ratio_words"
+    },
+    {
+      "proposal_id": 592,
+      "record_index": 11,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-592.json",
+      "snapshot_sha256": "eab5ed7b2a877aa30f9a4cfc0db67415538376c01721dda739f77c95ae6967d7",
+      "title": "SNS Changes for Mimic",
+      "summary": "Because of a fee change the token withdrawal failed, so I need to put these SNS changes back, and try not to screw it up this time.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "reject_cost_e8s",
+          "previous": 10000000000,
+          "proposed": 1000000000000
+        },
+        {
+          "field": "max_age_bonus_percentage",
+          "previous": 25,
+          "proposed": 400
+        },
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 1500000000000000,
+          "proposed": 600000000000000
+        },
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 252460800
+        },
+        {
+          "field": "max_neuron_age_for_age_bonus",
+          "previous": 7889400,
+          "proposed": 1728000
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "max_dissolve_delay_bonus_percentage",
+          "previous": 1,
+          "proposed": 800
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 1
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 126230400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5498332419517286,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stakeは1,500万→600万tokensへ下がるが、最低投票lockは2→1,461日へ上がる。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "days: vote period 2→1 max lock 30.4375→2922 bonus age 91.3125→20 min voting lock 2→1461(×730.5) bonus%: age 25→four hundred lock 1→eight hundred tokens: stake 15million→6million reject cost one hundred→ten thousand quiet extension 1day→1second",
+      "input_tokens": 126,
+      "layout": "unit_grouped_ratio_words"
+    },
+    {
+      "proposal_id": 593,
+      "record_index": 11,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-593.json",
+      "snapshot_sha256": "e45df3750183ab7dad433ef243a026ac11b55c7ef346d2ae109217a3649dde7c",
+      "title": "SNS Changes for Mimic",
+      "summary": "Because of a fee change the token withdrawal failed, so I need to put these SNS changes back, and try not to screw it up this time.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "reject_cost_e8s",
+          "previous": 10000000000,
+          "proposed": 1000000000000
+        },
+        {
+          "field": "max_age_bonus_percentage",
+          "previous": 25,
+          "proposed": 400
+        },
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 1500000000000000,
+          "proposed": 600000000000000
+        },
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 252460800
+        },
+        {
+          "field": "max_neuron_age_for_age_bonus",
+          "previous": 7889400,
+          "proposed": 1728000
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "max_dissolve_delay_bonus_percentage",
+          "previous": 1,
+          "proposed": 800
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 1
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 126230400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5498332419517286,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stakeは1,500万→600万tokensへ下がるが、最低投票lockは2→1,461日へ上がる。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "days: vote period 2→1 max lock 30.4375→2922 bonus age 91.3125→20 min voting lock 2→1461(×730.5) bonus%: age 25→four hundred lock 1→eight hundred tokens: stake 15million→6million reject cost one hundred→ten thousand quiet extension 1day→1second",
+      "input_tokens": 126,
+      "layout": "unit_grouped_ratio_words"
+    },
+    {
+      "proposal_id": 594,
+      "record_index": 12,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-594.json",
+      "snapshot_sha256": "d4b30aae65e2de4da6288bf79ddf00d54977a51c08c7eb36947cff5fddd36665",
+      "title": "SNS Changes for Mimic",
+      "summary": "Because of a fee change the token withdrawal failed, so I need to put these SNS changes back, and try not to screw it up this time.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "reject_cost_e8s",
+          "previous": 10000000000,
+          "proposed": 1000000000000
+        },
+        {
+          "field": "max_age_bonus_percentage",
+          "previous": 25,
+          "proposed": 400
+        },
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 600000000000000
+        },
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 252460800
+        },
+        {
+          "field": "max_neuron_age_for_age_bonus",
+          "previous": 7889400,
+          "proposed": 1728000
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "max_dissolve_delay_bonus_percentage",
+          "previous": 1,
+          "proposed": 800
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 1
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 126230400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5176238690388109,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→600万tokens、最低投票lock 2→1,461日。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "days: vote period 2→1 max lock 30.4375→2922 bonus age 91.3125→20 min voting lock 2→1461(×730.5) bonus%: age 25→four hundred lock 1→eight hundred tokens: stake 5→6million reject cost one hundred→ten thousand quiet extension 1day→1second",
+      "input_tokens": 124,
+      "layout": "unit_grouped_ratio_words"
+    },
+    {
+      "proposal_id": 595,
+      "record_index": 12,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-595.json",
+      "snapshot_sha256": "61ea9f014a00c48c373590f3b7ff85790ce80fb96e5d69420f679de22041f179",
+      "title": "SNS Changes for Mimic",
+      "summary": "Because of a fee change the token withdrawal failed, so I need to put these SNS changes back, and try not to screw it up this time.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "reject_cost_e8s",
+          "previous": 10000000000,
+          "proposed": 1000000000000
+        },
+        {
+          "field": "max_age_bonus_percentage",
+          "previous": 25,
+          "proposed": 400
+        },
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 600000000000000
+        },
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 252460800
+        },
+        {
+          "field": "max_neuron_age_for_age_bonus",
+          "previous": 7889400,
+          "proposed": 1728000
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "max_dissolve_delay_bonus_percentage",
+          "previous": 1,
+          "proposed": 800
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 1
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 126230400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5176238690388109,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→600万tokens、最低投票lock 2→1,461日。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "days: vote period 2→1 max lock 30.4375→2922 bonus age 91.3125→20 min voting lock 2→1461(×730.5) bonus%: age 25→four hundred lock 1→eight hundred tokens: stake 5→6million reject cost one hundred→ten thousand quiet extension 1day→1second",
+      "input_tokens": 124,
+      "layout": "unit_grouped_ratio_words"
+    },
+    {
+      "proposal_id": 596,
+      "record_index": 12,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-596.json",
+      "snapshot_sha256": "27daad3541a8259941f9bbe6c75d4ec021a969cf29bad4dce8659c716fa75daf",
+      "title": "SNS Changes for Mimic",
+      "summary": "Because of a fee change the token withdrawal failed, so I need to put these SNS changes back, and try not to screw it up this time.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "reject_cost_e8s",
+          "previous": 10000000000,
+          "proposed": 1000000000000
+        },
+        {
+          "field": "max_age_bonus_percentage",
+          "previous": 25,
+          "proposed": 400
+        },
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 600000000000000
+        },
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 252460800
+        },
+        {
+          "field": "max_neuron_age_for_age_bonus",
+          "previous": 7889400,
+          "proposed": 1728000
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "max_dissolve_delay_bonus_percentage",
+          "previous": 1,
+          "proposed": 800
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 1
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 126230400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5176238690388109,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→600万tokens、最低投票lock 2→1,461日。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "days: vote period 2→1 max lock 30.4375→2922 bonus age 91.3125→20 min voting lock 2→1461(×730.5) bonus%: age 25→four hundred lock 1→eight hundred tokens: stake 5→6million reject cost one hundred→ten thousand quiet extension 1day→1second",
+      "input_tokens": 124,
+      "layout": "unit_grouped_ratio_words"
+    },
+    {
+      "proposal_id": 597,
+      "record_index": 12,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-597.json",
+      "snapshot_sha256": "bc84134c1bc681a52452929714c246506ff454fb72eac847d76cda260706760f",
+      "title": "SNS Changes for Mimic",
+      "summary": "Because of a fee change the token withdrawal failed, so I need to put these SNS changes back, and try not to screw it up this time.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "reject_cost_e8s",
+          "previous": 10000000000,
+          "proposed": 1000000000000
+        },
+        {
+          "field": "max_age_bonus_percentage",
+          "previous": 25,
+          "proposed": 400
+        },
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 600000000000000
+        },
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 252460800
+        },
+        {
+          "field": "max_neuron_age_for_age_bonus",
+          "previous": 7889400,
+          "proposed": 1728000
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "max_dissolve_delay_bonus_percentage",
+          "previous": 1,
+          "proposed": 800
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 1
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 126230400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5176238690388109,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→600万tokens、最低投票lock 2→1,461日。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "days: vote period 2→1 max lock 30.4375→2922 bonus age 91.3125→20 min voting lock 2→1461(×730.5) bonus%: age 25→four hundred lock 1→eight hundred tokens: stake 5→6million reject cost one hundred→ten thousand quiet extension 1day→1second",
+      "input_tokens": 124,
+      "layout": "unit_grouped_ratio_words"
+    },
+    {
+      "proposal_id": 601,
+      "record_index": 12,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-601.json",
+      "snapshot_sha256": "5d834e96e658cfe806c88f4c564da71dd39bd3da4ceb14673d102f6b54a8afd8",
+      "title": "Let's change Poo DAO into Mimic!",
+      "summary": "this is the real one, vote yes please.  Sick of seeing this awful logo made by such awful people.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "representative_proposer_text_matches": false,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "reject_cost_e8s",
+          "previous": 10000000000,
+          "proposed": 1000000000000
+        },
+        {
+          "field": "max_age_bonus_percentage",
+          "previous": 25,
+          "proposed": 400
+        },
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 500000000,
+          "proposed": 600000000000000
+        },
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 252460800
+        },
+        {
+          "field": "max_neuron_age_for_age_bonus",
+          "previous": 7889400,
+          "proposed": 1728000
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "max_dissolve_delay_bonus_percentage",
+          "previous": 1,
+          "proposed": 800
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 1
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 126230400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5176238690388109,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stake 5→600万tokens、最低投票lock 2→1,461日。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "days: vote period 2→1 max lock 30.4375→2922 bonus age 91.3125→20 min voting lock 2→1461(×730.5) bonus%: age 25→four hundred lock 1→eight hundred tokens: stake 5→6million reject cost one hundred→ten thousand quiet extension 1day→1second",
+      "input_tokens": 124,
+      "layout": "unit_grouped_ratio_words"
+    },
+    {
+      "proposal_id": 598,
+      "record_index": 13,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-598.json",
+      "snapshot_sha256": "4f2731b7eecbc68a122b3d69470056ff16415fb80818b98874432d156b02c0d8",
+      "title": "SNS Changes for Mimic",
+      "summary": "Because of a fee change the token withdrawal failed, so I need to put these SNS changes back, and try not to screw it up this time.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "reject_cost_e8s",
+          "previous": 10000000000,
+          "proposed": 1000000000000
+        },
+        {
+          "field": "max_age_bonus_percentage",
+          "previous": 25,
+          "proposed": 400
+        },
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 1000000000000000,
+          "proposed": 600000000000000
+        },
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 252460800
+        },
+        {
+          "field": "max_neuron_age_for_age_bonus",
+          "previous": 7889400,
+          "proposed": 1728000
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "max_dissolve_delay_bonus_percentage",
+          "previous": 1,
+          "proposed": 800
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 1
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 126230400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5206724509836701,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stakeは1,000万→600万tokensへ下がるが、最低投票lockは2→1,461日へ上がる。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "days: vote period 2→1 max lock 30.4375→2922 bonus age 91.3125→20 min voting lock 2→1461(×730.5) bonus%: age 25→four hundred lock 1→eight hundred tokens: stake 10million→6million reject cost one hundred→ten thousand quiet extension 1day→1second",
+      "input_tokens": 126,
+      "layout": "unit_grouped_ratio_words"
+    },
+    {
+      "proposal_id": 599,
+      "record_index": 13,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-599.json",
+      "snapshot_sha256": "4ac5fdc347da2feaf970e9bcb1fba2b0c5eaf943dbe0afd136de2d6cc9f985b6",
+      "title": "SNS Changes for Mimic",
+      "summary": "Because of a fee change the token withdrawal failed, so I need to put these SNS changes back, and try not to screw it up this time.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "reject_cost_e8s",
+          "previous": 10000000000,
+          "proposed": 1000000000000
+        },
+        {
+          "field": "max_age_bonus_percentage",
+          "previous": 25,
+          "proposed": 400
+        },
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 1000000000000000,
+          "proposed": 600000000000000
+        },
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 252460800
+        },
+        {
+          "field": "max_neuron_age_for_age_bonus",
+          "previous": 7889400,
+          "proposed": 1728000
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "max_dissolve_delay_bonus_percentage",
+          "previous": 1,
+          "proposed": 800
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 1
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 126230400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5206724509836701,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stakeは1,000万→600万tokensへ下がるが、最低投票lockは2→1,461日へ上がる。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "days: vote period 2→1 max lock 30.4375→2922 bonus age 91.3125→20 min voting lock 2→1461(×730.5) bonus%: age 25→four hundred lock 1→eight hundred tokens: stake 10million→6million reject cost one hundred→ten thousand quiet extension 1day→1second",
+      "input_tokens": 126,
+      "layout": "unit_grouped_ratio_words"
+    },
+    {
+      "proposal_id": 600,
+      "record_index": 13,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-600.json",
+      "snapshot_sha256": "641502a0b4d34bea40f74b61d2bf72338c1b060ee9f8d335c6e49ffa557aacb3",
+      "title": "SNS Changes for Mimic",
+      "summary": "Because of a fee change the token withdrawal failed, so I need to put these SNS changes back, and try not to screw it up this time.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "reject_cost_e8s",
+          "previous": 10000000000,
+          "proposed": 1000000000000
+        },
+        {
+          "field": "max_age_bonus_percentage",
+          "previous": 25,
+          "proposed": 400
+        },
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 1000000000000000,
+          "proposed": 600000000000000
+        },
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 252460800
+        },
+        {
+          "field": "max_neuron_age_for_age_bonus",
+          "previous": 7889400,
+          "proposed": 1728000
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        },
+        {
+          "field": "max_dissolve_delay_bonus_percentage",
+          "previous": 1,
+          "proposed": 800
+        },
+        {
+          "field": "wait_for_quiet_deadline_increase_seconds",
+          "previous": 86400,
+          "proposed": 1
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 126230400
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5206724509836701,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低stakeは1,000万→600万tokensへ下がるが、最低投票lockは2→1,461日へ上がる。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "days: vote period 2→1 max lock 30.4375→2922 bonus age 91.3125→20 min voting lock 2→1461(×730.5) bonus%: age 25→four hundred lock 1→eight hundred tokens: stake 10million→6million reject cost one hundred→ten thousand quiet extension 1day→1second",
+      "input_tokens": 126,
+      "layout": "unit_grouped_ratio_words"
+    },
+    {
+      "proposal_id": 602,
+      "record_index": 14,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-602.json",
+      "snapshot_sha256": "288b7f650b410d6c19f45f77e4e416ed004c363696fb662800128ebfc1edb706",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 86400,
+          "proposed": 172800
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5385040329133796,
+      "conditional_reviewer_label": "hold",
+      "rationale": "最低投票lock 1→2日の強化だけ。2日を禁止的とする基準や実際の影響は示されていない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum voting lock: 1 -> 2 days; Minimum voting lock requirement increases 2-fold",
+      "input_tokens": 67,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 605,
+      "record_index": 14,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-605.json",
+      "snapshot_sha256": "8546c503004381b369b49898830bc050a64832d39d726cc5552e35a4cbbe9b08",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 86400,
+          "proposed": 172800
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5385040329133796,
+      "conditional_reviewer_label": "hold",
+      "rationale": "最低投票lock 1→2日の強化だけ。2日を禁止的とする基準や実際の影響は示されていない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum voting lock: 1 -> 2 days; Minimum voting lock requirement increases 2-fold",
+      "input_tokens": 67,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 608,
+      "record_index": 14,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-608.json",
+      "snapshot_sha256": "5df6b28183fec0616bcf954876ecf47365be1d738668facd819a97643d07453c",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 86400,
+          "proposed": 172800
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5385040329133796,
+      "conditional_reviewer_label": "hold",
+      "rationale": "最低投票lock 1→2日の強化だけ。2日を禁止的とする基準や実際の影響は示されていない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum voting lock: 1 -> 2 days; Minimum voting lock requirement increases 2-fold",
+      "input_tokens": 67,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 611,
+      "record_index": 14,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-611.json",
+      "snapshot_sha256": "7e4005ab80764fa58eceeb4c18d08a835673a1445279ad74cfd3504c071a38fe",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 86400,
+          "proposed": 172800
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5385040329133796,
+      "conditional_reviewer_label": "hold",
+      "rationale": "最低投票lock 1→2日の強化だけ。2日を禁止的とする基準や実際の影響は示されていない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum voting lock: 1 -> 2 days; Minimum voting lock requirement increases 2-fold",
+      "input_tokens": 67,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 614,
+      "record_index": 14,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-614.json",
+      "snapshot_sha256": "b46eb8413fc6fa10164c77962479d5e248ae9f8ab553e1e0b3c5eb0a28d5b639",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 86400,
+          "proposed": 172800
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5385040329133796,
+      "conditional_reviewer_label": "hold",
+      "rationale": "最低投票lock 1→2日の強化だけ。2日を禁止的とする基準や実際の影響は示されていない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum voting lock: 1 -> 2 days; Minimum voting lock requirement increases 2-fold",
+      "input_tokens": 67,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 620,
+      "record_index": 14,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-620.json",
+      "snapshot_sha256": "d7a66626117673d5b30fe690094f61c820a784dd9c370636988735ac243bf2d8",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 86400,
+          "proposed": 172800
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5385040329133796,
+      "conditional_reviewer_label": "hold",
+      "rationale": "最低投票lock 1→2日の強化だけ。2日を禁止的とする基準や実際の影響は示されていない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum voting lock: 1 -> 2 days; Minimum voting lock requirement increases 2-fold",
+      "input_tokens": 67,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 623,
+      "record_index": 14,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-623.json",
+      "snapshot_sha256": "e3f81dea719411cf2d641c4a70a6d569b90a2103b65afcbc14cbb1388a12d70a",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 86400,
+          "proposed": 172800
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5385040329133796,
+      "conditional_reviewer_label": "hold",
+      "rationale": "最低投票lock 1→2日の強化だけ。2日を禁止的とする基準や実際の影響は示されていない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum voting lock: 1 -> 2 days; Minimum voting lock requirement increases 2-fold",
+      "input_tokens": 67,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 626,
+      "record_index": 14,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-626.json",
+      "snapshot_sha256": "839be46355a0a74ec8e68ffb2701b0e767c6b36b1499e1aebdf4904fe5c1efce",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 86400,
+          "proposed": 172800
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5385040329133796,
+      "conditional_reviewer_label": "hold",
+      "rationale": "最低投票lock 1→2日の強化だけ。2日を禁止的とする基準や実際の影響は示されていない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum voting lock: 1 -> 2 days; Minimum voting lock requirement increases 2-fold",
+      "input_tokens": 67,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 629,
+      "record_index": 14,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-629.json",
+      "snapshot_sha256": "93c6880667c1bf4232460ef31372a44c2573ce2d280c8efa9926aedd610e72a7",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 86400,
+          "proposed": 172800
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5385040329133796,
+      "conditional_reviewer_label": "hold",
+      "rationale": "最低投票lock 1→2日の強化だけ。2日を禁止的とする基準や実際の影響は示されていない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum voting lock: 1 -> 2 days; Minimum voting lock requirement increases 2-fold",
+      "input_tokens": 67,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 632,
+      "record_index": 14,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-632.json",
+      "snapshot_sha256": "315aa23598b25d3e816691a3f61d586d078178c506518450f1c8392ac199855c",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 86400,
+          "proposed": 172800
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5385040329133796,
+      "conditional_reviewer_label": "hold",
+      "rationale": "最低投票lock 1→2日の強化だけ。2日を禁止的とする基準や実際の影響は示されていない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum voting lock: 1 -> 2 days; Minimum voting lock requirement increases 2-fold",
+      "input_tokens": 67,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 635,
+      "record_index": 14,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-635.json",
+      "snapshot_sha256": "4f2c3bca475915c131406cdf6cd72022573834a26a057fbcf4f71de349d33d4f",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 86400,
+          "proposed": 172800
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5385040329133796,
+      "conditional_reviewer_label": "hold",
+      "rationale": "最低投票lock 1→2日の強化だけ。2日を禁止的とする基準や実際の影響は示されていない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum voting lock: 1 -> 2 days; Minimum voting lock requirement increases 2-fold",
+      "input_tokens": 67,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 638,
+      "record_index": 14,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-638.json",
+      "snapshot_sha256": "225f5e0f8b28d62089f631ed3993f705264245e90448b8ab63f335f698ae4383",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 86400,
+          "proposed": 172800
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5385040329133796,
+      "conditional_reviewer_label": "hold",
+      "rationale": "最低投票lock 1→2日の強化だけ。2日を禁止的とする基準や実際の影響は示されていない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum voting lock: 1 -> 2 days; Minimum voting lock requirement increases 2-fold",
+      "input_tokens": 67,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 641,
+      "record_index": 14,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-641.json",
+      "snapshot_sha256": "172227a2b470c00a413721a9c5674fe106e101f1bf1a75d8ee68f54e54469cf9",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 86400,
+          "proposed": 172800
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5385040329133796,
+      "conditional_reviewer_label": "hold",
+      "rationale": "最低投票lock 1→2日の強化だけ。2日を禁止的とする基準や実際の影響は示されていない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum voting lock: 1 -> 2 days; Minimum voting lock requirement increases 2-fold",
+      "input_tokens": 67,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 644,
+      "record_index": 14,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-644.json",
+      "snapshot_sha256": "40ca85d500640461f57562d79e66c6c275bc6a558292b78acd4b252432bf2129",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 86400,
+          "proposed": 172800
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5385040329133796,
+      "conditional_reviewer_label": "hold",
+      "rationale": "最低投票lock 1→2日の強化だけ。2日を禁止的とする基準や実際の影響は示されていない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum voting lock: 1 -> 2 days; Minimum voting lock requirement increases 2-fold",
+      "input_tokens": 67,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 647,
+      "record_index": 14,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-647.json",
+      "snapshot_sha256": "20be2ad12f63521b593f06b2dff498e8a6105e3da52b9c91d7ca2676116a88c6",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 86400,
+          "proposed": 172800
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5385040329133796,
+      "conditional_reviewer_label": "hold",
+      "rationale": "最低投票lock 1→2日の強化だけ。2日を禁止的とする基準や実際の影響は示されていない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum voting lock: 1 -> 2 days; Minimum voting lock requirement increases 2-fold",
+      "input_tokens": 67,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 650,
+      "record_index": 14,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-650.json",
+      "snapshot_sha256": "0aefa61ca6bcf2ddc7bc521831debfd5b8c158abd0fe9611cf9014dd87d5c4b7",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 86400,
+          "proposed": 172800
+        }
+      ],
+      "current_label": "hold",
+      "raw_binary": "reject",
+      "score": 0.5385040329133796,
+      "conditional_reviewer_label": "hold",
+      "rationale": "最低投票lock 1→2日の強化だけ。2日を禁止的とする基準や実際の影響は示されていない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Minimum voting lock: 1 -> 2 days; Minimum voting lock requirement increases 2-fold",
+      "input_tokens": 67,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 617,
+      "record_index": 15,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-617.json",
+      "snapshot_sha256": "5bffee137600260bbdb94cf7658a306ae6cb4869d1107cb9bbd75ccaa93d36bc",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "max_dissolve_delay_seconds",
+          "previous": 2629800,
+          "proposed": 2629800000
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 86400,
+          "proposed": 1728000000
+        }
+      ],
+      "current_label": "reject",
+      "raw_binary": "reject",
+      "score": 0.6865371347908897,
+      "conditional_reviewer_label": "reject",
+      "rationale": "最低投票lock 1→2万日（約54.8年）。最大lock延長と最低投票条件を混同しない。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Maximum lock: 30.4375 -> 30437.5 days; Minimum voting lock: 1 -> 20000 days; Minimum voting lock requirement increases 20000-fold",
+      "input_tokens": 97,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 656,
+      "record_index": 16,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-656.json",
+      "snapshot_sha256": "c02603fa144534519ff35edfcae332b838e42e70d453a2f6ea53555cd8648a56",
+      "title": "Hello Mr Borovan",
+      "summary": "Sun Tzu says hi to Borovan.\n\nThe takeover can still happen. Try harder.\n\nThank you for taking BOOM DAO to ATH and for making it an even more iconic DAO on ICP.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 1500000000000000,
+          "proposed": 500000000
+        },
+        {
+          "field": "initial_voting_period_seconds",
+          "previous": 86400,
+          "proposed": 259200
+        }
+      ],
+      "current_label": "approve",
+      "raw_binary": "approve",
+      "score": 0.8763223067221613,
+      "conditional_reviewer_label": "approve",
+      "rationale": "最低stake 1,500万→5tokens、投票期間1→3日。数値上は参加条件を改善。ただしsummaryのtakeover言及は入力から落ちている。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "voting period: 1 -> 3 days; Minimum stake: 15 million -> 5 tokens; Minimum stake requirement decreases 3 million-fold",
+      "input_tokens": 78,
+      "layout": "ratio"
+    },
+    {
+      "proposal_id": 659,
+      "record_index": 17,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-659.json",
+      "snapshot_sha256": "271ab1b61b90dd4f619724a4798234b4d7480d325aa0e62fc13ef04084c34691",
+      "title": "SNS parameters adjustment",
+      "summary": "SNS parameters adjustment",
+      "representative_proposer_text_matches": true,
+      "raw_proposed_matches_renderer": true,
+      "complete_changed_scalar_set": true,
+      "historical_old_values_chain_verified": false,
+      "changes": [
+        {
+          "field": "neuron_minimum_stake_e8s",
+          "previous": 1500000000000000,
+          "proposed": 500000000
+        },
+        {
+          "field": "max_dissolve_delay_bonus_percentage",
+          "previous": 1,
+          "proposed": 100
+        },
+        {
+          "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+          "previous": 172800,
+          "proposed": 86400
+        }
+      ],
+      "current_label": "approve",
+      "raw_binary": "approve",
+      "score": 0.8624514131820308,
+      "conditional_reviewer_label": "approve",
+      "rationale": "最低stake 1,500万→5tokens、最低投票lock 2→1日。lock bonus 1→100%の投票力配分への影響は別途検討が必要。",
+      "human_gold": false,
+      "full_proposal_vote_verified": false,
+      "prompt": "Maximum lock bonus: 1 -> 100 percent; Minimum voting lock: 2 -> 1 days; Minimum voting lock requirement decreases 2-fold; Minimum stake: 15 million -> 5 tokens; Minimum stake requirement decreases 3 million-fold",
+      "input_tokens": 101,
+      "layout": "ratio"
+    }
+  ],
+  "tool_cases": [
+    {
+      "proposal_id": 501,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-501.json",
+      "snapshot_sha256": "64e19e6a358dde1d52d1a3f2d5641fc9dc8261492f637626f5aed33c0849a287",
+      "action": "ManageLedgerParameters",
+      "payload": {
+        "transfer_fee": 1000000
+      },
+      "title": "ledger parameters",
+      "summary": "changing token to CLAY\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "route": "outside_direct_eligibility_scope",
+      "reason": "Outside numerical stake/voting-lock participation scope.",
+      "task": {
+        "action": "ManageLedgerParameters",
+        "proposer_text": {
+          "proposal_title": "ledger parameters",
+          "summary": "changing token to CLAY\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n"
+        },
+        "changes_or_requests": [
+          {
+            "field": "token_logo",
+            "previous": null,
+            "unknowns": [
+              "previous_value",
+              "structured_proposed_value"
+            ],
+            "source_status": "rendering_only",
+            "structured_field_missing_or_null": true,
+            "proposed": {
+              "characters": 141502,
+              "sha256": "d0c46def5272c686c12e33dcdde3c5ef814a6119056081dbae9ee621b57925e6",
+              "value_omitted": true
+            },
+            "effect": "requests_token_logo_update"
+          },
+          {
+            "field": "token_name",
+            "previous": null,
+            "unknowns": [
+              "previous_value",
+              "structured_proposed_value"
+            ],
+            "source_status": "rendering_only",
+            "structured_field_missing_or_null": true,
+            "proposed": "Clay",
+            "effect": "requests_token_name_update"
+          },
+          {
+            "field": "token_symbol",
+            "previous": null,
+            "unknowns": [
+              "previous_value",
+              "structured_proposed_value"
+            ],
+            "source_status": "rendering_only",
+            "structured_field_missing_or_null": true,
+            "proposed": "CLAY",
+            "effect": "requests_token_symbol_update"
+          },
+          {
+            "field": "transfer_fee",
+            "previous": null,
+            "unknowns": [
+              "previous_value"
+            ],
+            "source_status": "consistent",
+            "proposed": 1000000,
+            "effect": "requests_transfer_fee_update"
+          }
+        ],
+        "unchanged_fields": [],
+        "limits": "Frozen proposal only. Historical old values are parsed from rendering, not chain-verified. Unknowns are not evidence of wrongdoing. Votes and outcomes are excluded. Logo content is represented by hashes, not visually inspected. External links are not fetched. Generic-call code is not verified."
+      },
+      "candidate_tokens": null,
+      "candidate_prompt": null,
+      "conditional_reviewer_label": "hold",
+      "human_gold": false
+    },
+    {
+      "proposal_id": 584,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-584.json",
+      "snapshot_sha256": "f4db52aaabfd1e5ad5ddc753cfd09ae777311e819ecb41e2fdab6435add994df",
+      "action": "TransferSnsTreasuryFunds",
+      "payload": {
+        "memo": null,
+        "amount_e8s": 2000000000000000,
+        "to_principal": "jrnhz-6ekxv-2fffs-wfcgt-l3pe7-456id-heznf-xyf64-nykjq-4jyso-zae",
+        "from_treasury": 2,
+        "to_subaccount": null
+      },
+      "title": "SNS Metadata Adjustment",
+      "summary": "SNS Metadata Adjustment\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "route": "evidence_gate",
+      "reason": "treasury capacity/control/recipient relationship evidence missing",
+      "task": {
+        "action": "TransferSnsTreasuryFunds",
+        "proposer_text": {
+          "proposal_title": "SNS Metadata Adjustment",
+          "summary": "SNS Metadata Adjustment\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n"
+        },
+        "changes_or_requests": [
+          {
+            "field": "treasury_transfer",
+            "effect": "treasury_transfer_requested",
+            "from_treasury": 2,
+            "asset": "SNS_TOKEN",
+            "amount_e8s": 2000000000000000,
+            "recipient": "jrnhz-6ekxv-2fffs-wfcgt-l3pe7-456id-heznf-xyf64-nykjq-4jyso-zae",
+            "memo": null,
+            "subaccount": null,
+            "unknowns": [
+              "treasury_balance_before",
+              "recipient_control",
+              "recipient_relationship"
+            ],
+            "impact_assessment": "insufficient_data",
+            "amount_units": "20000000.00000000"
+          }
+        ],
+        "unchanged_fields": [],
+        "limits": "Frozen proposal only. Historical old values are parsed from rendering, not chain-verified. Unknowns are not evidence of wrongdoing. Votes and outcomes are excluded. Logo content is represented by hashes, not visually inspected. External links are not fetched. Generic-call code is not verified."
+      },
+      "candidate_tokens": null,
+      "candidate_prompt": null,
+      "conditional_reviewer_label": "hold",
+      "human_gold": false
+    },
+    {
+      "proposal_id": 585,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-585.json",
+      "snapshot_sha256": "122267d2a55ccb9b32c61a3c0d9534920357bd3b79c8ad7ef40ddff0de80ad25",
+      "action": "ManageNervousSystemParameters",
+      "payload": {
+        "reject_cost_e8s": 1000000000000,
+        "default_followees": null,
+        "transaction_fee_e8s": null,
+        "max_number_of_neurons": 200000,
+        "max_age_bonus_percentage": 0,
+        "neuron_minimum_stake_e8s": 100000000000000,
+        "voting_rewards_parameters": null,
+        "max_dissolve_delay_seconds": 252460800,
+        "max_followees_per_function": null,
+        "neuron_claimer_permissions": null,
+        "maturity_modulation_disabled": false,
+        "max_neuron_age_for_age_bonus": 63115200,
+        "neuron_grantable_permissions": null,
+        "initial_voting_period_seconds": 86400,
+        "max_proposals_to_keep_per_action": null,
+        "max_dissolve_delay_bonus_percentage": 800,
+        "max_number_of_principals_per_neuron": null,
+        "automatically_advance_target_version": true,
+        "max_number_of_proposals_with_ballots": null,
+        "wait_for_quiet_deadline_increase_seconds": 43200,
+        "neuron_minimum_dissolve_delay_to_vote_seconds": 126230400
+      },
+      "title": "SNS Changes for Mimic",
+      "summary": "Because of a fee change the token withdrawal failed, so I need to put these SNS changes back, and try not to screw it up this time.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "route": "budget_overflow",
+      "reason": "All changed values preserved; input exceeds 128 tokens.",
+      "task": {
+        "action": "ManageNervousSystemParameters",
+        "proposer_text": {
+          "proposal_title": "SNS Changes for Mimic",
+          "summary": "Because of a fee change the token withdrawal failed, so I need to put these SNS changes back, and try not to screw it up this time.\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n"
+        },
+        "changes_or_requests": [
+          {
+            "field": "initial_voting_period_seconds",
+            "proposed": 86400,
+            "previous": 172800,
+            "unknowns": [
+              "actual_voter_participation"
+            ],
+            "unit": "seconds",
+            "direction": "decrease",
+            "effect": "shortens_initial_voting_period"
+          },
+          {
+            "field": "max_age_bonus_percentage",
+            "proposed": 0,
+            "previous": 50,
+            "unknowns": [
+              "actual_system_impact"
+            ],
+            "unit": "percent",
+            "direction": "decrease",
+            "effect": "decreases_max_age_bonus_percentage"
+          },
+          {
+            "field": "max_dissolve_delay_bonus_percentage",
+            "proposed": 800,
+            "previous": 100,
+            "unknowns": [
+              "actual_system_impact"
+            ],
+            "unit": "percent",
+            "direction": "increase",
+            "effect": "increases_max_dissolve_delay_bonus_percentage"
+          },
+          {
+            "field": "max_dissolve_delay_seconds",
+            "proposed": 252460800,
+            "previous": 2629800,
+            "unknowns": [
+              "actual_locking_behavior"
+            ],
+            "unit": "seconds",
+            "direction": "increase",
+            "effect": "raises_maximum_dissolve_delay"
+          },
+          {
+            "field": "max_neuron_age_for_age_bonus",
+            "proposed": 63115200,
+            "previous": 7889400,
+            "unknowns": [
+              "actual_system_impact"
+            ],
+            "unit": "seconds",
+            "direction": "increase",
+            "effect": "increases_max_neuron_age_for_age_bonus"
+          },
+          {
+            "field": "neuron_minimum_dissolve_delay_to_vote_seconds",
+            "proposed": 126230400,
+            "previous": 172800,
+            "unknowns": [
+              "affected_neuron_count"
+            ],
+            "unit": "seconds",
+            "direction": "increase",
+            "effect": "tightens_voting_delay_requirement"
+          },
+          {
+            "field": "neuron_minimum_stake_e8s",
+            "proposed": 100000000000000,
+            "previous": 500000000,
+            "unknowns": [
+              "affected_holder_count"
+            ],
+            "unit": "e8s",
+            "direction": "increase",
+            "effect": "raises_minimum_neuron_stake"
+          },
+          {
+            "field": "reject_cost_e8s",
+            "proposed": 1000000000000,
+            "previous": 10000000000,
+            "unknowns": [
+              "actual_system_impact"
+            ],
+            "unit": "e8s",
+            "direction": "increase",
+            "effect": "increases_reject_cost_e8s"
+          },
+          {
+            "field": "wait_for_quiet_deadline_increase_seconds",
+            "proposed": 43200,
+            "previous": 86400,
+            "unknowns": [
+              "actual_system_impact"
+            ],
+            "unit": "seconds",
+            "direction": "decrease",
+            "effect": "decreases_wait_for_quiet_deadline_increase_seconds"
+          }
+        ],
+        "unchanged_fields": [
+          "automatically_advance_target_version",
+          "maturity_modulation_disabled",
+          "max_number_of_neurons"
+        ],
+        "limits": "Frozen proposal only. Historical old values are parsed from rendering, not chain-verified. Unknowns are not evidence of wrongdoing. Votes and outcomes are excluded. Logo content is represented by hashes, not visually inspected. External links are not fetched. Generic-call code is not verified."
+      },
+      "candidate_tokens": 130,
+      "candidate_prompt": "days: vote period 2→1 max lock 30.4375→2922 bonus age 91.3125→730.5 min voting lock 2→1461(×730.5) bonus%: age 50→0 lock one hundred→eight hundred tokens: stake 5→1million reject cost one hundred→ten thousand quiet extension 1day→43200second\nAll changes: approve lower barriers; reject prohibitive stake/lock\nA approve B reject",
+      "conditional_reviewer_label": "hold",
+      "human_gold": false
+    },
+    {
+      "proposal_id": 653,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-653.json",
+      "snapshot_sha256": "6f01a2f344351f63c9200b103c59feaafce2d0cccdb6f4cc1473f42aba926e39",
+      "action": "MintSnsTokens",
+      "payload": {
+        "memo": null,
+        "amount_e8s": 25000000000000000,
+        "to_principal": "4mpab-ayg5c-m2frb-vjja5-b2qbe-5rxgv-33ova-ddjgm-egfav-br5hu-gqe",
+        "to_subaccount": null
+      },
+      "title": "SNS Adjustment",
+      "summary": "SNS Adjustment\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "route": "evidence_gate",
+      "reason": "mint concentration/control evidence missing",
+      "task": {
+        "action": "MintSnsTokens",
+        "proposer_text": {
+          "proposal_title": "SNS Adjustment",
+          "summary": "SNS Adjustment\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n"
+        },
+        "changes_or_requests": [
+          {
+            "field": "token_mint",
+            "amount_e8s": 25000000000000000,
+            "recipient": "4mpab-ayg5c-m2frb-vjja5-b2qbe-5rxgv-33ova-ddjgm-egfav-br5hu-gqe",
+            "memo": null,
+            "subaccount": null,
+            "unknowns": [
+              "supply_before",
+              "recipient_holdings_before",
+              "recipient_control"
+            ],
+            "effect": "mint_requested",
+            "concentration_assessment": "insufficient_data",
+            "amount_tokens": "250000000"
+          }
+        ],
+        "unchanged_fields": [],
+        "limits": "Frozen proposal only. Historical old values are parsed from rendering, not chain-verified. Unknowns are not evidence of wrongdoing. Votes and outcomes are excluded. Logo content is represented by hashes, not visually inspected. External links are not fetched. Generic-call code is not verified."
+      },
+      "candidate_tokens": null,
+      "candidate_prompt": null,
+      "conditional_reviewer_label": "hold",
+      "human_gold": false
+    },
+    {
+      "proposal_id": 654,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-654.json",
+      "snapshot_sha256": "2a17a9189f55999581b585440ac705ce858122b8cdcb00f0d9b5bdbe78316ef4",
+      "action": "TransferSnsTreasuryFunds",
+      "payload": {
+        "memo": null,
+        "amount_e8s": 890000000000,
+        "to_principal": "p2leq-glkq6-6w6nz-sbosf-7mdyc-6zkca-7pfrm-bzgyl-m3rs5-qqhxt-iqe",
+        "from_treasury": 1,
+        "to_subaccount": null
+      },
+      "title": "SNS Adjustment",
+      "summary": "SNS Adjustment\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "route": "evidence_gate",
+      "reason": "treasury capacity/control/recipient relationship evidence missing",
+      "task": {
+        "action": "TransferSnsTreasuryFunds",
+        "proposer_text": {
+          "proposal_title": "SNS Adjustment",
+          "summary": "SNS Adjustment\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n"
+        },
+        "changes_or_requests": [
+          {
+            "field": "treasury_transfer",
+            "effect": "treasury_transfer_requested",
+            "from_treasury": 1,
+            "asset": "ICP",
+            "amount_e8s": 890000000000,
+            "recipient": "p2leq-glkq6-6w6nz-sbosf-7mdyc-6zkca-7pfrm-bzgyl-m3rs5-qqhxt-iqe",
+            "memo": null,
+            "subaccount": null,
+            "unknowns": [
+              "treasury_balance_before",
+              "recipient_control",
+              "recipient_relationship"
+            ],
+            "impact_assessment": "insufficient_data",
+            "amount_units": "8900.00000000"
+          }
+        ],
+        "unchanged_fields": [],
+        "limits": "Frozen proposal only. Historical old values are parsed from rendering, not chain-verified. Unknowns are not evidence of wrongdoing. Votes and outcomes are excluded. Logo content is represented by hashes, not visually inspected. External links are not fetched. Generic-call code is not verified."
+      },
+      "candidate_tokens": null,
+      "candidate_prompt": null,
+      "conditional_reviewer_label": "hold",
+      "human_gold": false
+    },
+    {
+      "proposal_id": 655,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-655.json",
+      "snapshot_sha256": "1dde9ebc10b2fb5d95b123ff984ce67a34037df0798e1211d01bfed685934d78",
+      "action": "TransferSnsTreasuryFunds",
+      "payload": {
+        "memo": null,
+        "amount_e8s": 1800000000000000,
+        "to_principal": "p2leq-glkq6-6w6nz-sbosf-7mdyc-6zkca-7pfrm-bzgyl-m3rs5-qqhxt-iqe",
+        "from_treasury": 2,
+        "to_subaccount": null
+      },
+      "title": "SNS Adjustment",
+      "summary": "SNS Adjustment\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n",
+      "route": "evidence_gate",
+      "reason": "treasury capacity/control/recipient relationship evidence missing",
+      "task": {
+        "action": "TransferSnsTreasuryFunds",
+        "proposer_text": {
+          "proposal_title": "SNS Adjustment",
+          "summary": "SNS Adjustment\n--------------------------------\n<br><br>\nThis proposal was created using [https://ic-toolkit.app](https://ic-toolkit.app)\n<br><br>\n"
+        },
+        "changes_or_requests": [
+          {
+            "field": "treasury_transfer",
+            "effect": "treasury_transfer_requested",
+            "from_treasury": 2,
+            "asset": "SNS_TOKEN",
+            "amount_e8s": 1800000000000000,
+            "recipient": "p2leq-glkq6-6w6nz-sbosf-7mdyc-6zkca-7pfrm-bzgyl-m3rs5-qqhxt-iqe",
+            "memo": null,
+            "subaccount": null,
+            "unknowns": [
+              "treasury_balance_before",
+              "recipient_control",
+              "recipient_relationship"
+            ],
+            "impact_assessment": "insufficient_data",
+            "amount_units": "18000000.00000000"
+          }
+        ],
+        "unchanged_fields": [],
+        "limits": "Frozen proposal only. Historical old values are parsed from rendering, not chain-verified. Unknowns are not evidence of wrongdoing. Votes and outcomes are excluded. Logo content is represented by hashes, not visually inspected. External links are not fetched. Generic-call code is not verified."
+      },
+      "candidate_tokens": null,
+      "candidate_prompt": null,
+      "conditional_reviewer_label": "hold",
+      "human_gold": false
+    },
+    {
+      "proposal_id": 658,
+      "source": "artifacts/proposal-assessment-500-660-20261006/snapshots/snapshots/proposal-658.json",
+      "snapshot_sha256": "749a34fcb8ca57369b050f379ea4783030c67a11eca10a4ecca90983f14506f1",
+      "action": "ExecuteGenericNervousSystemFunction",
+      "payload": {
+        "payload": [],
+        "function_id": 1010
+      },
+      "title": "Upgrade Boom Gaming Guild Frontend",
+      "summary": "This proposal executes the generic function commit_proposed_batch on the Game Launcher Asset canister. \n\nThe proposed batch will upgrade Boom Gaming Guild frontend to fix token withdrawal issues and to fix Boom Gaming Guild website issues. \n\nFor more information check https://internetcomputer.org/docs/current/developer-docs/integrations/sns/managing/sns-asset-canister#submitting-an-sns-proposal-and-upgrading-an-asset-canister .\n",
+      "route": "evidence_gate",
+      "reason": "executable content missing or payload sources conflict",
+      "task": {
+        "action": "ExecuteGenericNervousSystemFunction",
+        "proposer_text": {
+          "proposal_title": "Upgrade Boom Gaming Guild Frontend",
+          "summary": "This proposal executes the generic function commit_proposed_batch on the Game Launcher Asset canister. \n\nThe proposed batch will upgrade Boom Gaming Guild frontend to fix token withdrawal issues and to fix Boom Gaming Guild website issues. \n\nFor more information check https://internetcomputer.org/docs/current/developer-docs/integrations/sns/managing/sns-asset-canister#submitting-an-sns-proposal-and-upgrading-an-asset-canister .\n"
+        },
+        "changes_or_requests": [
+          {
+            "field": "generic_call",
+            "function_id": 1010,
+            "effect": "generic_call_requested",
+            "unknowns": [
+              "execution_semantics",
+              "target_code",
+              "payload_hash_matches_rendering"
+            ],
+            "declared_target": {
+              "target_canister_id": "awcae-maaaa-aaaam-abmyq-cai",
+              "target_method_name": "commit_proposed_batch",
+              "validator_canister_id": "awcae-maaaa-aaaam-abmyq-cai",
+              "validator_method_name": "validate_commit_proposed_batch"
+            },
+            "payload_bytes": 0,
+            "payload_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "rendered_payload_sha256": "a7cdb45eb328fab204162e603d4faadbeccb08b12e09c559a2c4da1355e49ace",
+            "source_status": "conflicting_sources"
+          }
+        ],
+        "unchanged_fields": [],
+        "limits": "Frozen proposal only. Historical old values are parsed from rendering, not chain-verified. Unknowns are not evidence of wrongdoing. Votes and outcomes are excluded. Logo content is represented by hashes, not visually inspected. External links are not fetched. Generic-call code is not verified."
+      },
+      "candidate_tokens": null,
+      "candidate_prompt": null,
+      "conditional_reviewer_label": "hold",
+      "human_gold": false
+    }
+  ],
+  "threshold_comparison": [
+    {
+      "threshold": 0.5,
+      "counts": {
+        "reject": 44,
+        "hold": 4,
+        "approve": 2
+      },
+      "conditional_review_confusion": {
+        "reject→reject": 28,
+        "reject→hold": 4,
+        "hold→reject": 16,
+        "approve→approve": 2
+      },
+      "human_gold": false,
+      "calibration": false,
+      "new_inference_count": 0
+    },
+    {
+      "threshold": 0.52,
+      "counts": {
+        "reject": 39,
+        "hold": 9,
+        "approve": 2
+      },
+      "conditional_review_confusion": {
+        "reject→reject": 23,
+        "reject→hold": 9,
+        "hold→reject": 16,
+        "approve→approve": 2
+      },
+      "human_gold": false,
+      "calibration": false,
+      "new_inference_count": 0
+    },
+    {
+      "threshold": 0.54,
+      "counts": {
+        "reject": 19,
+        "hold": 29,
+        "approve": 2
+      },
+      "conditional_review_confusion": {
+        "reject→reject": 19,
+        "reject→hold": 13,
+        "hold→hold": 16,
+        "approve→approve": 2
+      },
+      "human_gold": false,
+      "calibration": false,
+      "new_inference_count": 0
+    },
+    {
+      "threshold": 0.55,
+      "counts": {
+        "reject": 15,
+        "hold": 33,
+        "approve": 2
+      },
+      "conditional_review_confusion": {
+        "reject→reject": 15,
+        "reject→hold": 17,
+        "hold→hold": 16,
+        "approve→approve": 2
+      },
+      "human_gold": false,
+      "calibration": false,
+      "new_inference_count": 0
+    },
+    {
+      "threshold": 0.6,
+      "counts": {
+        "reject": 10,
+        "hold": 38,
+        "approve": 2
+      },
+      "conditional_review_confusion": {
+        "reject→reject": 10,
+        "reject→hold": 22,
+        "hold→hold": 16,
+        "approve→approve": 2
+      },
+      "human_gold": false,
+      "calibration": false,
+      "new_inference_count": 0
+    },
+    {
+      "threshold": 0.7,
+      "counts": {
+        "reject": 8,
+        "hold": 40,
+        "approve": 2
+      },
+      "conditional_review_confusion": {
+        "reject→reject": 8,
+        "reject→hold": 24,
+        "hold→hold": 16,
+        "approve→approve": 2
+      },
+      "human_gold": false,
+      "calibration": false,
+      "new_inference_count": 0
+    },
+    {
+      "threshold": 0.8,
+      "counts": {
+        "reject": 2,
+        "hold": 46,
+        "approve": 2
+      },
+      "conditional_review_confusion": {
+        "reject→reject": 2,
+        "reject→hold": 30,
+        "hold→hold": 16,
+        "approve→approve": 2
+      },
+      "human_gold": false,
+      "calibration": false,
+      "new_inference_count": 0
+    },
+    {
+      "threshold": 0.9,
+      "counts": {
+        "hold": 50
+      },
+      "conditional_review_confusion": {
+        "reject→hold": 32,
+        "hold→hold": 16,
+        "approve→hold": 2
+      },
+      "human_gold": false,
+      "calibration": false,
+      "new_inference_count": 0
+    }
+  ],
+  "primary_protocol_source": "https://docs.internetcomputer.org/references/sns-settings/"
+}

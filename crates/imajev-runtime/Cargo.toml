@@ -1,0 +1,89 @@
+[package]
+name = "imajev-runtime"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+[dependencies]
+inference-core = { path = "../inference-core" }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+blake3 = { version = "=1.8.2", optional = true, features = ["wasm32_simd"] }
+
+miniz_oxide = { version = "=0.8.9", optional = true }
+
+[features]
+experimental-adaptive-token-tiles = ["experimental-update-token-chunks"]
+experimental-update-token-chunks = ["experimental-prefix-hybrid", "experimental-attention-full"]
+experimental-single-quad = ["experimental-strassen-raw"]
+experimental-terminal-stream = ["experimental-mlp-attention-finish", "experimental-terminal-attention"]
+experimental-attention-views = []
+# Verification only; never enabled in the production optimized builder.
+experimental-attention-reference = ["experimental-attention-views"]
+experimental-mlp-attention-finish = ["experimental-mlp-delta-fusion", "experimental-attention-full", "experimental-mlp-stream"]
+experimental-prefix-update-hoist = []
+experimental-attention-mlp-stream = ["experimental-mlp-stream", "experimental-attention-full"]
+experimental-mlp-delta-stream = ["experimental-mlp-delta-fusion", "experimental-mlp-stream", "experimental-int8-k-continue", "experimental-delta-state-layout", "experimental-mlp-full89"]
+experimental-int8-k-continue = ["experimental-strassen-raw", "experimental-projection-reuse", "experimental-f32-output-generic"]
+experimental-direct-mlp-reply = ["experimental-mlp-stream"]
+experimental-mlp-half = ["experimental-mlp-stream"]
+experimental-mlp-stream = ["experimental-f32-k-continue", "experimental-mlp-pipeline"]
+experimental-f32-k-continue = ["experimental-f32-output-generic", "experimental-projection-reuse"]
+experimental-host-checksum = []
+experimental-terminal-tail = ["experimental-terminal-attention", "experimental-mlp-full89"]
+experimental-f32-output-generic = ["experimental-f32-output-reuse"]
+experimental-f32-output-reuse = []
+experimental-mlp-delta-fusion = ["dep:miniz_oxide", "experimental-delta-state-layout", "experimental-mlp-pipeline"]
+experimental-delta-state-layout = ["experimental-delta-no-writeback", "experimental-prefix-hybrid"]
+experimental-delta-no-writeback = []
+experimental-prefix-start = ["experimental-prefix-hybrid"]
+experimental-terminal-attention = ["experimental-attention-full"]
+experimental-strassen-raw = ["experimental-pair-wat"]
+experimental-strassen-output128 = ["experimental-strassen-raw"]
+experimental-pair-direct-input = ["experimental-pair-wat"]
+experimental-paired-only = ["experimental-prepared-output-pairs"]
+experimental-pair-wat = ["experimental-prepared-output-pairs"]
+experimental-pair-shared-body = ["experimental-prepared-output-pairs"]
+experimental-prefix-hybrid = ["experimental-delta-full-log", "experimental-projection-reuse"]
+experimental-lora-input-sharing = ["experimental-adopt-matrix-tail"]
+experimental-mlp-full89 = ["experimental-mlp-full"]
+experimental-prepared-output-pairs = []
+experimental-prepared-activation = []
+experimental-delta-full-log = ["experimental-delta-projected"]
+experimental-mlp-full = ["experimental-mlp-pipeline"]
+experimental-attention-full = ["experimental-attention-fusion"]
+experimental-mlp-pipeline = ["experimental-projection-reuse"]
+experimental-delta-finish = ["experimental-delta-projected"]
+experimental-prepared-rope = []
+experimental-delta-projected = ["experimental-projection-reuse"]
+experimental-attention-fusion = []
+experimental-blake3 = ["dep:blake3"]
+instruction-profile = []
+experimental-strassen-prepacked = []
+experimental-strassen-wide = ["experimental-strassen-prepacked"]
+experimental-matrix-tail = []
+experimental-adopt-matrix-tail = ["experimental-matrix-tail"]
+experimental-strassen-prepared = ["experimental-strassen-wide"]
+experimental-strassen-packed-reduction = ["experimental-strassen-prepared"]
+experimental-projection-reuse = []
+
+# Explicit source-built optimized numerical backend.
+kernel-contract-tests = ["optimized-release"]
+optimized-release = ["experimental-adopt-balanced44", "experimental-adopt-column16", "experimental-adopt-column16-token48", "experimental-adopt-column32", "experimental-adopt-dot-scale", "experimental-adopt-matrix-tail", "experimental-attention-full", "experimental-attention-fusion", "experimental-attention-mlp-stream", "experimental-attention-views", "experimental-balanced44", "experimental-blake3", "experimental-column16", "experimental-column16-token48", "experimental-column32", "experimental-delta-finish", "experimental-delta-full-log", "experimental-delta-no-writeback", "experimental-delta-projected", "experimental-delta-state-layout", "experimental-direct-mlp-reply", "experimental-dot-scale", "experimental-explicit-weight-loads", "experimental-f32-k-continue", "experimental-f32-output-generic", "experimental-f32-output-reuse", "experimental-host-checksum", "experimental-int8-k-continue", "experimental-lora-input-sharing", "experimental-matrix-tail", "experimental-mlp-attention-finish", "experimental-mlp-delta-fusion", "experimental-mlp-delta-stream", "experimental-mlp-full", "experimental-mlp-full89", "experimental-mlp-half", "experimental-mlp-pipeline", "experimental-mlp-stream", "experimental-pair-direct-input", "experimental-pair-wat", "experimental-paired-only", "experimental-prefix-hybrid", "experimental-prefix-start", "experimental-prefix-update-hoist", "experimental-prepared-activation", "experimental-prepared-output-pairs", "experimental-prepared-rope", "experimental-projection-reuse", "experimental-single-quad", "experimental-strassen-output128", "experimental-strassen-raw", "experimental-terminal-attention", "experimental-terminal-stream", "experimental-terminal-tail"]
+experimental-adopt-balanced44 = []
+experimental-adopt-column16 = []
+experimental-adopt-column16-token48 = []
+experimental-adopt-column32 = []
+experimental-adopt-dot-scale = []
+experimental-balanced44 = []
+experimental-column16 = []
+experimental-column16-token48 = []
+experimental-column32 = []
+experimental-dot-scale = []
+experimental-explicit-weight-loads = []
+experimental-wide-token-tiles = []
+
+[[bin]]
+name="delta_log_verify"
+path="src/bin/delta_log_verify.rs"
+required-features=["experimental-delta-full-log"]

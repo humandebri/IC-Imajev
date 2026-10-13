@@ -1,0 +1,16 @@
+canisters:
+  - name: imajev-inference
+    build:
+      steps:
+        - type: script
+          command: cargo build --release --target wasm32-unknown-unknown -p imajev-inference
+        - type: script
+          command: cp target/wasm32-unknown-unknown/release/imajev_inference.wasm "$ICP_WASM_OUTPUT_PATH"
+        - type: script
+          command: python3 scripts/generate_wasm_candid.py "$ICP_WASM_OUTPUT_PATH" "$ICP_WASM_OUTPUT_PATH.did" --profile cargo --embed-public
+
+networks:
+  - name: local
+    mode: managed
+    gateway:
+      port: 8001

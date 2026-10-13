@@ -1,0 +1,322 @@
+{
+  "date": "2026-10-07",
+  "scan_scope": "Git tracked and non-ignored untracked UTF-8 text files; ignored original artifacts are excluded",
+  "text_files_scanned": 1716,
+  "machine_specific_paths_remaining": [],
+  "retained_temporary_paths": [
+    {
+      "file": "scripts/finalize_proposal_assessment.py",
+      "line": 15,
+      "purpose": "historical cleanup boundary"
+    },
+    {
+      "file": "scripts/test_adaptive_graph.py",
+      "line": 33,
+      "purpose": "non-writing test fixture"
+    },
+    {
+      "file": "scripts/test_limit_fallback.py",
+      "line": 9,
+      "purpose": "non-writing test fixture"
+    },
+    {
+      "file": "scripts/test_limit_fallback.py",
+      "line": 10,
+      "purpose": "non-writing test fixture"
+    },
+    {
+      "file": "scripts/test_packed_graph.py",
+      "line": 27,
+      "purpose": "non-writing test fixture"
+    },
+    {
+      "file": "scripts/test_review_fixes.py",
+      "line": 31,
+      "purpose": "non-writing test fixture"
+    }
+  ],
+  "frozen_original_files_verified": 33,
+  "changed_original_files": 26,
+  "source_hashes": {
+    "PLAN.md": {
+      "original_sha256": "347f6874982426626db11027b363ddb292457fc173022740e5141203a0cebbb3",
+      "current_sha256": "54836f4923d72dacc465c274e53a608c347243f65880b9b4103c50a58fca3703",
+      "changed": true
+    },
+    "README.md": {
+      "original_sha256": "74a6b9b2d979db4efa8d57c2b66247e0aae28bbb56092b639e583d13948b6710",
+      "current_sha256": "b37feb7845ee32a125809c4365850103178bfb48d3b69c6c690b9f5fe098aa2b",
+      "changed": true
+    },
+    "docs/PROPOSAL_FILTER_REPORT_20261007.md": {
+      "original_sha256": "5158857016c69d22181f2022ff70d0a8a5499a142958298b184284df5e411042",
+      "current_sha256": "85c70ae97fc555f97c10618c95b789f7a5480bfe271bc398ec48f4fea2705865",
+      "changed": true
+    },
+    "docs/UPDATE_INSTRUCTION_TARGET.md": {
+      "original_sha256": "fdeee907163d954996b2bea62fbb69ee2d6d65282309d156eedd2a2dcd5a6737",
+      "current_sha256": "3036c1baf39693bebd71a04776a110bd2075e9a0da7a92780c60d6fae407023e",
+      "changed": true
+    },
+    "scripts/analyze_laya_cost.py": {
+      "original_sha256": "8be77d569cc9b62d249e5b576029af9e9819ebdcc64f5bb58ad2182d75f35f24",
+      "current_sha256": "2ba40db19ac9a66026183c9fc8377692c21a4d19fcfaf3372565a2a4db9ad4bb",
+      "changed": true
+    },
+    "scripts/audit_paid_gated_norm_finalize_report.py": {
+      "original_sha256": "47c1003d1995429348eb3a8e895722abf175f9048b8633083bfd863c34f6c015",
+      "current_sha256": "5e41189c84690bd8dbc86d4ee6f3131f8ff4725e16b0fc174596e26a6935828a",
+      "changed": true
+    },
+    "scripts/audit_paid_k2_compact_report.py": {
+      "original_sha256": "da0e5a51f5e670c1e619f1b13f097f8a5ab12992fb2164ceb434adb96489fa8a",
+      "current_sha256": "325089b012916327d041f1ce26ca5b770c474a3dc82ae0f60752929a26516da1",
+      "changed": true
+    },
+    "scripts/audit_paid_k2_odd_roots_report.py": {
+      "original_sha256": "0f5f663c61dbc01011668c3790aff56e20694eeea0693399a16d33afd8654299",
+      "current_sha256": "5675182ee5e1334451ebd8fee1a0521788fcf3ff4a744f353d17bdaa353aae35",
+      "changed": true
+    },
+    "scripts/audit_paid_k2_pair_guard_fold_report.py": {
+      "original_sha256": "9e08bee574fb2ce8c258dc41cd01e8e70634ef02362b5ae6c8ee340a62f2a386",
+      "current_sha256": "01c06648397475a12fd027d8627d583b73905036dd5c67f556591a2fb316b5ca",
+      "changed": true
+    },
+    "scripts/benchmark_laya_kernels.py": {
+      "original_sha256": "db62fa666c10e3965fabf1eb6d1b5fe24e0a4c9f5bbedc368cfea968a9d532d0",
+      "current_sha256": "c81e1a7223d943e6db5430aa577c34ab99a09d0e40cb40200f042d6c5e88befa",
+      "changed": true
+    },
+    "scripts/benchmark_laya_peak.py": {
+      "original_sha256": "d9c3c6041a98ea6462247a3ef5fed3ea0320d5af7277df396a1b3a8d310ffc9d",
+      "current_sha256": "e57a78eebff13f559ebdd6199b7868f010080eae72d8c64428074e52ac2b305e",
+      "changed": true
+    },
+    "scripts/benchmark_proposal_assessment.py": {
+      "original_sha256": "2771701a40bd03f0a87d6800d4178a396ff13993b1dccd1cd23b0b78c82bcdc9",
+      "current_sha256": "3a7ed54214d36807f764077fa8ed0d409e6a5f60c8b22e61fc5b159c3b78bd75",
+      "changed": true
+    },
+    "scripts/checkpoint_goal_recovery_baseline.py": {
+      "original_sha256": "9df2916a3f7ddb1da7ac465d620d8791881a7ddf94dd514a149f1e49e2d35166",
+      "current_sha256": "be490110470dcb64264a5b659dc428197d0a88c7dc44e810f03abbe8c65baf6c",
+      "changed": true
+    },
+    "scripts/finalize_proposal_assessment.py": {
+      "original_sha256": "40240d31a30ee2a644a6b14011ec61f0679937ff350531a78e3e82f8bc30c2b3",
+      "current_sha256": "40240d31a30ee2a644a6b14011ec61f0679937ff350531a78e3e82f8bc30c2b3",
+      "changed": false
+    },
+    "scripts/finalize_proposal_query_optimization.py": {
+      "original_sha256": "29424a47a6d9f0e21568441f630cf7e8152b6f60eaaf64a6f0fa5721f4a9d65b",
+      "current_sha256": "264805e2f231c89cfde53ee8dc7c0286f2a7c5c097a263520504139353e0af33",
+      "changed": true
+    },
+    "scripts/make_benchmark.py": {
+      "original_sha256": "6417bc441d05076dc1eda24570b0c79c465ddb514f8eedfd7d82fc284a313ba4",
+      "current_sha256": "f566d862a2a5860318516d85b1c9130f4159bdde324946c1cb8d6cff744c65fa",
+      "changed": true
+    },
+    "scripts/prepare_all_proposal_compact86.py": {
+      "original_sha256": "40b5d4ca027a7bb5de7b7708c5886dbecc636fe68724b037ae536d87b4cc856b",
+      "current_sha256": "6962eaaa39378a7e36391772077544776d86fc47f992a1421a2f4e6f2b72c889",
+      "changed": true
+    },
+    "scripts/prepare_all_proposal_query32.py": {
+      "original_sha256": "87c54c1bb2b4d27c6a03e79ae22ab7c47c66b4d874c1bc9b56854578c8257b61",
+      "current_sha256": "f7aaec649bb0184cee0131afa2f4c38d9d0782f93f2c8549487d7eea831c6ef0",
+      "changed": true
+    },
+    "scripts/prepare_all_proposal_windows.py": {
+      "original_sha256": "117a3d34f90fc635c574d3a090090eff40140e1ee403ca8ab5d11b5c466d8ab4",
+      "current_sha256": "ae25f8cec3cb50867aac62759b4923389ae59ebb8ac6a460169d3c75f7afbfbd",
+      "changed": true
+    },
+    "scripts/report_proposal_assessment.py": {
+      "original_sha256": "8eb87d50b001da0dc4273cb8cabfd3623f4289a5498b4cf8b9913e697db920d8",
+      "current_sha256": "e3eb5ec6b3ed8c03eff4466cbee654e18a3922cf43c729c639ef36e8da5ba094",
+      "changed": true
+    },
+    "scripts/run_fresh_proposal_assessment.py": {
+      "original_sha256": "95f00f907765533ca006fb1d40ca3b77813bb8aaf614adae5e7b1f556306eb0d",
+      "current_sha256": "91101673d4598578fcde896c3dcaa0caf4e9fb426e44c4f965e858720231b3c9",
+      "changed": false
+    },
+    "scripts/summarize_optimizations.py": {
+      "original_sha256": "43dfd4ce7538fb5ee5ea6981c96c2f8e006c4691cb21dab68b177731bbe640a6",
+      "current_sha256": "94e3e6f264a7a8fa357ad1ac4ed5e1dd88e17918effcba3532778f92c6a5ed98",
+      "changed": true
+    },
+    "scripts/test_adaptive_graph.py": {
+      "original_sha256": "88231d39dc875c5613bbf62c3ddb0ee74a5fe24b15e0a58827997969e31ca2f2",
+      "current_sha256": "88231d39dc875c5613bbf62c3ddb0ee74a5fe24b15e0a58827997969e31ca2f2",
+      "changed": false
+    },
+    "scripts/test_limit_fallback.py": {
+      "original_sha256": "0bcb1abc12df8da9cb06a9e43395a75db7cf32ce7ca5b2d1c62fb56f026ac690",
+      "current_sha256": "0bcb1abc12df8da9cb06a9e43395a75db7cf32ce7ca5b2d1c62fb56f026ac690",
+      "changed": false
+    },
+    "scripts/test_packed_graph.py": {
+      "original_sha256": "4fbe7d67ae84f357b8df8cf52878db3cd0e6eeccfc9c4b459761ece26ba1b950",
+      "current_sha256": "4fbe7d67ae84f357b8df8cf52878db3cd0e6eeccfc9c4b459761ece26ba1b950",
+      "changed": false
+    },
+    "scripts/test_review_fixes.py": {
+      "original_sha256": "bb8e61b0918d38862a3ce3cef025ae9d274f282834108bf6f26b62ada5036eef",
+      "current_sha256": "bb8e61b0918d38862a3ce3cef025ae9d274f282834108bf6f26b62ada5036eef",
+      "changed": false
+    },
+    "scripts/verify_fresh_proposal_assessment.py": {
+      "original_sha256": "4e4624543e16fe2aa6a0f2b846fe0e80c5d5017ad4043d740f471bc9a3868924",
+      "current_sha256": "4e4624543e16fe2aa6a0f2b846fe0e80c5d5017ad4043d740f471bc9a3868924",
+      "changed": false
+    },
+    "tools/proposal_assessment/README.md": {
+      "original_sha256": "6b9188c42be8ea98f2721e13e6411799dfc3d57a32355cd0163dde2be7facccf",
+      "current_sha256": "205003c1c82a2c62185f687c0ca4bfb4a3d70844ae1ca8828e7be2fc8159e872",
+      "changed": true
+    },
+    "tools/proposal_assessment/UPSTREAM.json": {
+      "original_sha256": "8d6f2d4bb37db61175bf070d0c50e76d0ca9ec609d494261dc73f9467fe474b0",
+      "current_sha256": "617e0feec8036d8e8d626ccb4719700e8300bce7a4fd809ee09f17fa0be2fd4e",
+      "changed": true
+    },
+    "tools/proposal_assessment/gpt-6.1-sol-medium-20261005-1509/vote-results.json": {
+      "original_sha256": "d0aa2d557ab197ce539b2557242ac4f1dc5a325a943cee8768a4f63f85277bdb",
+      "current_sha256": "e9bf8a698e59c81b58ca68f16b399ecf6ca48275c8d13f15a1a8308ec3fc2dfa",
+      "changed": true
+    },
+    "tools/proposal_assessment/million_notation.py": {
+      "original_sha256": "14752ef6aba8bb1c955649a004c3e5db6482f6e2768bbd02fed8c6b80f381afe",
+      "current_sha256": "02fa75c3706fafe04d4317693a6e7fb1639a748f4eb2fb46a72ea39ef24d7f3b",
+      "changed": true
+    },
+    "tools/proposal_assessment/token_sweep.py": {
+      "original_sha256": "80ef90446e8e32c5edd1f22728d41318fa7ad42124e05faa6feffb0195adfaf5",
+      "current_sha256": "3215829ea0757863592ce0ec87c7c5ba2592eb06578fc34fb5ebbf3df9b7d8aa",
+      "changed": true
+    },
+    "tools/proposal_assessment/verify_local_copy.py": {
+      "original_sha256": "45aaff01cc1de2519b0eebc2ddee3b6847fcda72fcc55295076305e0e84ccb21",
+      "current_sha256": "83f5e750fe85bd1f419b38f77da8daf0b521f94ecae24daf999291bd40543056",
+      "changed": true
+    }
+  },
+  "frozen_experiment_files_unchanged": {
+    "artifacts/proposal-assessment-fresh-500-660-20261007/evaluation/source-hashes.json": "e544efca1f6afbd6c0425a6282f318a3e14dae80df7a1ae11d037deebe558ef7",
+    "artifacts/proposal-assessment-fresh-500-660-20261007/evaluation/fresh-source-hashes.json": "9183266f6846dc768f3baa5197c1bf7eded933d6eba059e8868f855f3814333c",
+    "artifacts/proposal-assessment-fresh-500-660-20261007/evaluation/report.json": "78d5a726cd3b58689561ab58d372ef637f6c623c26ad3190007ac93f9db35e2c",
+    "artifacts/proposal-assessment-fresh-500-660-20261007/evaluation/inputs.json": "4caa77b150f4b4b08767703d580604999e7346b3296b6c5aa292ee5c8819872f",
+    "artifacts/proposal-query-optimization-v1/source-hashes.json": "a0bd7b3d0cd75ca1f1640b15c62bebc9aebe1be96e290197ba248d96b54ac701"
+  },
+  "relocation": {
+    "analyze_laya_cost.py help": true,
+    "summarize_optimizations.py help": true,
+    "make_benchmark.py help": true,
+    "report_proposal_assessment.py help": true,
+    "benchmark_laya_kernels.py help": true,
+    "benchmark_laya_peak.py help": true,
+    "checkpoint_goal_recovery_baseline.py help": true,
+    "benchmark_proposal_assessment.py help": true,
+    "analyze_laya_cost.py explicit input required": true,
+    "summarize_optimizations.py explicit input required": true,
+    "make_benchmark.py explicit input required": true,
+    "report_proposal_assessment.py explicit input required": true,
+    "benchmark_laya_kernels.py explicit input required": true,
+    "benchmark_laya_peak.py explicit input required": true,
+    "checkpoint_goal_recovery_baseline.py explicit input required": true,
+    "relocated module provenance": true,
+    "8 relocated roots and CLI defaults": true,
+    "benchmark fixtures unchanged": true,
+    "no experiment or canister execution": true
+  },
+  "assessment": {
+    "facts_identical": 161,
+    "prompts_and_token_ids_identical": 18,
+    "model_proposal_decisions_identical": 50,
+    "threshold": 0.6,
+    "new_inferences": 0
+  },
+  "new_inference_count": 0,
+  "canister_operations": 0,
+  "git_worktrees_created": 0,
+  "original_archives": "Local artifacts/path-portability-20261007; historical paths and original command records are not in this public export",
+  "added_source_hashes": {
+    "scripts/repository_paths.py": "069c1fef9c59df532cb48192fde9598d4b5b2b2800411b2e2d4f74f31cc74918",
+    "tools/proposal_assessment/evaluation.py": "e4372d6360ca2b895abc6f88519ecc7df67dd74f352c00b1d5cbe1a1ce1250b7",
+    "docs/PATH_PORTABILITY.md": "1e809ecbf2e3472329128a1fed1fcc4af7057604904c41592f3808cddac2f90a"
+  },
+  "translation_note": "English reports and navigation links added after the portability checks; source hashes for edited documentation refreshed. Execution code and saved inference results unchanged.",
+  "review_followup": {
+    "scope": "Resolve historical snapshot paths inside the selected archive; add required --laya-root to reproduction instructions.",
+    "tests": {
+      "command": ".venv/bin/python -B scripts/test_proposal_assessment_runs.py",
+      "passed": 11
+    },
+    "relocated_snapshot_archive": {
+      "verified_records": 61,
+      "original_manifest_preserved": true,
+      "checks": [
+        "selected archive used even when original exists",
+        "missing relocated file fails without fallback",
+        "SHA-256 and proposal identity",
+        "traversal and external symlink rejected"
+      ]
+    },
+    "documented_cli_arguments": {
+      "accepted": 2,
+      "report_generation_executed": false
+    },
+    "source_hashes": {
+      "scripts/benchmark_proposal_assessment.py": "e7aeb832a459c4e708db36c81e88bd57334bbd9802a3427610b155367b873809",
+      "scripts/test_proposal_assessment_runs.py": "74e6204876140e8e9c6a04e8f510afde051375543cc35b26ef0c2de95583650a",
+      "docs/OPTIMIZATIONS.md": "4f0108c83a470c09022077a39e9870b7d7431899cd52481a7b9af02e2e072d76",
+      "docs/LAYA_COST_ANALYSIS.md": "3c9175e1602cbb9da2399942b4da6a3430cd17558517a0437af3bfc1e35dc591",
+      "docs/PATH_PORTABILITY.md": "151679662b7dd6deb7235d132696111cb7cdc02f3c06ebc49843aedcbdad46c9",
+      "docs/PATH_PORTABILITY.en.md": "bd0cca268b4e90ecf3584851f69aab1a5970c31e56e8e506c6ab06cd5d827a31"
+    },
+    "proposal_evidence_export_check": {
+      "files": 19,
+      "source_match_checked": true
+    },
+    "new_inferences": 0,
+    "canister_operations": 0,
+    "checkpoint_note": "Earlier verification entries describe their recorded checkpoints; unrelated files may have changed independently since those checks."
+  },
+  "snapshot_archive_followup": {
+    "scope": "Shared archive-bound snapshot verification across the 500-660 driver, fresh preparation, all three window preparers and the 600-660 runner.",
+    "tests": [
+      {
+        "command": ".venv/bin/python -B scripts/test_proposal_snapshot_archives.py",
+        "passed": 4
+      },
+      {
+        "command": ".venv/bin/python -B scripts/test_proposal_assessment_runs.py",
+        "passed": 11
+      }
+    ],
+    "relocated_archive": {
+      "snapshots_verified": 161,
+      "prepared_model_inputs": 18,
+      "all_inputs_equal_to_retained_inputs": true,
+      "original_manifest_preserved": true
+    },
+    "source_hashes": {
+      "scripts/assess_proposal_range.py": "9d02a40e21e3aae8bf03d1f58a9348dcf59a10d854dba145a8917ac687a06438",
+      "scripts/benchmark_proposal_assessment.py": "3a7ed54214d36807f764077fa8ed0d409e6a5f60c8b22e61fc5b159c3b78bd75",
+      "scripts/prepare_all_proposal_windows.py": "ae25f8cec3cb50867aac62759b4923389ae59ebb8ac6a460169d3c75f7afbfbd",
+      "scripts/prepare_all_proposal_query32.py": "f7aaec649bb0184cee0131afa2f4c38d9d0782f93f2c8549487d7eea831c6ef0",
+      "scripts/prepare_all_proposal_compact86.py": "6962eaaa39378a7e36391772077544776d86fc47f992a1421a2f4e6f2b72c889",
+      "scripts/run_fresh_proposal_assessment.py": "91101673d4598578fcde896c3dcaa0caf4e9fb426e44c4f965e858720231b3c9",
+      "scripts/proposal_snapshots.py": "4229feb67af8d7cb6c3430d3b840b0b8aeb1298bfc77d873ee38ca67314719b4",
+      "scripts/test_proposal_snapshot_archives.py": "7ece7b3622c7a5b6c38c7bf62b618525972f41db27e44a140cc4276b8351d561",
+      "docs/PATH_PORTABILITY.md": "1e809ecbf2e3472329128a1fed1fcc4af7057604904c41592f3808cddac2f90a",
+      "docs/PATH_PORTABILITY.en.md": "cf30e59ea3ee550b50dd4f75572079291b4b4a054a7e6a5af5fa2384e0e9810a"
+    },
+    "new_inferences": 0,
+    "canister_operations": 0,
+    "frozen_experiment_manifests_updated": false
+  }
+}

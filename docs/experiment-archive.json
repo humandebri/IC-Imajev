@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "source_revision": "4eb568f90683b5b3e60fdaefb914a4e37c9d1ec4",
+  "archive_file": "experiments-and-docs.tar.gz",
+  "archive_sha256": "4bf80a681ad58651d4d572a668e9b8d8028e93ea330a66999d0dd9cdab9f0bc8",
+  "method": "Selected supported CLI/test entry points and executable dependencies, resolving explicit repository/relative paths and Python imports. Generator inputs are retained without unrelated benchmark crate scaffolding. Dynamic window imports are covered by regression tests. Descriptive filename mentions do not retain unrelated files with the same generic basename.",
+  "inventory": {
+    "archive_files": 1653,
+    "removed_files": 1562,
+    "retained_scripts": 63,
+    "detailed_inventory_sha256": "87d759a57eb6bf207eb56f42b966dae2c00d9e0459b42453a091222e30f674ac",
+    "availability": "Detailed original inventory is retained in the private local archive; it is not distributed in the public source tree."
+  }
+}

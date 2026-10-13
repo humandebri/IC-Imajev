@@ -1,0 +1,2 @@
+# Compact public WAT source inputs; expanded .wat files are ignored.
+/kernels/optimized/*.wat.gz binary

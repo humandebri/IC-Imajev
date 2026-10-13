@@ -1,0 +1,1225 @@
+{
+  "scope": "Client prefix continuation; preparation excluded",
+  "version": 1,
+  "graph": "qwen35-text-bf16-v1",
+  "model": "7ef38ecb70f4afa4e92bad2fe9f0448699ee45041688b1110819143f41601330",
+  "pack_hash": "364e3aa3f69a61a69e6df62e3e2a71d4f55457f1a8e1c16934aefc6130f04c84",
+  "input_hash": "cbf6a290be886cda0a5d252a952828fa2020ca22ebbc8cf52352c6ae0b03530d",
+  "url": "http://localhost:8001/",
+  "canister": "7st3i-3l777-77775-aaaja-cai",
+  "row_cap": 16384,
+  "token_cap": 132,
+  "work_cap": 2500000000,
+  "wire_codec": "bf16-block256-exact-v1",
+  "hybrid_prefix_identity": "b4bb0f4eefbe3e6d0fa826e16ad20a111d7bf1cf784b7ec98fe60e40ce15288a",
+  "delta_full_log_requested": true,
+  "delta_full_log_effective": true,
+  "delta_state_version": 2,
+  "arithmetic": "int8-block256-base-f32-lora-v1",
+  "integer_scheduler": "aligned-token8-v1",
+  "fuse_mlp": "gate-up-swiglu-v1",
+  "fuse_norm_rope": "rms-rope-shared-angles-v1",
+  "fuse_mlp_norm": "residual-norm-mlp-v1",
+  "mlp_scheduler": "work-budget-v2",
+  "fuse_add_norm": true,
+  "compact_lossless": true,
+  "compact_heads": "gqa-shared-terminal-delta-v1",
+  "terminal_states_retained": false,
+  "reuse_projection_inputs": "client-held-int8-f32-a-and-mlp-v2",
+  "fuse_delta_full_log": "full32-exact-prefix-innovation-v1",
+  "fuse_delta_finish": "second-heads-output-projection-v1",
+  "fuse_mlp_full": "complete-mlp-int8-v1",
+  "mlp_full_token_cap": 89,
+  "fuse_attention_full": "complete-attention-int8-v1",
+  "fuse_mlp_pipeline": "prepared-int8-down-norm-v1",
+  "fuse_delta_projected": "shared-integer-a-gates-stage-v1",
+  "fuse_attention": "integer-kv-q-gqa-gate-v1",
+  "terminal_readout": true,
+  "fuse_terminal_tail": true,
+  "fuse_terminal_attention": true,
+  "fuse_terminal_decision": true,
+  "fuse_prefix_start": true,
+  "fuse_delta_input": "qkv-gates-v1",
+  "fuse_delta": "projection-gates-conv-recurrence-v2",
+  "wide_mlp": "short-token89-4.5G-v2",
+  "delta_head_cap": 16,
+  "attention_head_cap": 8,
+  "prefix_mode": "continue",
+  "prefix_identity": "ad7b98af161c8946ca4992f7f52c2c9c18b23aeaecf008e55c9021b99f53d59c",
+  "prefix_graph_sha256": "5367d64b9c7763e5545c9c0de071e9c063643e940d6162fdf9378c361dae91ab",
+  "wasm_sha256": "6ce099e1f128b835b153bb28cde9f27dee719711be3822a38976cb4688613de4",
+  "tail_start": true,
+  "tail_source_sha256": "3897bbc946bb97fd5877c41a517dabf1292706731ffe599cde1ad5845d1ba9d7",
+  "tail_heads28": 6,
+  "tail_front28": 5888,
+  "tail_heads29": 24,
+  "tail_front30": 512,
+  "tail_down29": 1024,
+  "join_start": true,
+  "join_source_sha256": "b4b393af9013cfbde9c57b7d3f1409fd66747f6e06d23353cdfb4ec862caccee",
+  "roll_start": true,
+  "roll_begin": 4096,
+  "roll_heads": 18,
+  "roll_down": 768,
+  "roll_source_sha256": "2126d3cd1d22a18f57c32dcf90514beda783241af4e9c8a04dcffd76af5d7545",
+  "frame_checksum": "host",
+  "request_step_offset": 18000000,
+  "tokens": 128,
+  "layers": [
+    {
+      "layer": 0,
+      "kind": "delta",
+      "queries": 2,
+      "instructions": 8665759123,
+      "candid_bytes": 5353926,
+      "wall_seconds": 2.232838833006099,
+      "replayed": 0,
+      "next_delta_heads_included": 20
+    },
+    {
+      "layer": 1,
+      "kind": "delta",
+      "queries": 2,
+      "instructions": 8749275128,
+      "candid_bytes": 5980260,
+      "wall_seconds": 2.4015467920107767,
+      "replayed": 0,
+      "next_delta_included": 2
+    },
+    {
+      "layer": 2,
+      "kind": "delta",
+      "queries": 1,
+      "instructions": 3952326585,
+      "candid_bytes": 2561684,
+      "wall_seconds": 0.8357302919612266,
+      "replayed": 0,
+      "next_attention_kv_included": 3
+    },
+    {
+      "layer": 3,
+      "kind": "full_attention",
+      "queries": 2,
+      "instructions": 7965378382,
+      "candid_bytes": 6026202,
+      "wall_seconds": 1.7996230829739943,
+      "replayed": 0,
+      "next_delta_heads_included": 26
+    },
+    {
+      "layer": 4,
+      "kind": "delta",
+      "queries": 1,
+      "instructions": 4389610941,
+      "candid_bytes": 2409041,
+      "wall_seconds": 0.7921066249837168,
+      "replayed": 0
+    },
+    {
+      "layer": 5,
+      "kind": "delta",
+      "queries": 2,
+      "instructions": 8637391791,
+      "candid_bytes": 6172802,
+      "wall_seconds": 1.6535277920193039,
+      "replayed": 0,
+      "next_delta_heads_included": 20
+    },
+    {
+      "layer": 6,
+      "kind": "delta",
+      "queries": 2,
+      "instructions": 7525110012,
+      "candid_bytes": 5497550,
+      "wall_seconds": 1.5102919999626465,
+      "replayed": 0,
+      "next_attention_included": 7
+    },
+    {
+      "layer": 7,
+      "kind": "full_attention",
+      "queries": 1,
+      "instructions": 3679999405,
+      "candid_bytes": 1639979,
+      "wall_seconds": 0.8947920840000734,
+      "replayed": 0
+    },
+    {
+      "layer": 8,
+      "kind": "delta",
+      "queries": 2,
+      "instructions": 8638448283,
+      "candid_bytes": 6172802,
+      "wall_seconds": 1.6856892500072718,
+      "replayed": 0,
+      "next_delta_heads_included": 20
+    },
+    {
+      "layer": 9,
+      "kind": "delta",
+      "queries": 2,
+      "instructions": 8773041691,
+      "candid_bytes": 6006403,
+      "wall_seconds": 2.123872999974992,
+      "replayed": 0,
+      "next_delta_included": 10
+    },
+    {
+      "layer": 10,
+      "kind": "delta",
+      "queries": 1,
+      "instructions": 3952291698,
+      "candid_bytes": 2561688,
+      "wall_seconds": 0.856753166008275,
+      "replayed": 0,
+      "next_attention_kv_included": 11
+    },
+    {
+      "layer": 11,
+      "kind": "full_attention",
+      "queries": 2,
+      "instructions": 7963234630,
+      "candid_bytes": 6026170,
+      "wall_seconds": 1.6382778330007568,
+      "replayed": 0,
+      "next_delta_heads_included": 26
+    },
+    {
+      "layer": 12,
+      "kind": "delta",
+      "queries": 1,
+      "instructions": 4368911525,
+      "candid_bytes": 2409665,
+      "wall_seconds": 0.7672200829838403,
+      "replayed": 0
+    },
+    {
+      "layer": 13,
+      "kind": "delta",
+      "queries": 2,
+      "instructions": 8634178388,
+      "candid_bytes": 6172810,
+      "wall_seconds": 1.4664626669837162,
+      "replayed": 0,
+      "next_delta_heads_included": 20
+    },
+    {
+      "layer": 14,
+      "kind": "delta",
+      "queries": 2,
+      "instructions": 7504719067,
+      "candid_bytes": 5496719,
+      "wall_seconds": 1.437608124979306,
+      "replayed": 0,
+      "next_attention_included": 15
+    },
+    {
+      "layer": 15,
+      "kind": "full_attention",
+      "queries": 1,
+      "instructions": 3679689710,
+      "candid_bytes": 1639983,
+      "wall_seconds": 0.6955070830299519,
+      "replayed": 0
+    },
+    {
+      "layer": 16,
+      "kind": "delta",
+      "queries": 2,
+      "instructions": 8635021024,
+      "candid_bytes": 6172810,
+      "wall_seconds": 1.4936185420374386,
+      "replayed": 0,
+      "next_delta_heads_included": 20
+    },
+    {
+      "layer": 17,
+      "kind": "delta",
+      "queries": 2,
+      "instructions": 8752151071,
+      "candid_bytes": 5985245,
+      "wall_seconds": 1.7992547909962013,
+      "replayed": 0,
+      "next_delta_included": 18
+    },
+    {
+      "layer": 18,
+      "kind": "delta",
+      "queries": 1,
+      "instructions": 3953364274,
+      "candid_bytes": 2561688,
+      "wall_seconds": 0.9270215000142343,
+      "replayed": 0,
+      "next_attention_kv_included": 19
+    },
+    {
+      "layer": 19,
+      "kind": "full_attention",
+      "queries": 2,
+      "instructions": 7965261832,
+      "candid_bytes": 6026182,
+      "wall_seconds": 1.6995788749773055,
+      "replayed": 0,
+      "next_delta_heads_included": 26
+    },
+    {
+      "layer": 20,
+      "kind": "delta",
+      "queries": 1,
+      "instructions": 4389980244,
+      "candid_bytes": 2408482,
+      "wall_seconds": 0.936709166970104,
+      "replayed": 0
+    },
+    {
+      "layer": 21,
+      "kind": "delta",
+      "queries": 2,
+      "instructions": 8636813079,
+      "candid_bytes": 6172810,
+      "wall_seconds": 1.9261460829875432,
+      "replayed": 0,
+      "next_delta_heads_included": 20
+    },
+    {
+      "layer": 22,
+      "kind": "delta",
+      "queries": 2,
+      "instructions": 8618149375,
+      "candid_bytes": 6057476,
+      "wall_seconds": 1.7206975829903968,
+      "replayed": 0,
+      "next_attention_included": 23
+    },
+    {
+      "layer": 23,
+      "kind": "full_attention",
+      "queries": 1,
+      "instructions": 4360467342,
+      "candid_bytes": 3101906,
+      "wall_seconds": 0.8339722499949858,
+      "replayed": 0,
+      "next_delta_heads_included": 18
+    },
+    {
+      "layer": 24,
+      "kind": "delta",
+      "queries": 2,
+      "instructions": 8747033650,
+      "candid_bytes": 5927102,
+      "wall_seconds": 1.9536187089979649,
+      "replayed": 0,
+      "next_delta_included": 25
+    },
+    {
+      "layer": 25,
+      "kind": "delta",
+      "queries": 1,
+      "instructions": 4350684306,
+      "candid_bytes": 2622034,
+      "wall_seconds": 0.8739825409720652,
+      "replayed": 0,
+      "next_delta_heads_included": 10
+    },
+    {
+      "layer": 26,
+      "kind": "delta",
+      "queries": 2,
+      "instructions": 8508821487,
+      "candid_bytes": 5691999,
+      "wall_seconds": 1.7170380000025034,
+      "replayed": 0,
+      "next_attention_included": 27
+    },
+    {
+      "layer": 27,
+      "kind": "full_attention",
+      "queries": 1,
+      "instructions": 4385613543,
+      "candid_bytes": 2543037,
+      "wall_seconds": 0.8969891250017099,
+      "replayed": 0,
+      "next_delta_heads_included": 6
+    },
+    {
+      "layer": 28,
+      "kind": "delta",
+      "queries": 2,
+      "instructions": 8619577442,
+      "candid_bytes": 6508055,
+      "wall_seconds": 1.7752338749705814,
+      "replayed": 0,
+      "next_delta_heads_included": 24
+    },
+    {
+      "layer": 29,
+      "kind": "delta",
+      "queries": 2,
+      "instructions": 8070019039,
+      "candid_bytes": 5779779,
+      "wall_seconds": 1.6205514579778537,
+      "replayed": 0,
+      "next_delta_included": 30
+    },
+    {
+      "layer": 30,
+      "kind": "delta",
+      "queries": 1,
+      "instructions": 3968925359,
+      "candid_bytes": 1256541,
+      "wall_seconds": 0.8777629159740172,
+      "replayed": 0,
+      "hidden_exported": false
+    },
+    {
+      "layer": 31,
+      "kind": "full_attention",
+      "queries": 0,
+      "instructions": 0,
+      "candid_bytes": 0,
+      "wall_seconds": 0.0,
+      "replayed": 0,
+      "included_in_layer": 30
+    }
+  ],
+  "query_cache_controlled": false,
+  "communication_scope": "Candid request+reply; HTTP/CBOR/signatures excluded",
+  "instruction_scope": "Handler counter excludes CDK Candid decode/encode",
+  "weight_precision": "Base per-row INT8, scalar/norm BF16/F32, separate F32 LoRA/readout",
+  "activation_precision": "Per-token block256 INT8 activation only inside base integer projections; F32 input preserved for LoRA, recurrent states and readout; lossless wire",
+  "queries": [
+    {
+      "index": 18000000,
+      "op": "delta_mlp_stream_start_ids",
+      "tensor": "model.language_model.layers.0.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62975,
+        "instructions": 4340157880,
+        "reply_bytes": 1082438,
+        "request_bytes": 1039218,
+        "stable_pages": 71754,
+        "stable_read_bytes": 215424
+      },
+      "wall_seconds": 0.951766083
+    },
+    {
+      "index": 18000001,
+      "op": "mlp_complete_delta_partial",
+      "tensor": "model.language_model.layers.0.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62939,
+        "instructions": 4325601243,
+        "reply_bytes": 1550090,
+        "request_bytes": 1682180,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5184
+      },
+      "wall_seconds": 1.172794541
+    },
+    {
+      "index": 18000002,
+      "op": "delta_partial_mlp_prepare_down",
+      "tensor": "model.language_model.layers.0.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62981,
+        "instructions": 4403906271,
+        "reply_bytes": 1197972,
+        "request_bytes": 1776170,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5120
+      },
+      "wall_seconds": 1.288203916
+    },
+    {
+      "index": 18000003,
+      "op": "mlp_finish_delta_log_mlp_front",
+      "tensor": "model.language_model.layers.1.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 63185,
+        "instructions": 4345368857,
+        "reply_bytes": 1284055,
+        "request_bytes": 1722063,
+        "stable_pages": 71754,
+        "stable_read_bytes": 10304
+      },
+      "wall_seconds": 0.880162208
+    },
+    {
+      "index": 18000004,
+      "op": "mlp_complete_attention_kv_q4",
+      "tensor": "model.language_model.layers.2.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62900,
+        "instructions": 3952326585,
+        "reply_bytes": 1539853,
+        "request_bytes": 1021831,
+        "stable_pages": 71754,
+        "stable_read_bytes": 6144
+      },
+      "wall_seconds": 0.7317795
+    },
+    {
+      "index": 18000005,
+      "op": "attention_finish_mlp_front_q4_compact",
+      "tensor": "model.language_model.layers.3.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62987,
+        "instructions": 3621357182,
+        "reply_bytes": 1199382,
+        "request_bytes": 1326786,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5632
+      },
+      "wall_seconds": 0.807863333
+    },
+    {
+      "index": 18000006,
+      "op": "mlp_complete_delta_partial",
+      "tensor": "model.language_model.layers.3.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 63004,
+        "instructions": 4344021200,
+        "reply_bytes": 1559306,
+        "request_bytes": 1940728,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5184
+      },
+      "wall_seconds": 0.84898125
+    },
+    {
+      "index": 18000007,
+      "op": "delta_partial_mlp_full",
+      "tensor": "model.language_model.layers.3.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62950,
+        "instructions": 4389610941,
+        "reply_bytes": 829062,
+        "request_bytes": 1579979,
+        "stable_pages": 71754,
+        "stable_read_bytes": 10240
+      },
+      "wall_seconds": 0.718107292
+    },
+    {
+      "index": 18000008,
+      "op": "delta_mlp_stream_prepare",
+      "tensor": "model.language_model.layers.5.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62988,
+        "instructions": 4309962007,
+        "reply_bytes": 1082436,
+        "request_bytes": 1858096,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5184
+      },
+      "wall_seconds": 0.69155875
+    },
+    {
+      "index": 18000009,
+      "op": "mlp_complete_delta_partial",
+      "tensor": "model.language_model.layers.5.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62939,
+        "instructions": 4327429784,
+        "reply_bytes": 1550090,
+        "request_bytes": 1682180,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5184
+      },
+      "wall_seconds": 0.861531084
+    },
+    {
+      "index": 18000010,
+      "op": "delta_partial_mlp_prepare_down",
+      "tensor": "model.language_model.layers.5.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62981,
+        "instructions": 4425297270,
+        "reply_bytes": 1197972,
+        "request_bytes": 1775982,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5120
+      },
+      "wall_seconds": 0.756517542
+    },
+    {
+      "index": 18000011,
+      "op": "mlp_finish_attention_full_compact",
+      "tensor": "model.language_model.layers.6.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62997,
+        "instructions": 3099812742,
+        "reply_bytes": 1147533,
+        "request_bytes": 1376063,
+        "stable_pages": 71754,
+        "stable_read_bytes": 6144
+      },
+      "wall_seconds": 0.611684875
+    },
+    {
+      "index": 18000012,
+      "op": "mlp_full_integer",
+      "tensor": "model.language_model.layers.7.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62885,
+        "instructions": 3679999405,
+        "reply_bytes": 820029,
+        "request_bytes": 819950,
+        "stable_pages": 71754,
+        "stable_read_bytes": 10240
+      },
+      "wall_seconds": 0.887204709
+    },
+    {
+      "index": 18000013,
+      "op": "delta_mlp_stream_prepare",
+      "tensor": "model.language_model.layers.8.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62988,
+        "instructions": 4310581839,
+        "reply_bytes": 1082436,
+        "request_bytes": 1858096,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5184
+      },
+      "wall_seconds": 0.84557775
+    },
+    {
+      "index": 18000014,
+      "op": "mlp_complete_delta_partial",
+      "tensor": "model.language_model.layers.8.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62939,
+        "instructions": 4327866444,
+        "reply_bytes": 1550090,
+        "request_bytes": 1682180,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5184
+      },
+      "wall_seconds": 0.787758125
+    },
+    {
+      "index": 18000015,
+      "op": "delta_partial_mlp_prepare_down",
+      "tensor": "model.language_model.layers.8.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62981,
+        "instructions": 4424694482,
+        "reply_bytes": 1197972,
+        "request_bytes": 1774541,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5120
+      },
+      "wall_seconds": 0.883737666
+    },
+    {
+      "index": 18000016,
+      "op": "mlp_finish_delta_log_mlp_front",
+      "tensor": "model.language_model.layers.9.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 63185,
+        "instructions": 4348347209,
+        "reply_bytes": 1284056,
+        "request_bytes": 1749834,
+        "stable_pages": 71754,
+        "stable_read_bytes": 10304
+      },
+      "wall_seconds": 0.964784292
+    },
+    {
+      "index": 18000017,
+      "op": "mlp_complete_attention_kv_q4",
+      "tensor": "model.language_model.layers.10.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62900,
+        "instructions": 3952291698,
+        "reply_bytes": 1539855,
+        "request_bytes": 1021833,
+        "stable_pages": 71754,
+        "stable_read_bytes": 6144
+      },
+      "wall_seconds": 0.811360833
+    },
+    {
+      "index": 18000018,
+      "op": "attention_finish_mlp_front_q4_compact",
+      "tensor": "model.language_model.layers.11.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62987,
+        "instructions": 3619884051,
+        "reply_bytes": 1199384,
+        "request_bytes": 1326788,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5632
+      },
+      "wall_seconds": 0.73601725
+    },
+    {
+      "index": 18000019,
+      "op": "mlp_complete_delta_partial",
+      "tensor": "model.language_model.layers.11.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 63004,
+        "instructions": 4343350579,
+        "reply_bytes": 1559308,
+        "request_bytes": 1940690,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5184
+      },
+      "wall_seconds": 0.803814375
+    },
+    {
+      "index": 18000020,
+      "op": "delta_partial_mlp_full",
+      "tensor": "model.language_model.layers.11.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62950,
+        "instructions": 4368911525,
+        "reply_bytes": 829064,
+        "request_bytes": 1580601,
+        "stable_pages": 71754,
+        "stable_read_bytes": 10240
+      },
+      "wall_seconds": 0.69766375
+    },
+    {
+      "index": 18000021,
+      "op": "delta_mlp_stream_prepare",
+      "tensor": "model.language_model.layers.13.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62988,
+        "instructions": 4307670485,
+        "reply_bytes": 1082438,
+        "request_bytes": 1858098,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5184
+      },
+      "wall_seconds": 0.603556209
+    },
+    {
+      "index": 18000022,
+      "op": "mlp_complete_delta_partial",
+      "tensor": "model.language_model.layers.13.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62939,
+        "instructions": 4326507903,
+        "reply_bytes": 1550092,
+        "request_bytes": 1682182,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5184
+      },
+      "wall_seconds": 0.672156334
+    },
+    {
+      "index": 18000023,
+      "op": "delta_partial_mlp_prepare_down",
+      "tensor": "model.language_model.layers.13.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62981,
+        "instructions": 4404951059,
+        "reply_bytes": 1197974,
+        "request_bytes": 1775145,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5120
+      },
+      "wall_seconds": 0.668689834
+    },
+    {
+      "index": 18000024,
+      "op": "mlp_finish_attention_full_compact",
+      "tensor": "model.language_model.layers.14.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62997,
+        "instructions": 3099768008,
+        "reply_bytes": 1147535,
+        "request_bytes": 1376065,
+        "stable_pages": 71754,
+        "stable_read_bytes": 6144
+      },
+      "wall_seconds": 0.588883
+    },
+    {
+      "index": 18000025,
+      "op": "mlp_full_integer",
+      "tensor": "model.language_model.layers.15.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62885,
+        "instructions": 3679689710,
+        "reply_bytes": 820031,
+        "request_bytes": 819952,
+        "stable_pages": 71754,
+        "stable_read_bytes": 10240
+      },
+      "wall_seconds": 0.688923625
+    },
+    {
+      "index": 18000026,
+      "op": "delta_mlp_stream_prepare",
+      "tensor": "model.language_model.layers.16.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62988,
+        "instructions": 4308330449,
+        "reply_bytes": 1082438,
+        "request_bytes": 1858098,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5184
+      },
+      "wall_seconds": 0.647543209
+    },
+    {
+      "index": 18000027,
+      "op": "mlp_complete_delta_partial",
+      "tensor": "model.language_model.layers.16.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62939,
+        "instructions": 4326690575,
+        "reply_bytes": 1550092,
+        "request_bytes": 1682182,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5184
+      },
+      "wall_seconds": 0.6790575
+    },
+    {
+      "index": 18000028,
+      "op": "delta_partial_mlp_prepare_down",
+      "tensor": "model.language_model.layers.16.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62981,
+        "instructions": 4405581567,
+        "reply_bytes": 1197974,
+        "request_bytes": 1776088,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5120
+      },
+      "wall_seconds": 0.726851917
+    },
+    {
+      "index": 18000029,
+      "op": "mlp_finish_delta_log_mlp_front",
+      "tensor": "model.language_model.layers.17.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 63185,
+        "instructions": 4346569504,
+        "reply_bytes": 1284057,
+        "request_bytes": 1727126,
+        "stable_pages": 71754,
+        "stable_read_bytes": 10304
+      },
+      "wall_seconds": 0.798212083
+    },
+    {
+      "index": 18000030,
+      "op": "mlp_complete_attention_kv_q4",
+      "tensor": "model.language_model.layers.18.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62900,
+        "instructions": 3953364274,
+        "reply_bytes": 1539855,
+        "request_bytes": 1021833,
+        "stable_pages": 71754,
+        "stable_read_bytes": 6144
+      },
+      "wall_seconds": 0.841084625
+    },
+    {
+      "index": 18000031,
+      "op": "attention_finish_mlp_front_q4_compact",
+      "tensor": "model.language_model.layers.19.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62987,
+        "instructions": 3621129396,
+        "reply_bytes": 1199384,
+        "request_bytes": 1326788,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5632
+      },
+      "wall_seconds": 0.768766875
+    },
+    {
+      "index": 18000032,
+      "op": "mlp_complete_delta_partial",
+      "tensor": "model.language_model.layers.19.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 63004,
+        "instructions": 4344132436,
+        "reply_bytes": 1559308,
+        "request_bytes": 1940702,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5184
+      },
+      "wall_seconds": 0.890866458
+    },
+    {
+      "index": 18000033,
+      "op": "delta_partial_mlp_full",
+      "tensor": "model.language_model.layers.19.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62950,
+        "instructions": 4389980244,
+        "reply_bytes": 829064,
+        "request_bytes": 1579418,
+        "stable_pages": 71754,
+        "stable_read_bytes": 10240
+      },
+      "wall_seconds": 0.848949125
+    },
+    {
+      "index": 18000034,
+      "op": "delta_mlp_stream_prepare",
+      "tensor": "model.language_model.layers.21.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62988,
+        "instructions": 4309296930,
+        "reply_bytes": 1082438,
+        "request_bytes": 1858098,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5184
+      },
+      "wall_seconds": 0.917099042
+    },
+    {
+      "index": 18000035,
+      "op": "mlp_complete_delta_partial",
+      "tensor": "model.language_model.layers.21.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62939,
+        "instructions": 4327516149,
+        "reply_bytes": 1550092,
+        "request_bytes": 1682182,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5184
+      },
+      "wall_seconds": 0.923384292
+    },
+    {
+      "index": 18000036,
+      "op": "delta_partial_mlp_prepare_down",
+      "tensor": "model.language_model.layers.21.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62981,
+        "instructions": 4406277597,
+        "reply_bytes": 1197974,
+        "request_bytes": 1775253,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5120
+      },
+      "wall_seconds": 0.835515917
+    },
+    {
+      "index": 18000037,
+      "op": "mlp_finish_attention_mlp_front",
+      "tensor": "model.language_model.layers.22.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62997,
+        "instructions": 4211871778,
+        "reply_bytes": 1708182,
+        "request_bytes": 1376067,
+        "stable_pages": 71754,
+        "stable_read_bytes": 11264
+      },
+      "wall_seconds": 0.723798084
+    },
+    {
+      "index": 18000038,
+      "op": "mlp_complete_delta_partial",
+      "tensor": "model.language_model.layers.23.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62908,
+        "instructions": 4360467342,
+        "reply_bytes": 1547020,
+        "request_bytes": 1554886,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5184
+      },
+      "wall_seconds": 0.787956708
+    },
+    {
+      "index": 18000039,
+      "op": "delta_partial_mlp_prepare_down",
+      "tensor": "model.language_model.layers.23.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 63077,
+        "instructions": 4409309684,
+        "reply_bytes": 1201045,
+        "request_bytes": 1754053,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5120
+      },
+      "wall_seconds": 0.882952834
+    },
+    {
+      "index": 18000040,
+      "op": "mlp_finish_delta_log_mlp_front",
+      "tensor": "model.language_model.layers.24.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 63185,
+        "instructions": 4337723966,
+        "reply_bytes": 1221656,
+        "request_bytes": 1750348,
+        "stable_pages": 71754,
+        "stable_read_bytes": 10304
+      },
+      "wall_seconds": 0.794094625
+    },
+    {
+      "index": 18000041,
+      "op": "mlp_complete_delta_partial",
+      "tensor": "model.language_model.layers.25.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62908,
+        "instructions": 4350684306,
+        "reply_bytes": 1534732,
+        "request_bytes": 1087302,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5184
+      },
+      "wall_seconds": 0.832308458
+    },
+    {
+      "index": 18000042,
+      "op": "delta_partial_mlp_front",
+      "tensor": "model.language_model.layers.25.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 63063,
+        "instructions": 4263613385,
+        "reply_bytes": 1275091,
+        "request_bytes": 1831538,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5120
+      },
+      "wall_seconds": 0.725736792
+    },
+    {
+      "index": 18000043,
+      "op": "mlp_stream_complete_attention_full",
+      "tensor": "model.language_model.layers.26.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62994,
+        "instructions": 4245208102,
+        "reply_bytes": 1147536,
+        "request_bytes": 1437834,
+        "stable_pages": 71754,
+        "stable_read_bytes": 6144
+      },
+      "wall_seconds": 0.883767708
+    },
+    {
+      "index": 18000044,
+      "op": "mlp_full_delta_partial",
+      "tensor": "model.language_model.layers.27.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62986,
+        "instructions": 4385613543,
+        "reply_bytes": 1528580,
+        "request_bytes": 1014457,
+        "stable_pages": 71754,
+        "stable_read_bytes": 10304
+      },
+      "wall_seconds": 0.854834875
+    },
+    {
+      "index": 18000045,
+      "op": "delta_partial_mlp_front",
+      "tensor": "model.language_model.layers.27.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62965,
+        "instructions": 4347474257,
+        "reply_bytes": 1198031,
+        "request_bytes": 1919257,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5120
+      },
+      "wall_seconds": 0.821411209
+    },
+    {
+      "index": 18000046,
+      "op": "mlp_complete_delta_partial",
+      "tensor": "model.language_model.layers.28.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 63001,
+        "instructions": 4272103185,
+        "reply_bytes": 1556236,
+        "request_bytes": 1834531,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5184
+      },
+      "wall_seconds": 0.766707791
+    },
+    {
+      "index": 18000047,
+      "op": "delta_partial_mlp_prepare_down",
+      "tensor": "model.language_model.layers.28.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 62945,
+        "instructions": 3975512840,
+        "reply_bytes": 1191830,
+        "request_bytes": 1644813,
+        "stable_pages": 71754,
+        "stable_read_bytes": 5120
+      },
+      "wall_seconds": 0.570841792
+    },
+    {
+      "index": 18000048,
+      "op": "mlp_finish_delta_log_mlp_front",
+      "tensor": "model.language_model.layers.29.post_attention_layernorm.weight",
+      "ok": {
+        "heap_pages": 63185,
+        "instructions": 4094506199,
+        "reply_bytes": 1180056,
+        "request_bytes": 1763080,
+        "stable_pages": 71754,
+        "stable_read_bytes": 10304
+      },
+      "wall_seconds": 0.805131792
+    },
+    {
+      "index": 18000049,
+      "op": "mlp_stream_complete_terminal",
+      "tensor": "model.language_model.layers.30.post_attention_layernorm.weight",
+      "ok": {
+        "decision": {
+          "abstained": false,
+          "calibration_version": "p3-r2-s000291-authored",
+          "instructions": 378841,
+          "probabilities": [
+            0.1859634816646576,
+            0.7976074814796448
+          ],
+          "raw_logits": [
+            6.246119976043701,
+            8.146514892578125,
+            3.0791542530059814
+          ],
+          "unknown_probability": 0.016429007053375244,
+          "value": "reject"
+        },
+        "heap_pages": 62912,
+        "instructions": 3968925359,
+        "reply_bytes": 338695,
+        "request_bytes": 917846,
+        "stable_pages": 71754,
+        "stable_read_bytes": 16384
+      },
+      "wall_seconds": 0.831466625,
+      "decision_options": [
+        "approve",
+        "reject"
+      ]
+    }
+  ],
+  "replayed_queries": 0,
+  "roll_effective": true,
+  "join_effective": true,
+  "tail_effective": true,
+  "decision_query": {
+    "ok": {
+      "decision": {
+        "abstained": false,
+        "calibration_version": "p3-r2-s000291-authored",
+        "instructions": 378841,
+        "probabilities": [
+          0.1859634816646576,
+          0.7976074814796448
+        ],
+        "raw_logits": [
+          6.246119976043701,
+          8.146514892578125,
+          3.0791542530059814
+        ],
+        "unknown_probability": 0.016429007053375244,
+        "value": "reject"
+      },
+      "request_bytes": 0,
+      "reply_bytes": 0
+    },
+    "included_in_terminal_query": true
+  },
+  "comparison": {
+    "value": "reject",
+    "typed_output_valid": true,
+    "gold": null
+  },
+  "wall_seconds_this_run": 43.995430333015975,
+  "query_count": 50,
+  "total_instructions": 209041249426,
+  "total_candid_bytes": 140942830,
+  "max_query_instructions": 4425297270,
+  "max_observed_heap_bytes": 4140892160,
+  "executed_query_count": 50,
+  "executed_instructions": 209041249426,
+  "executed_candid_bytes": 140942830,
+  "implementation_hashes": {
+    "client/full_inference.py": "a7d3a6a33e788a343b51e3b69e19f3a679cecb560265780f39aac8835a89c150",
+    "client/transport.py": "d95b5769ade035d01c62a86140d12232371a2986009573875b1c065b70348f72",
+    "crates/imajev-runtime/src/lib.rs": "4359e47420683e4eabd3d76d7b466acf522e921bc1f53ab3c13c9671ceb11f79",
+    "crates/imajev-runtime/src/delta_stage.rs": "933be159e28904f748b784d261d3318b1bfee1e21aed667a586a0b8609e7b350",
+    "crates/imajev-runtime/src/delta_simd.rs": "69064c4eb38b0e2ee9c5cc88ad8d06837f344a2cbde9dcf31ec8aff776d64959",
+    "crates/imajev-runtime/src/int8_kernel.rs": "4364f3b3a22700f810bbe6de7ec15411bf71fc904c74721877515a4a6068572d",
+    "crates/imajev-runtime/src/terminal.rs": "3203c265b3075b53225592b39f71b7feaf414c8e69a89a84723dae0508e9d41d",
+    "canisters/inference/src/lib.rs": "ce8937792bcbd52934cdd172d0f7f2149109243ba661e6eea1d7fd1a54a7f0d9",
+    "crates/imajev-runtime/src/attention_full.rs": "239495cee415e3607a158ccc4ef763cbcf2be501f5523fae86cf2b7e253762dc",
+    "crates/imajev-runtime/src/attention_fusion.rs": "c81c71ae88fdac1ef65a54a5f12ffcb38555d20d3f275f25d164a5a738e3fa64",
+    "crates/imajev-runtime/src/attention_mlp_stream.rs": "19e77f3339956449d950132b6af9fb40c2b273fc1728ecf2ee949e7af7a00fea",
+    "crates/imajev-runtime/src/attention_views.rs": "db5f4d51cd87c35faa2b1968c7b8d727f987b6f4593fd1d025aa8d5aee6db98e",
+    "crates/imajev-runtime/src/bf16_codec.rs": "91c66f5a2591c0fa33a9514ec5be48d14b7b908d377655fa05029db46981bbfb",
+    "crates/imajev-runtime/src/block_codec.rs": "f5906df9b1726f814ace7328c65c501ce7e1dc304d02eaa651bb56d04c119251",
+    "crates/imajev-runtime/src/carry_planes.rs": "65ac892444845a2912550a3ca5d2467ef75b8314683d270b3dc64ec35d93d8e3",
+    "crates/imajev-runtime/src/delta_finish.rs": "9f9756793d71853d027f1525ce49792f2baf003467aa7b56793b7e0fab441273",
+    "crates/imajev-runtime/src/delta_full_log.rs": "639885bc60085c143e5a38b619b112d1456880168339f07243b8cb86557b31fc",
+    "crates/imajev-runtime/src/delta_head_continue.rs": "483c071f2898f8d1727b619629a33015acef532d9d5b609ddd2173b5ee6b192a",
+    "crates/imajev-runtime/src/delta_hybrid.rs": "411f35f5b1c13da791b3be6ee36c3339c6e0a3abec44164fd689f4b53ddbb375",
+    "crates/imajev-runtime/src/delta_log.rs": "0226c1a0d3fffceffdfd52fd411d58f051a5d5d7f73ba4e85a81eba080b03309",
+    "crates/imajev-runtime/src/delta_mlp_start.rs": "8bbafb377fc7318b801c9dcbcc6218f39fc886308f8fa5b6ac2a790637bed961",
+    "crates/imajev-runtime/src/delta_projected.rs": "503153b83d048233c180dda267ae801ed57220b207b9eba10ab1e1dca54901c2",
+    "crates/imajev-runtime/src/delta_recorded_simd.rs": "aa2c042a086af784aa3913c7213f33d624d6c69b6f4d50775bf245b7b8044cc7",
+    "crates/imajev-runtime/src/delta_restore.rs": "4fbaac7803b302997a634c24b0a24d5f91350e8be03399314e804e19b47dd509",
+    "crates/imajev-runtime/src/delta_state_layout_tests.rs": "6243256e27618cb0876e44449f31a09625dfacb4f3b5afc896b59fcaf4c76e78",
+    "crates/imajev-runtime/src/f32_k_continue.rs": "b8af9a99d0cbe7524102b34096094b49de7d29f804dd56b25f3327d42ad181b0",
+    "crates/imajev-runtime/src/f32_output.rs": "d5fdfef3f22badb775a194690e243859facbb800aa859ff0179721f211313667",
+    "crates/imajev-runtime/src/int8_column32.rs": "4f6d7fa6533c81437777c464b0bc00aa967afb6dbff4f88c0a490511d1eb1db2",
+    "crates/imajev-runtime/src/int8_dot_scale.rs": "66dfc1da2215a0972a596e17feca1ab9d29578c30c462a2b87e110a5b03078af",
+    "crates/imajev-runtime/src/int8_k_continue.rs": "108a26a5f876a9a51e22548cdb0abd58135d53ef5f617f0dc9c8531a8b15fc36",
+    "crates/imajev-runtime/src/int8_token_kernel.rs": "479ffa4b006fbaa7e98e8554ee99d375d46cb1753b3fa632824a52e5c2de544f",
+    "crates/imajev-runtime/src/lora_input_sharing.rs": "b8774010979a55a5264a62da27b458447be61a685d44f776e929ff010f912ed2",
+    "crates/imajev-runtime/src/matrix_tail.rs": "0b33197ae82f4a2d695874fb94449f133867b7ffd120281cf2d4ea3a26bdc125",
+    "crates/imajev-runtime/src/mlp_attention_finish.rs": "3b491434e7854f9bb729c4def6df68c8609fb6da2db95ad95b392a041c24399a",
+    "crates/imajev-runtime/src/mlp_delta_fusion.rs": "b577676f31f33420cf4e5b864ac7a89225e14b0d778cb7b38e036b57232602c1",
+    "crates/imajev-runtime/src/mlp_delta_stream.rs": "374891e2beba7d071c60d236afaee46fea0899d08fa257c8557ba187544f21aa",
+    "crates/imajev-runtime/src/mlp_norm.rs": "a8a4d83fd869835f6c4087da5d2e8dcb1fae737e93b78fe09027452c95357298",
+    "crates/imajev-runtime/src/mlp_pipeline.rs": "858b7a3f0b015c23612d4727321e8bdf8f93d671ce1acdc44ee896f4d6d75f68",
+    "crates/imajev-runtime/src/mlp_reuse.rs": "901ab5f5285af3b7bc0933e6a50d1b32be1198e841f15d159f4dad5c21040238",
+    "crates/imajev-runtime/src/mlp_stream.rs": "f91d35724b6cb27f5d0a64c5029d2c74ffa6c4f861052ad1221cd09ae41a7954",
+    "crates/imajev-runtime/src/output_pairs.rs": "962d99fc0a0dae57651f1a090146c0cf0032c300cf7145559db96fbafd1a17ad",
+    "crates/imajev-runtime/src/output_pairs_shared.rs": "33d7662c998bac98e1847d2ca26f567795ef503f899368f1bf370d34980f34c9",
+    "crates/imajev-runtime/src/output_pairs_simd.rs": "ecb524595b066833491f8396babf3b748d00a4e88d0c6a6de9fc6d8aa4c1b146",
+    "crates/imajev-runtime/src/output_pairs_wat.rs": "3d47b20960d8a89b07967ffd6c615e34380bbab0e57807a8674c60a203384abc",
+    "crates/imajev-runtime/src/prefix_hybrid_codec.rs": "ba03ac7eb175f794d8eed5dbc081aa721edde19d8ff86974bd699049bd3dbca5",
+    "crates/imajev-runtime/src/prefix_start.rs": "9324d6790ade7c30b26c19d4ba237465922408bf124ca47ce2506a2b3f8adf3e",
+    "crates/imajev-runtime/src/prepared_activation.rs": "3fb82e35b715001d98a3cfaa4ae8f21da108c778a0bd95b78a8e76fb1e422695",
+    "crates/imajev-runtime/src/prepared_weights.rs": "062d7116ea1129ed11e68dfc715741eb90e1d91796925856cefc34df69b5a5a7",
+    "crates/imajev-runtime/src/profile.rs": "a58407caa5079a24995b7d76ad03967e58ff9eb7b1bd13383a1f2300ee7eb616",
+    "crates/imajev-runtime/src/projection_codec.rs": "b9f781f8bc2016da430bcfd30271492a5508a44b0eb2f55e73f5b6cae9dccd9c",
+    "crates/imajev-runtime/src/projection_reuse.rs": "58d935ad5d8b1a5e729b6715b6be85ff72d8b9096c80655e2322f67e40789502",
+    "crates/imajev-runtime/src/quantize_simd.rs": "b68f50aa39defc269e984b7db38b9d895d552513bf09d60934a723aafc4d316e",
+    "crates/imajev-runtime/src/query_reply.rs": "95dde60d84e65f0a7035abb499c968589c6674bfc8b16ef9317c4638f60297d3",
+    "crates/imajev-runtime/src/rope.rs": "d322c60db495fb3b3cc5d9ef762d6bef08a2228ec391f3de0bfa0947e7bd84c3",
+    "crates/imajev-runtime/src/strassen_prepacked.rs": "74b84aa6014ed1c86f3d1d19a02b95d931ba9458770b1c944a5b73911c83a813",
+    "crates/imajev-runtime/src/strassen_raw.rs": "ce65e4abed4985b378808a4d84c653f5bc42675159a41b36a6dd96929df8f7d3",
+    "crates/imajev-runtime/src/terminal_attention.rs": "8259b3691f01a7ce781d0da403f412e99de15590a43be565f60fe79e5b99cab4",
+    "crates/imajev-runtime/src/terminal_tail.rs": "12e00a0720fc6287f04b8771fe20819f8d4572b93cd679b47ad49cad9aeed380",
+    "crates/inference-core/src/linear.rs": "a2ab06db6f5cacb3fe162029e1c48490a10f0d3478a0d3c21536e69e6520357d",
+    "crates/inference-core/src/lib.rs": "0fa9f226faf50687cd6eb787454ebcb576b8bcde807d39b62c255c4122fb63f3",
+    "crates/inference-core/src/bf16.rs": "5d54fdc756b99d39bd66c99f442334849b43b253a11dce32c2e18e270abe16dc",
+    "crates/inference-core/src/block256.rs": "e9f75d7aafc08e2e1811fa984ff828efa379ff1d52c3c031ea65d71008a6d2cb",
+    "crates/inference-core/Cargo.toml": "a6d19429b9a3369e2f7d25d3311a6074d4e0a40db12c4c02fbfdab1afe955784",
+    "client/prefix_inference.py": "5f99874bdc1ca1eff4939b48309f9570fc09c1f42a92284785589a9438c161c1",
+    "scripts/run_prefix_canister.py": "685fa7ebcce10a4a32edb339b11713db9d893c918587340d6c95b61957e979ae"
+  },
+  "processed_tokens": 80,
+  "prefix_preparation_included": false,
+  "prefix_cache_load_seconds": 0.06224579201079905,
+  "deployed_wasm_sha256": "6ce099e1f128b835b153bb28cde9f27dee719711be3822a38976cb4688613de4",
+  "end_to_end_seconds_excluding_process_startup": 44.21922008396359
+}

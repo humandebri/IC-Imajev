@@ -1,0 +1,11 @@
+{
+  "canister": "xis3j-paaaa-aaaai-axumq-cai",
+  "host": "https://icp-api.io",
+  "module_hash": "8fd78b39b4ab626b4623826c162275737d875b7df25341d1aa2852d6e50a546c",
+  "model": "7ef38ecb70f4afa4e92bad2fe9f0448699ee45041688b1110819143f41601330",
+  "pack_hash": "364e3aa3f69a61a69e6df62e3e2a71d4f55457f1a8e1c16934aefc6130f04c84",
+  "manifest_sha256": "300ba46a7ebee3aab16957dda8bd8c1ac4d32eef75e788072d2dc53cf4a69cf5",
+  "prefix_tokens": 5,
+  "max_tokens": 96,
+  "prompt_layout": "text-only-state-prefix5-v1"
+}

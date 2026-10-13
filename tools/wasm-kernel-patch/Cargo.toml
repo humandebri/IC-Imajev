@@ -1,0 +1,12 @@
+[package]
+name = "imajev-wasm-kernel-patch"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+[dependencies]
+wasmparser = "=0.224.1"
+wat = "=1.227.1"
+sha2.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+flate2 = "=1.1.9"

@@ -1,0 +1,16 @@
+{
+  "verified": true,
+  "rerouted_proposals": 161,
+  "modeled_proposals": 50,
+  "new_distinct_inferences": 18,
+  "reused_predictions": 0,
+  "full_input_tokens_preserved": true,
+  "inference_queries": 774,
+  "preparation_queries": 990,
+  "query_count_distribution": {
+    "50": 11,
+    "32": 7
+  },
+  "logits_bit_equal_to_previous": 18,
+  "human_vote_accuracy_measured": false
+}

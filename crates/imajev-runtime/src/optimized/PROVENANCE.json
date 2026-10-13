@@ -1,0 +1,117 @@
+{
+  "license": "Apache-2.0; Laya-derived portions retain MIT",
+  "sources": {
+    "int8_kernel.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/int8_kernel.rs",
+      "sha256": "56257ec0ca8d6acf82c2d22d5b30e303290b6a582ebc30ebe565ad6079b652dc"
+    },
+    "strassen_raw.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/strassen_raw.rs",
+      "sha256": "72dff2756e2fdfdefc3a9c90868e94fb6b537c3861c25cbf0b549a78f36a7e55"
+    },
+    "rank49_raw.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/rank49_raw.rs",
+      "sha256": "9ca292259ed2a938988c31a87b3460763ab3e63389b7241aa491626ca1ad4bac"
+    },
+    "rank49_prepare.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/rank49_prepare.rs",
+      "sha256": "c5b975d4675935ac998e05130e5874720b2c1594461352e25bc67f8e439a5713"
+    },
+    "rank49_kernel.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/rank49_kernel.rs",
+      "sha256": "7a36eadbd155e4217f6b4ef5cfedd077da49de5fc50918452e4273dae6b68dad"
+    },
+    "win_kernel.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/win_kernel.rs",
+      "sha256": "f8638f73d23f28d9f8bea01275e9500310e1570eff310e4a747700ac8901eacc"
+    },
+    "f32_output.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/f32_output.rs",
+      "sha256": "e3f80f8bb50ccd1fac4213a189d22efb84857afc1b3e7f739d4d2c83ceb7ab6a"
+    },
+    "output_pairs.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/output_pairs.rs",
+      "sha256": "fc581726fb20f82a2a5ed89b96b9d1089f298dc50e98042dac400b884deadfbe"
+    },
+    "output_pairs_wat.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/output_pairs_wat.rs",
+      "sha256": "85da96d9eb6d81f90a3111ea1556342ea0af31e8ce90d12758ce89e115ded990"
+    },
+    "projection_row_reuse.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/projection_row_reuse.rs",
+      "sha256": "43403eff28e1f2424902e0c8c8d209336adc699dc6ffdd22ebfd796fafccfcd6"
+    },
+    "int8_column32.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/int8_column32.rs",
+      "sha256": "4f6d7fa6533c81437777c464b0bc00aa967afb6dbff4f88c0a490511d1eb1db2"
+    },
+    "int8_dot_scale.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/int8_dot_scale.rs",
+      "sha256": "66dfc1da2215a0972a596e17feca1ab9d29578c30c462a2b87e110a5b03078af"
+    },
+    "int8_k_continue.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/int8_k_continue.rs",
+      "sha256": "c98dd29a6f121ec4bc6e298670ea266e821a3934e317d67799b0820a683863ab"
+    },
+    "f32_k_continue.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/f32_k_continue.rs",
+      "sha256": "5efc6ee4772ed87a058810bcf55d9f065a6778546f90a25c3aa43aae5e2eb5a0"
+    },
+    "delta_simd.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/delta_simd.rs",
+      "sha256": "64347d4d4dee94a22f9b9beebd036da9131653f9d6aff786f6dbd2cf8f582532"
+    },
+    "finite_simd.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/finite_simd.rs",
+      "sha256": "65a428095ca54d48faf7de80977570e278269889d83c75b102a348285c11cc7a"
+    },
+    "positive_finite.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/positive_finite.rs",
+      "sha256": "c00c11da9528ee0ea3d13320570f746e6402eeeab052344f1c10fbfa3caac4f5"
+    },
+    "bf16_predicates.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/bf16_predicates.rs",
+      "sha256": "4f1d0dc487925d58b8f3aac37eaf322297833003d92f26cfaa43b9b9b135b459"
+    },
+    "bf16_codec.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/bf16_codec.rs",
+      "sha256": "1a34e1f3db8c4b933a318d8575906b5d8ac81595ff5a550691b93c84880769e4",
+      "scope": "BF16 predicates"
+    },
+    "rms.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/lib.rs",
+      "sha256": "91fe2f6661643c577bfde5758cacb9b270133c8e53d358e19607295bac93bfab",
+      "scope": "rms_ordered_simd only; preserves sequential sum and multiply order"
+    },
+    "quantize_simd.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/quantize_simd.rs",
+      "sha256": "37f953ada56c5c59a90f2d8449d9153ded882fa04024a66040fe7bdb05b33a3d"
+    },
+    "attention_key_lanes.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/attention_key_lanes.rs",
+      "sha256": "e4b98ec49a30f4d890691bf6b52371f7b9163d5cc697c26b67d5ed10650e554e"
+    },
+    "elementwise.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/lib.rs",
+      "sha256": "91fe2f6661643c577bfde5758cacb9b270133c8e53d358e19607295bac93bfab",
+      "scope": "Exact finish_lora, conv4, add_norm, swiglu and gated_norm helpers only"
+    },
+    "../delta_full_log.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/delta_full_log.rs",
+      "sha256": "092091c9c1aec3564ca2bee59567c187c13351a8f17f56996ac2c90534525e52",
+      "scope": "ReusedRows and project_rows helper only"
+    },
+    "../attention_views.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/attention_views.rs",
+      "sha256": "919f6b5a1b8961ae41605b104a3e6c7a1c64ccc6645fed5ab8f2cc86e5c4ec3b",
+      "scope": "Independent key-score dispatch only"
+    },
+    "../prepared_activation.rs": {
+      "origin": "artifacts/update-rank7-prepare8-unrolled-v1/build/runtime/prepared_activation.rs",
+      "sha256": "2ef35c3448e602f346f3d34fbaaec7ad50920c3018d73bbcec5e760211c243ac",
+      "scope": "with_table borrow helper only"
+    }
+  },
+  "scope": "Numerical kernels only. Current public runtime retains frame, operation, sequence and API validation.",
+  "license_notice": "docs/licenses/Laya-MIT.txt and NOTICE.md"
+}

@@ -1,0 +1,151 @@
+{
+  "date": "2026-10-07",
+  "sources": [
+    {
+      "source": "artifacts/proposal-assessment-fresh-500-660-20261007/RESULT.md",
+      "source_sha256": "f13ebc952deda8ae57feac22c9f0ad2bfe70e2451f5d715c891ed76679211911",
+      "export": "RESULT.md",
+      "export_sha256": "f316ef637196bb91df9c5f3e0afc1546b18354fdd73e5795dd18533f7fd0a5e1",
+      "bytes": 2049,
+      "projection": false
+    },
+    {
+      "source": "artifacts/proposal-assessment-fresh-500-660-20261007/evaluation/REPORT.md",
+      "source_sha256": "188582ab03e2f8d30be108c52e53a2bf94d5fe9b8456ae29ca2239b9e65bd655",
+      "export": "DECISIONS.md",
+      "export_sha256": "188582ab03e2f8d30be108c52e53a2bf94d5fe9b8456ae29ca2239b9e65bd655",
+      "bytes": 14146,
+      "projection": false
+    },
+    {
+      "source": "artifacts/proposal-assessment-fresh-500-660-20261007/evaluation/report.json",
+      "source_sha256": "78d5a726cd3b58689561ab58d372ef637f6c623c26ad3190007ac93f9db35e2c",
+      "export": "decisions.json",
+      "export_sha256": "40d2c4482ac8d53d4b1ee05ecebf615bbde26223a2473d6e558ce33ca244b8cd",
+      "bytes": 50298,
+      "projection": true
+    },
+    {
+      "source": "artifacts/proposal-assessment-fresh-500-660-20261007/evaluation/inputs.json",
+      "source_sha256": "4caa77b150f4b4b08767703d580604999e7346b3296b6c5aa292ee5c8819872f",
+      "export": "inputs.json",
+      "export_sha256": "4caa77b150f4b4b08767703d580604999e7346b3296b6c5aa292ee5c8819872f",
+      "bytes": 35513,
+      "projection": false
+    },
+    {
+      "source": "artifacts/proposal-assessment-fresh-500-660-20261007/verification.json",
+      "source_sha256": "264a563e361f24aeaf33c25e1654379bbd88eb75b3aee0c4f33d0e26b83a1e59",
+      "export": "verification.json",
+      "export_sha256": "264a563e361f24aeaf33c25e1654379bbd88eb75b3aee0c4f33d0e26b83a1e59",
+      "bytes": 378,
+      "projection": false
+    },
+    {
+      "source": "artifacts/proposal-assessment-fresh-500-660-20261007/plan.json",
+      "source_sha256": "4cf8fdd9323f32188ea52ad4021866ffc821870bc34c9046f36924caf27babdc",
+      "export": "plan.json",
+      "export_sha256": "4cf8fdd9323f32188ea52ad4021866ffc821870bc34c9046f36924caf27babdc",
+      "bytes": 7477,
+      "projection": false
+    },
+    {
+      "source": "artifacts/proposal-assessment-fresh-500-660-20261007/execution-policy.json",
+      "source_sha256": "3cb97a463cbde664e9bf4c9f59685a93e397f56624191c36bcfa7442f5ca68fb",
+      "export": "execution-policy.json",
+      "export_sha256": "3cb97a463cbde664e9bf4c9f59685a93e397f56624191c36bcfa7442f5ca68fb",
+      "bytes": 413,
+      "projection": false
+    },
+    {
+      "source": "artifacts/proposal-assessment-fresh-500-660-20261007/fresh-summary.json",
+      "source_sha256": "35483630d57a052c9f4bc3cef61565dfcccb83f30a539b672fd68ecca758f1e2",
+      "export": "fresh-summary.json",
+      "export_sha256": "35483630d57a052c9f4bc3cef61565dfcccb83f30a539b672fd68ecca758f1e2",
+      "bytes": 732,
+      "projection": false
+    },
+    {
+      "source": "artifacts/proposal-assessment-fresh-500-660-20261007/evaluation/runs/000/report.json",
+      "source_sha256": "e056465fdd3122e4524ee46e655eca941d4f14ff94c3cf4c643b0c2a754fa51e",
+      "export": "run-000.json",
+      "export_sha256": "e056465fdd3122e4524ee46e655eca941d4f14ff94c3cf4c643b0c2a754fa51e",
+      "bytes": 41190,
+      "projection": false
+    },
+    {
+      "source": "artifacts/proposal-evidence-review-20261007/REVIEW.md",
+      "source_sha256": "2ee82f9c76be440753cb5c5ce88ebfabde1c75fc3cf2bd9b12324931ee9d43ba",
+      "export": "REVIEW.md",
+      "export_sha256": "2ee82f9c76be440753cb5c5ce88ebfabde1c75fc3cf2bd9b12324931ee9d43ba",
+      "bytes": 10053,
+      "projection": false
+    },
+    {
+      "source": "artifacts/proposal-evidence-review-20261007/review.json",
+      "source_sha256": "bcd72cebae281af4cebbb7e20d3e9fdd63dd8df02dc5c52d62fb74d672f2a66c",
+      "export": "review.json",
+      "export_sha256": "88381438a77bd7c5cdf7e40785fe5a368963c5303b87bd1995d7a23ce2b9e2a7",
+      "bytes": 118018,
+      "projection": false
+    },
+    {
+      "source": "artifacts/proposal-query-optimization-v1/REPORT.md",
+      "source_sha256": "86105527e7aacb6e92d35c841b5fe1f7712d75083b84dd88e3bd2f398246fab2",
+      "export": "OPTIMIZATION.md",
+      "export_sha256": "86105527e7aacb6e92d35c841b5fe1f7712d75083b84dd88e3bd2f398246fab2",
+      "bytes": 3597,
+      "projection": false
+    },
+    {
+      "source": "artifacts/proposal-query-optimization-v1/verification.json",
+      "source_sha256": "995e73f943767e13c367bf9bedfabf3b696242459f2693be89ba326ca3d22ced",
+      "export": "optimization-verification.json",
+      "export_sha256": "995e73f943767e13c367bf9bedfabf3b696242459f2693be89ba326ca3d22ced",
+      "bytes": 16304,
+      "projection": false
+    },
+    {
+      "source": "artifacts/merged-query32-v1/build/report.json",
+      "source_sha256": "2593375c7e99f4aac282f91a36d5c6fbe39561c976578582a9449a21feb290a3",
+      "export": "build.json",
+      "export_sha256": "1509c391f56cdc5807ee4c11eae54dcbca6dccd750a47e3ef11bf4d5696e36d8",
+      "bytes": 23474,
+      "projection": false
+    },
+    {
+      "source": "checkpoints/full-int8.manifest.json",
+      "source_sha256": "f8403edc1de2a9268ee79f8cb6b7b37d9dba0ebb66ee8655dd934ebe4be4f431",
+      "export": "pack-manifest.json",
+      "export_sha256": "f8403edc1de2a9268ee79f8cb6b7b37d9dba0ebb66ee8655dd934ebe4be4f431",
+      "bytes": 164846,
+      "projection": false
+    },
+    {
+      "source": "checkpoints/adapter/RELEASE-SPEC.md",
+      "source_sha256": "cb16ecbfd452c45dacd584f90cf6bc373c7f963f6a8e79d493da86db9ead19ae",
+      "export": "RELEASE-SPEC.md",
+      "export_sha256": "cb16ecbfd452c45dacd584f90cf6bc373c7f963f6a8e79d493da86db9ead19ae",
+      "bytes": 6141,
+      "projection": false
+    },
+    {
+      "source": "checkpoints/adapter/README.md",
+      "source_sha256": "062d3efab530c8c333b20294f90af99e0e38b18684bb2223e3cc3545ef7b18e9",
+      "export": "MODEL_CARD.md",
+      "export_sha256": "062d3efab530c8c333b20294f90af99e0e38b18684bb2223e3cc3545ef7b18e9",
+      "bytes": 23610,
+      "projection": false
+    }
+  ],
+  "model_lock_sha256": "7ef38ecb70f4afa4e92bad2fe9f0448699ee45041688b1110819143f41601330",
+  "exporter_sha256": "aeee575cf16892f9d9521a5367b07b4a44bf1fe6de4f7eed0b56f94ef3bd0b2a",
+  "transformations": [
+    "Repository absolute paths become repository-relative strings.",
+    "RESULT.md links target the exported decision report.",
+    "decisions.json contains summary and all 161 proposals; model_rows are omitted."
+  ],
+  "new_inference_count": 0,
+  "human_gold": false,
+  "scope": "Export of saved evidence; hashes are provenance, not an independent execution attestation."
+}

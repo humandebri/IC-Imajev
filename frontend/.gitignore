@@ -1,0 +1,16 @@
+node_modules/
+dist/
+*.tsbuildinfo
+test-results/
+playwright-report/
+.vlmkit/
+.cloudflare/
+.wrangler/
+/public/tokenizer/
+/public/inference/
+/public/api/
+
+# Saved browser inspection output; not an input fixture.
+/verification/boom-copy.txt
+/verification/copy.txt
+/verification/RESULTS.md

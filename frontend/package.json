@@ -1,0 +1,53 @@
+{
+  "name": "ic-imajev-playground",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build",
+    "deploy": "npm run build && node scripts/prepare-cf-output.mjs && cf deploy --prebuilt",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --experimental-strip-types scripts/check-tokenizer.mjs && node --experimental-strip-types scripts/check-browser-examples.mjs && playwright test",
+    "prepare:tokenizer": "node scripts/prepare-tokenizer.mjs",
+    "prepare:inference": "../.venv/bin/python -B ../scripts/prepare_browser_prefix.py",
+    "predev": "node scripts/check-release-assets.mjs && node --experimental-strip-types scripts/prepare-public-candid.mjs && node --experimental-strip-types scripts/check-query-profiles.mjs && python3 -B ../scripts/prepare_browser_examples.py --check-content && node --experimental-strip-types scripts/check-browser-examples.mjs",
+    "prebuild": "node scripts/check-release-assets.mjs && node --experimental-strip-types scripts/prepare-public-candid.mjs && node --experimental-strip-types scripts/check-query-profiles.mjs && python3 -B ../scripts/prepare_browser_examples.py --check-content && node --experimental-strip-types scripts/check-browser-examples.mjs",
+    "test:tokenizer": "node --experimental-strip-types scripts/check-tokenizer.mjs",
+    "test:query": "node --experimental-strip-types scripts/check-prefix-cache.mjs && node --experimental-strip-types scripts/check-query-runner.mjs && node --experimental-strip-types scripts/check-query-plans.mjs && node --experimental-strip-types scripts/check-query-profiles.mjs && node --experimental-strip-types scripts/check-prefix-prefetch.mjs",
+    "test:ci": "node scripts/check-ci.mjs",
+    "test:calibration": "node --experimental-strip-types scripts/check-query-calibration-policy.mjs && node --experimental-strip-types scripts/prepare-query-profiles.mjs --check && node --experimental-strip-types scripts/check-optimized-query-evidence.mjs && node --experimental-strip-types scripts/check-release-prefix-assets.mjs",
+    "test:live-query": "node scripts/check-live-query.mjs",
+    "pretest": "node scripts/check-release-assets.mjs && node --experimental-strip-types scripts/prepare-public-candid.mjs && node --experimental-strip-types scripts/check-query-profiles.mjs && python3 -B ../scripts/prepare_browser_examples.py --check-content && node --experimental-strip-types scripts/check-browser-examples.mjs",
+    "prepare:candid": "node --experimental-strip-types scripts/prepare-public-candid.mjs",
+    "test:candid": "node --experimental-strip-types scripts/prepare-public-candid.mjs --check",
+    "prepare:examples": "../.venv/bin/python -B ../scripts/prepare_browser_examples.py",
+    "test:examples": "python3 -B ../scripts/test_browser_examples.py && python3 -B ../scripts/prepare_browser_examples.py --check && node --experimental-strip-types scripts/check-browser-examples.mjs",
+    "refresh:boom-ledger": "node scripts/refresh-boom-ledger.mjs && npm run prepare:examples",
+    "test:boom-live": "node scripts/check-boom-examples-live.mjs",
+    "refresh:boom-neurons": "../.venv/bin/python -B ../scripts/refresh_boom_neurons.py && npm run prepare:examples",
+    "test:boom617-live": "node scripts/check-boom617-live.mjs",
+    "check:assets": "node scripts/check-release-assets.mjs"
+  },
+  "dependencies": {
+    "@huggingface/tokenizers": "^0.2.0",
+    "@icp-sdk/core": "6.1.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@cloudflare/build-output-utils": "0.8.2",
+    "@cloudflare/config": "0.20.0",
+    "@mizchi/vlmkit": "^0.23.0",
+    "@playwright/test": "^1.56.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "cf": "1.0.0-beta.12",
+    "typescript": "^5.9.0",
+    "vite": "^7.1.0"
+  },
+  "overrides": {
+    "sharp": "0.35.5"
+  }
+}

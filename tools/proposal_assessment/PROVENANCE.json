@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "implementation": "Imajev snapshot evidence utilities; rewritten from typed field and prompt contracts",
+  "baseline_commit": "ede51e051f689bf08918843cf34a54563b5afbda",
+  "retained_data": {
+    "path": "prompt_contract.json",
+    "sha256": "66b32eb6ffa9c0d66ef5a3ca1d28c885b1c6b8015228112895e1f90d488e4e32",
+    "source": "Historical proposal prompt strings and field metadata from IC-Laya-Standalone",
+    "license": "MIT",
+    "notice": "../../docs/licenses/Laya-MIT.txt"
+  },
+  "historical_sources": "Frozen pre-change sources remain in ignored experiment archives; historical run hashes are not rewritten."
+}

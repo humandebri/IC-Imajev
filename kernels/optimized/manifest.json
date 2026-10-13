@@ -1,0 +1,279 @@
+{
+  "version": 1,
+  "license": "Apache-2.0",
+  "origin": "Verified experiment sources from update-rank7-prepare8-unrolled-v1; kernels maintained as source, not extracted from Wasm.",
+  "kernels": [
+    {
+      "file": "pair_accumulate.wat.gz",
+      "export": "__imajev_pair_accumulate",
+      "donor_export": "__imajev_pair_accumulate",
+      "sha256": "43f9db67af634a56a475f52bae756d12ddb128a5a9bfe9e3038f739153841510",
+      "body_sha256": "2a103abbb5389750b8358a3e0424f5e2fc87b2dc52f6ee0a0e2a821b34c9134d",
+      "origin": "artifacts/single-quad/build-v2/kernel0.wat"
+    },
+    {
+      "file": "s1_raw_accumulate.wat.gz",
+      "export": "__imajev_s1_raw_accumulate",
+      "donor_export": "__imajev_s1_raw_accumulate",
+      "sha256": "5c07e85a19cc3ad47390587dd0ff646772553b0388ed9a6012cda66e44b919f7",
+      "body_sha256": "5615f9c06550d5ee5a2a2586e33498530a42ccc062eaf8ddc3bfd075fecf4e32",
+      "origin": "artifacts/update-k2-pair-guard-fold-v1/int8_32.wat"
+    },
+    {
+      "file": "f32_output64.wat.gz",
+      "export": "__imajev_f32_output64",
+      "donor_export": "__imajev_pair_accumulate",
+      "sha256": "25b6a171b7ca2d863964a244b68e0dad9131eda3a404ba2fb0cf28d42530a579",
+      "body_sha256": "ff4bd48a5957d9dd26d74a58e5fbc0c385cc52493aa9bfaf1e3f72b07b7a4ce6",
+      "origin": "artifacts/single-quad/build-v2/kernel2.wat"
+    },
+    {
+      "file": "s1_wide_accumulate.wat.gz",
+      "export": "__imajev_s1_wide_accumulate",
+      "donor_export": "__imajev_s1_wide_accumulate",
+      "sha256": "bc57d45d85d7565d10ffb4e15d5a1f3742ef85587e93a3d185e1740f5daa471a",
+      "body_sha256": "643bd188b12c36a974d13d338108263fed973fbe16a70beda05f2e94d9c6d9ef",
+      "origin": "artifacts/update-k2-pair-guard-fold-v1/int8_128.wat"
+    },
+    {
+      "file": "delta_register.wat.gz",
+      "export": "__imajev_delta_register",
+      "donor_export": "__imajev_delta_register",
+      "sha256": "b4067863c3dbb815ae2fabd93f86d8ef0b232bf1bfcde69c07962b2a1843e24e",
+      "body_sha256": "26751121e9ede43e0c91bfe95522cccc2ca5f7758f3ac25c3fc52b634034ca44",
+      "origin": "artifacts/update-k2-pair-guard-fold-v1/delta.wat"
+    },
+    {
+      "file": "f32_wide.wat.gz",
+      "export": "__imajev_f32_wide",
+      "donor_export": "__imajev_f32_wide",
+      "sha256": "476f127c29f078cf44c4814efc8386ec177d57e5676f0c1c3ffe22ef5a11fbbe",
+      "body_sha256": "63678e0aae98f635f40c877f9be20ac7e73ec0276862f883b9fdb846d817ea8c",
+      "origin": "artifacts/update-k2-pair-guard-fold-v1/wide64.wat"
+    },
+    {
+      "file": "f32_wide128.wat.gz",
+      "export": "__imajev_f32_wide128",
+      "donor_export": "__imajev_f32_wide128",
+      "sha256": "eee17c760d08d175d406c9686ff98ba09f3e61ae34ae1e64f25f2bcf421c090d",
+      "body_sha256": "e2c9b8765f45ca0355be3bf69746228ad55243bd07b0f07f39679497cb9fe827",
+      "origin": "artifacts/update-k2-pair-guard-fold-v1/build/wide128.wat"
+    },
+    {
+      "file": "s1_160_accumulate.wat.gz",
+      "export": "__imajev_s1_160_accumulate",
+      "donor_export": "__imajev_s1_160_accumulate",
+      "sha256": "d29108a6f25a40105cf817b18550c96d0742b62c740a59e0e662fe96367c49bb",
+      "body_sha256": "59d2ed7871cf6a307783758345de286dfaf128695e64b91036d39499ad9ac0cd",
+      "origin": "artifacts/update-k2-pair-guard-fold-v1/int8_160.wat"
+    },
+    {
+      "file": "f32_wide512.wat.gz",
+      "export": "__imajev_f32_wide512",
+      "donor_export": "__imajev_f32_wide512",
+      "sha256": "26f95102efd7830134595e70ae5cbe3da3048e0947f71ab4ff538ca91e61a2ba",
+      "body_sha256": "b395079f240d0c6003a9f4a2426f2dd3ca61520ebc5f615f80dd75ad20ac339c",
+      "origin": "artifacts/update-k2-pair-guard-fold-v1/wide512.wat"
+    },
+    {
+      "file": "f32_columns512.wat.gz",
+      "export": "__imajev_f32_columns512",
+      "donor_export": "__imajev_f32_columns512",
+      "sha256": "5de1aa7fe27bbe7f0394c5089dda18522bace6f64e4d9bf6729cc2e3be72368d",
+      "body_sha256": "07086e55f61717f79ed0e4aa71348239ccf60319170d8e745aebb8141da4d9a5",
+      "origin": "artifacts/update-k2-pair-guard-fold-v1/columns512.wat"
+    },
+    {
+      "file": "s1_168_accumulate.wat.gz",
+      "export": "__imajev_s1_168_accumulate",
+      "donor_export": "__imajev_s1_168_accumulate",
+      "sha256": "3b27781d49d79dde43b319fc3bfc742a95729d5465b9598a3fe00250e89c6ea5",
+      "body_sha256": "1e958a82a32f8117880fb8d841bd442f834fe81db6d2ac8b86bc89f46da87071",
+      "origin": "artifacts/update-k2-pair-guard-fold-v1/int8_168.wat"
+    },
+    {
+      "file": "s1_wide_seed_accumulate.wat.gz",
+      "export": "__imajev_s1_wide_seed_accumulate",
+      "donor_export": "__imajev_s1_wide_seed_accumulate",
+      "sha256": "923fefe9399c3ab17d742493445c529d88c6682e02244db6b2742bd943fb1d73",
+      "body_sha256": "c155237bfa7bbe0eed3539fd6dee510152f97d9fba550af2884a162044a2c7d4",
+      "origin": "artifacts/update-k2-pair-guard-fold-v1/seed128.wat"
+    },
+    {
+      "file": "s1_160_seed_accumulate.wat.gz",
+      "export": "__imajev_s1_160_seed_accumulate",
+      "donor_export": "__imajev_s1_160_seed_accumulate",
+      "sha256": "4dcab0b5dc550fadaadbc39f5d5be6be5ecddbf79c779865585a1fb686705c04",
+      "body_sha256": "c8a060556ca007877ac78e255154522ddfedab81f6c18dedabf82199e6ec19a2",
+      "origin": "artifacts/update-k2-pair-guard-fold-v1/seed160.wat"
+    },
+    {
+      "file": "s1_raw_seed_accumulate.wat.gz",
+      "export": "__imajev_s1_raw_seed_accumulate",
+      "donor_export": "__imajev_s1_raw_seed_accumulate",
+      "sha256": "8ff12fbe4d515fa564ca8b8edc5b778af167d40efb3fd7a00e8352f9b76251e1",
+      "body_sha256": "9ae98d32dc6cef44bdca34434246e0ed0ec030592a68452922557406e834ca10",
+      "origin": "artifacts/update-k2-pair-guard-fold-v1/seed32.wat"
+    },
+    {
+      "file": "s1_wide_direct_accumulate.wat.gz",
+      "export": "__imajev_s1_wide_direct_accumulate",
+      "donor_export": "__imajev_s1_wide_direct_accumulate",
+      "sha256": "43600358b20d063fe7e477a80874f679e24143a96a2681d40eb6cb3937dbc22e",
+      "body_sha256": "b221377a8d7ea270eb7d4514b1d7331c76e608387af706a446e6b65be5f7e856",
+      "origin": "artifacts/update-k2-pair-guard-fold-v1/direct128.wat"
+    },
+    {
+      "file": "s1_wide_direct_seed_accumulate.wat.gz",
+      "export": "__imajev_s1_wide_direct_seed_accumulate",
+      "donor_export": "__imajev_s1_wide_direct_seed_accumulate",
+      "sha256": "b025294e0de571023b73883dc8cc434ab1ec498ae1487584fc130f78b67dcc09",
+      "body_sha256": "738765b63ce8ec37535848be9d1f7aa15f1ed4775ac03aacc42867d3cfadb6fc",
+      "origin": "artifacts/update-k2-pair-guard-fold-v1/direct128-seed.wat"
+    },
+    {
+      "file": "s1_160_direct_accumulate.wat.gz",
+      "export": "__imajev_s1_160_direct_accumulate",
+      "donor_export": "__imajev_s1_160_direct_accumulate",
+      "sha256": "21a0aee79c95f5b448ff4cf6c0a3404f7cd260db6ebaa0ab213a51c177fd97a1",
+      "body_sha256": "82f82881eb9ef332b662800bf03582f54c971347f7265d9d5316347fa154112a",
+      "origin": "artifacts/update-k2-pair-guard-fold-v1/direct160.wat"
+    },
+    {
+      "file": "s1_160_direct_seed_accumulate.wat.gz",
+      "export": "__imajev_s1_160_direct_seed_accumulate",
+      "donor_export": "__imajev_s1_160_direct_seed_accumulate",
+      "sha256": "607dc9a5824c43dfd120644ee39f5e640f76144894a34ad91d369e8df88771b7",
+      "body_sha256": "1134ebd6eaf721aae1f434ac8154716b899093c36b13f6fcc1f0866aa18f42a3",
+      "origin": "artifacts/update-k2-pair-guard-fold-v1/direct160-seed.wat"
+    },
+    {
+      "file": "s1_raw_direct_accumulate.wat.gz",
+      "export": "__imajev_s1_raw_direct_accumulate",
+      "donor_export": "__imajev_s1_raw_direct_accumulate",
+      "sha256": "660dd6218c705c8c8c5c8adc46d1fa188e5860878de70e286d6599f2098a1bcc",
+      "body_sha256": "bba0819c59bc82ea939c2d9ed79ebca37fbae0a09a82772a4b58d51dad887d24",
+      "origin": "artifacts/update-k2-pair-guard-fold-v1/direct32.wat"
+    },
+    {
+      "file": "s1_raw_direct_seed_accumulate.wat.gz",
+      "export": "__imajev_s1_raw_direct_seed_accumulate",
+      "donor_export": "__imajev_s1_raw_direct_seed_accumulate",
+      "sha256": "cdbb5f586449e9cfad9463bc49fa3a8e637f8d858a85ea1b369b1381ad25e724",
+      "body_sha256": "dfbc515dc0389c822b24c10fc819ead67611b74502ce431e200ee58067425c80",
+      "origin": "artifacts/update-k2-pair-guard-fold-v1/direct32-seed.wat"
+    },
+    {
+      "file": "s1_168_direct_accumulate.wat.gz",
+      "export": "__imajev_s1_168_direct_accumulate",
+      "donor_export": "__imajev_s1_168_direct_accumulate",
+      "sha256": "739cdfc1ea4d081990350c712c2c0ce7f1f3ca22c04432a52eda3bd614342ebf",
+      "body_sha256": "34e892c326e52f07a65846f9571008b1ac4ca8df7b33aeb479a363934fd819a3",
+      "origin": "artifacts/update-k2-pair-guard-fold-v1/direct168.wat"
+    },
+    {
+      "file": "s1_168_direct_seed_accumulate.wat.gz",
+      "export": "__imajev_s1_168_direct_seed_accumulate",
+      "donor_export": "__imajev_s1_168_direct_seed_accumulate",
+      "sha256": "329d8d23d9a08bc510938bffe72a45263b1e2bf369dacafe2b92a0b530ea6a42",
+      "body_sha256": "f12addad987ee2555159b817289561fe1b5e8734958ea78dac61da2e4c6c57b0",
+      "origin": "artifacts/update-k2-pair-guard-fold-v1/direct168-seed.wat"
+    },
+    {
+      "file": "win7_wide_accumulate.wat.gz",
+      "export": "__imajev_win7_wide_accumulate",
+      "donor_export": "__imajev_win7_wide_accumulate",
+      "sha256": "ec6a4928021b930b3a839c9dc46bbcf047ec0805991ba81db09f244e8a3be062",
+      "body_sha256": "6f2a01431ebe3a7ca9682a8bce005f7e2e21c17981acbb3822b0b25dd6b5fd5f",
+      "origin": "artifacts/k2-contiguous-roots-kernels-v1/k2-direct128.wat"
+    },
+    {
+      "file": "win7_wide_accumulate_seed.wat.gz",
+      "export": "__imajev_win7_wide_accumulate_seed",
+      "donor_export": "__imajev_win7_wide_accumulate_seed",
+      "sha256": "e583981e0bf78259e2cddcf1dc7e5e24f6f5ae389818a47199d1d5ce85fe44c8",
+      "body_sha256": "b5c398a1478b218c6aa93f8a7c6f09ff38fea6ed79d4f2b83f0312f02c736c5e",
+      "origin": "artifacts/k2-contiguous-roots-kernels-v1/k2-direct128_seed.wat"
+    },
+    {
+      "file": "win7_168_accumulate.wat.gz",
+      "export": "__imajev_win7_168_accumulate",
+      "donor_export": "__imajev_win7_168_accumulate",
+      "sha256": "4524a8e0f72786fb65844a99808606284e4c2fbc8096deceedbab2daa448ce80",
+      "body_sha256": "778f3ca42d412dda80cbc6e153658000883c51004d4376e16880f4cdc31060e0",
+      "origin": "artifacts/k2-contiguous-roots-kernels-v1/k2-direct168.wat"
+    },
+    {
+      "file": "win7_168_accumulate_seed.wat.gz",
+      "export": "__imajev_win7_168_accumulate_seed",
+      "donor_export": "__imajev_win7_168_accumulate_seed",
+      "sha256": "d410359977befc5d294be1e57ed75ead1151e7454f76d60f63cc75ec4b5a8fb1",
+      "body_sha256": "a4e1a206b05c89c52de0ad1b352e6b254d439adc1ac15879a939eae8f8c34d97",
+      "origin": "artifacts/k2-contiguous-roots-kernels-v1/k2-direct168_seed.wat"
+    },
+    {
+      "file": "win7_160_accumulate.wat.gz",
+      "export": "__imajev_win7_160_accumulate",
+      "donor_export": "__imajev_win7_160_accumulate",
+      "sha256": "d3993abaa307043c4f44ceee8e2033ee95125f03ef964c2cdf3e2742156c1efd",
+      "body_sha256": "c9a8a75884d03139ddac8d8b4ae1e8fb74462fbbc9ba677907874fdb48ada695",
+      "origin": "artifacts/k2-contiguous-roots-kernels-v1/k2-direct160.wat"
+    },
+    {
+      "file": "win7_160_accumulate_seed.wat.gz",
+      "export": "__imajev_win7_160_accumulate_seed",
+      "donor_export": "__imajev_win7_160_accumulate_seed",
+      "sha256": "765fb8849c9664c70a5545a144be2ab25e1f6ec3ca65669f2c9a41d360b9c047",
+      "body_sha256": "8790cb07bc2d0c46f0604d40b377ae07f7e2d5a79769a0767ee9cbcf41d93564",
+      "origin": "artifacts/k2-contiguous-roots-kernels-v1/k2-direct160_seed.wat"
+    },
+    {
+      "file": "win7_32_accumulate.wat.gz",
+      "export": "__imajev_win7_32_accumulate",
+      "donor_export": "__imajev_win7_32_accumulate",
+      "sha256": "a10ac62d84305a35b98331962752b2d0f759e7db453d368b609f9c3902d05de7",
+      "body_sha256": "2388fbfa1ab8b2498399c443a1e9ac896a083eded83913c94d6d779a621d3509",
+      "origin": "artifacts/k2-contiguous-roots-kernels-v1/k2-direct32.wat"
+    },
+    {
+      "file": "win7_32_accumulate_seed.wat.gz",
+      "export": "__imajev_win7_32_accumulate_seed",
+      "donor_export": "__imajev_win7_32_accumulate_seed",
+      "sha256": "ff5fe4883869249e2ee3f495411fc6c4a2b9a3ff12b7cdaa78cdd7aaa79788eb",
+      "body_sha256": "b8c5df527493a533bf0948e702843abee02b53b4bd156e019034bd21a464afad",
+      "origin": "artifacts/k2-contiguous-roots-kernels-v1/k2-direct32_seed.wat"
+    },
+    {
+      "file": "s2_k2_96.wat.gz",
+      "export": "__imajev_s2_k2_96",
+      "donor_export": "__imajev_s2_k2_96",
+      "sha256": "c240e4609e479a538c902f2295ba49d9f43695bad3bcb4a56f00c269a0603006",
+      "body_sha256": "f48f125256317fd26bfe6a958cc13d5688016da8dd6234a08cb1f5d86911ffc7",
+      "origin": "artifacts/s2-cached-tail-dot-reuse-kernels-v1/96.wat"
+    },
+    {
+      "file": "s2_k2_96_seed.wat.gz",
+      "export": "__imajev_s2_k2_96_seed",
+      "donor_export": "__imajev_s2_k2_96_seed",
+      "sha256": "aa5524d3888ef054c64a46e0d4b12e17e045d0097a02ce6734b6bd0407caf587",
+      "body_sha256": "2d416ba936b2b780ffb73820a8f7a51908aed519baded9c9fa4079d89b841b04",
+      "origin": "artifacts/s2-cached-tail-dot-reuse-kernels-v1/96_seed.wat"
+    },
+    {
+      "file": "s2_k2_16.wat.gz",
+      "export": "__imajev_s2_k2_16",
+      "donor_export": "__imajev_s2_k2_16",
+      "sha256": "92df059f496fea102e1cd61b52b5d6947eb5153b635bf902f1dc4f4c675a869b",
+      "body_sha256": "1e82a788b6b5d38ab955af1ee5555901ba2281bc78d73f218532f62ea221627a",
+      "origin": "artifacts/s2-cached-tail-dot-reuse-kernels-v1/16.wat"
+    },
+    {
+      "file": "s2_k2_16_seed.wat.gz",
+      "export": "__imajev_s2_k2_16_seed",
+      "donor_export": "__imajev_s2_k2_16_seed",
+      "sha256": "8d966042498c87ec483734e6b77d4436721bceae7816de7249a79ecd0e944a49",
+      "body_sha256": "0754345a573ebb7aa89792732563eccc4b478f20e5f094ff15e3c56beaca32f9",
+      "origin": "artifacts/s2-cached-tail-dot-reuse-kernels-v1/16_seed.wat"
+    }
+  ]
+}

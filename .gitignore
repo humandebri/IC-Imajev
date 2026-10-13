@@ -1,0 +1,77 @@
+/checkpoints/
+/artifacts/
+/vendor/
+/target/
+/.venv/
+/.icp/
+/.cache/
+/build/
+__pycache__/
+*.pyc
+*.pem
+*.seed
+.DS_Store
+/.pytest_cache/
+
+# Generated measurements and exported interfaces (keep Markdown reports and input fixtures).
+/docs/*.json
+!/docs/experiment-archive.json
+/docs/**/*-results.json
+/benchmarks/laya_baseline.json
+/canisters/inference/inference.did
+
+# Build outputs, tensor dumps, logs, and incomplete atomic writes.
+*.wasm
+*.bin
+*.npy
+*.npz
+*.bf16
+*.reply.hex
+*.pack
+*.safetensors
+*.log
+*.part
+*.pending
+*.tmp
+
+# Build outputs for standalone benchmark and Wasm inspection crates.
+/scripts/**/target/
+
+# Recreated by generate_wat_pair.py; validated copies are archived under artifacts.
+/scripts/wat_pair_bench/kernel.wat
+
+/scripts/wat_s1_bench/kernel.wat
+
+# Expanded kernel sources are reproducible from the public .wat.gz inputs.
+/kernels/optimized/*.wat
+
+# Local frontend quality-gate and Cloudflare CLI state.
+/.vlmkit/
+/.cloudflare/
+
+# Private drafts and environment-specific operation/validation sources.
+/.local-only/
+
+# Local worktrees and credentials must never enter a publication bundle.
+/.worktrees/
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+
+# Historical comparison sources already kept local via .git/info/exclude.
+/docs/runtime/comparison/
+/scripts/runtime_kernel_bench/
+/scripts/benchmark_runtime_kernels.py
+/scripts/measure_runtime_kernels_ic.py
+
+# Historical GPT comparison runs are supplied as explicit external benchmark inputs.
+/tools/proposal_assessment/gpt-6.1-sol-medium-20261005-1509/
+
+# npm is the supported frontend package manager; do not restore stale alternate locks.
+/frontend/bun.lock

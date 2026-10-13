@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+"""Apply the measured POC tariff to an explicitly selected local paid canister."""
+import argparse,json
+from pathlib import Path
+from paid_update_transport import PaidTransport
+R=Path(__file__).resolve().parents[1]
+def main():
+ ap=argparse.ArgumentParser(description=__doc__)
+ ap.add_argument('--canister',required=True)
+ ap.add_argument('--directory',required=True,help='New output directory for payment configuration evidence')
+ ap.add_argument('--config',type=Path,default=R/'examples/paid-inference-caller/poc-config.json',help='Local POC config JSON with base_fee, fee_per_token and reserve_cycles')
+ args=ap.parse_args();dest=R/args.directory;dest.mkdir(parents=True,exist_ok=False)
+ wire=PaidTransport(dest,args.canister);old=wire.call('paid_config')['result']
+ data=json.loads(args.config.read_text());config=data.get('config',data)
+ if set(config)!={'base_fee','fee_per_token','reserve_cycles'}:raise ValueError('current fee config fields required; fee versions are retired')
+ reply=wire.call('configure_paid',config)['result']
+ if 'Ok' not in reply:raise RuntimeError(reply)
+ actual=wire.call('paid_config')['result'];assert actual==config
+ (dest/'applied.json').write_text(json.dumps(dict(canister=args.canister,network='local',before=old,after=actual),indent=2)+'\n')
+ print(json.dumps(actual,indent=2))
+if __name__=='__main__':main()
