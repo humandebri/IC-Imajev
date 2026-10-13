@@ -15,7 +15,6 @@ __pycache__/
 
 # Generated measurements and exported interfaces (keep Markdown reports and input fixtures).
 /docs/*.json
-!/docs/experiment-archive.json
 /docs/**/*-results.json
 /benchmarks/laya_baseline.json
 /canisters/inference/inference.did
@@ -75,3 +74,6 @@ id_ed25519
 
 # npm is the supported frontend package manager; do not restore stale alternate locks.
 /frontend/bun.lock
+
+# Generated inventory belongs to the matching source release bundle.
+/PUBLIC_SOURCE_MANIFEST.json
