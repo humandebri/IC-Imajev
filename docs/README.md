@@ -13,8 +13,7 @@
 | Proposal assessment tools | [Assessment guide](../tools/proposal_assessment/README.md) |
 | Historical local evaluation | [October 7 report](PROPOSAL_FILTER_REPORT_20261007.en.md) |
 | Retained machine-readable evaluation records | [Evidence index](evidence/proposal-filter-20261007/README.md) |
-| Historical experiments and restoration | [Archive](ARCHIVE.md) |
+| Separately supplied historical reproduction inputs | [Historical inputs](ARCHIVE.md) |
 | History-free source packaging and supported build scope | [Public releases](RELEASING.md) |
-| Publication risks and coverage | [Publication audit](OSS_PUBLICATION_AUDIT.md) |
 
 Entry-point documentation is in English. Historical Japanese experiment notes are preserved in a separate archive with their original hashes. Retained evidence JSON and upstream model documents preserve their original content and provenance. They are not specifications for the current deployed release.

@@ -1,6 +1,6 @@
 # Public source releases
 
-The public source repository is [humandebri/IC-Imajev-public](https://github.com/humandebri/IC-Imajev-public), initialized from a reviewed snapshot without development Git history. Download the matching source bundle from its [releases](https://github.com/humandebri/IC-Imajev-public/releases); bundles include the generated browser assets omitted from ordinary Git tracking. The original `humandebri/IC-Imajev` development repository is retained privately. Before the October 13, 2026 cutover it was public, and its history contained deleted operational notes and machine-specific paths. Making it private does not revoke copies already obtained by others. Do not copy its existing refs into this source repository. Existing email attribution remains in the original history; source packages contain no commit metadata. See the [history cleanup record](GIT_HISTORY_CLEANUP.md).
+The public source repository is [humandebri/ic-imajev](https://github.com/humandebri/ic-imajev). Download the matching source bundle from its [releases](https://github.com/humandebri/ic-imajev/releases); bundles include the generated browser assets omitted from ordinary Git tracking. Build and packaging instructions below describe the public source tree. Generated source manifests belong to their release bundle, not to the current Git checkout.
 
 ## Prepare a release
 
@@ -14,7 +14,7 @@ python3 scripts/package_public_release.py
 
 The last command creates `.cache/public-release/ic-imajev-source.tar.gz` and prints its SHA-256. It refuses to overwrite an existing package; choose a new ignored output with `--output` for a later version. The deterministic package contains current publishable files plus exactly 70 checksum-verified browser assets and the upstream tokenizer license. It excludes `.git`, deleted experiments, owner credentials, model weights, frozen compiler inputs and arbitrary files in ignored directories. Pattern checks also apply to the selected asset bytes. `PUBLIC_SOURCE_MANIFEST.json` inside the package records each included file's digest, size and mode; it excludes itself.
 
-Extract into an empty directory, check the manifest and review the result before uploading. The packager does not create a repository, push, change refs or publish anything. To start a public Git repository, initialize one from the extracted tree and give it a new remote. Never copy the development `.git` directory. Keep the historical experiment archive private unless separately reviewed.
+Extract into an empty directory, check the manifest and review the result before uploading. The packager does not create a repository, push, change refs or publish anything. Do not copy local Git metadata or ignored directories into a source bundle. Historical reproduction inputs are supplied separately and are not part of public packages.
 
 ## Build from the extracted release
 

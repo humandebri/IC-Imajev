@@ -1,12 +1,26 @@
 # IC-Imajev
 
-Public sources: [humandebri/IC-Imajev-public](https://github.com/humandebri/IC-Imajev-public). For browser builds, download the matching [source release bundle](https://github.com/humandebri/IC-Imajev-public/releases), which includes the pinned browser assets. The original development history is retained separately; see the [history cleanup record](docs/GIT_HISTORY_CLEANUP.md).
+Public sources: [humandebri/ic-imajev](https://github.com/humandebri/ic-imajev). Download the matching [source release bundle](https://github.com/humandebri/ic-imajev/releases) for the pinned browser assets.
 
 Run the pinned Imajev-4B **text decision model** on Internet Computer canisters. The model scores supplied choices and an unknown outcome using Qwen3.5-4B, a rank-64 LoRA adapter, and a dedicated decision readout. This implementation does not provide image inference or free-form text generation.
 
 The Rust/Wasm runtime uses an INT8 backbone and F32 LoRA/readout. A Python client prepares inputs and carries intermediate state between ordinary queries. The React frontend prepares and executes anonymous queries in a Web Worker. A separate paid update API accepts cycles from calling canisters.
 
 This is an experimental implementation. Standard Cargo and source-built optimized modules are separate build profiles. Historical measurements and the pinned browser release describe their original modules; a new module must pass the numerical and performance gates before migration.
+
+## Public endpoints
+
+| Resource | Address |
+| --- | --- |
+| Web playground | [imajev.kinic.xyz](https://imajev.kinic.xyz) |
+| Inference canister | `xis3j-paaaa-aaaai-axumq-cai` |
+| Canister details | [Internet Computer Dashboard](https://dashboard.internetcomputer.org/canister/xis3j-paaaa-aaaai-axumq-cai) |
+| IC API gateway | `https://icp-api.io` |
+| Source and issues | [humandebri/ic-imajev](https://github.com/humandebri/ic-imajev) |
+| Source bundles | [GitHub releases](https://github.com/humandebri/ic-imajev/releases) |
+| Browser API | [Public query API](docs/PUBLIC_QUERY_API.md) |
+
+The canister is an inference API, not an HTML website. `frontend/src/inference-release.json` is the canonical canister/gateway/module binding used by the browser. Repository documentation changes do not upgrade that canister or deploy the web playground.
 
 ## Start here
 
@@ -19,7 +33,6 @@ This is an experimental implementation. Standard Cargo and source-built optimize
 | Call paid inference from another canister | [Caller example](examples/paid-inference-caller/README.md) |
 | Understand numerical contracts | [Runtime architecture](docs/runtime/ARCHITECTURE.md) and [inference-core](crates/inference-core/README.md) |
 | Inspect historical results | [English evaluation report](docs/PROPOSAL_FILTER_REPORT_20261007.en.md) |
-| Inspect publication findings and archived experiments | [Publication audit](docs/OSS_PUBLICATION_AUDIT.md) and [archive guide](docs/ARCHIVE.md) |
 
 ## Build and test
 
