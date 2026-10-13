@@ -48,6 +48,45 @@ cargo run --example export_did -p imajev-inference --locked > canisters/inferenc
 
 The default canister features include experimental paid inference and token tiling. Diagnostic methods require `paid-update-diagnostics`. See the [API guide](docs/CANISTER_API_NAMES.md) for service definitions and the difference between standard and optimized releases.
 
+## Calling paid inference with an update call
+
+Call `runPaidInference` from a canister that can attach cycles. Prepare the full prompt as `token_ids` with the pinned tokenizer and pass the choice labels as `options`; this API does not accept raw question text. Obtain the current fee and token limits with `getInferenceQuote` before submitting the update. The browser playground uses the separate anonymous query API.
+
+The following Rust function belongs in the **calling canister**, using this repository's `ic-cdk` 0.20.3 and `candid` dependencies. Copy the shared [paid Candid types](canisters/inference/src/paid_types.rs) into its `paid_types` module, with the corresponding `serde` dependency. Supply prepared tokens, options and a unique request ID:
+
+```rust
+use candid::Principal;
+use ic_cdk::call::Call;
+use paid_types::{InferError, InferRequest, InferenceResult, Quote};
+
+async fn infer(
+    token_ids: Vec<u32>,
+    options: Vec<String>,
+    request_id: String,
+) -> Result<InferenceResult, String> {
+    let service = Principal::from_text("xis3j-paaaa-aaaai-axumq-cai")
+        .map_err(|e| e.to_string())?;
+    let request = InferRequest { token_ids, options };
+    let quote: Result<Quote, InferError> = Call::unbounded_wait(service, "getInferenceQuote")
+        .with_arg(request.clone())
+        .await.map_err(|e| e.to_string())?
+        .candid().map_err(|e| e.to_string())?;
+    let quote = quote.map_err(|e| format!("{e:?}"))?;
+    let result: Result<InferenceResult, InferError> = Call::unbounded_wait(service, "runPaidInference")
+        .with_args(&(request, request_id))
+        .with_cycles(quote.fee)
+        .await.map_err(|e| e.to_string())?
+        .candid().map_err(|e| e.to_string())?;
+    result.map_err(|e| format!("{e:?}"))
+}
+```
+
+`getInferenceQuote` is a query method; the example invokes it through an inter-canister call. `runPaidInference` is an update that runs the worker sequence internally and returns the final decision, paid cycles and worker metrics. Ordinary browser ingress cannot attach cycles directly; use a caller canister or the [owner-controlled relay example](examples/paid-inference-caller/README.md). Read the target's quote rather than hard-coding test pricing or browser token limits.
+
+Use a nonempty request ID of at most 64 bytes and retain it to recover the outcome. Receipts are scoped to the calling principal: retrieve them through `getInferenceReceipt(request_id)` from the same caller canister. While its receipt is retained, the same ID and input return the existing outcome without charging again; different input with that ID returns `IdConflict`. If a call's outcome is uncertain, check the receipt before choosing a new ID. Completed receipts have bounded retention (128 entries, 24 hours).
+
+Admission rejects invalid input, busy/not-ready state and insufficient cycles before accepting the service fee. Excess attached cycles are returned by the IC. Worker failure after charging triggers a full service-fee refund; if its receipt reports `Pending`, the same caller can call `retryInferenceRefund(request_id)`. Do not retry an `InFlight` refund. Caller execution and messaging still consume cycles. See the [caller guide](examples/paid-inference-caller/README.md) and [Candid contract](canisters/inference/paid-inference.did) for detailed result, receipt and error types.
+
 ## Model preparation and host reference
 
 [MODEL_LOCK.json](MODEL_LOCK.json) pins upstream revisions and SHA-256 hashes. Python dependencies are pinned in [requirements.lock](requirements.lock); the MLX host reference was evaluated on Apple Silicon with Python 3.12. This is not a claim of host-reference portability to other platforms.
