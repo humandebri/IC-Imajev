@@ -1,9 +1,9 @@
 # CI
 
-GitHub Actions runs `rust`, `wasm`, `python`, and `frontend` on every pull request,
-on pushes to `main`, and on manual dispatch. All four jobs run without path
-filters so they can later become required checks. A newer push to a PR cancels
-its previous run. Toolchains and action revisions are pinned.
+GitHub Actions runs `rust`, `rust-all-features`, `wasm`, `python`, `frontend`,
+and `publication` on every pull request, on pushes to `main`, and on manual
+dispatch. All six jobs run without path filters and are required on `main`. A newer push
+to a PR cancels its previous run. Toolchains and action revisions are pinned.
 
 ## Run locally
 
@@ -15,6 +15,8 @@ Install frontend dependencies with `npm ci --prefix frontend`, then run:
 python3 scripts/ci_check.py all
 # Or one suite:
 python3 scripts/ci_check.py rust
+python3 scripts/ci_check.py rust-all-features
+python3 scripts/ci_check.py publication
 python3 scripts/ci_check.py wasm
 python3 scripts/ci_check.py python
 python3 scripts/ci_check.py frontend
@@ -26,6 +28,8 @@ It deliberately avoids the asset-generating `pretest` and `prebuild` hooks.
 | Job | Coverage |
 | --- | --- |
 | `rust` | Default workspace feature set, unit/integration/doc tests, and the `paid_update_args` example test. |
+| `rust-all-features` | Workspace unit/integration/doc tests with all features enabled. This is test coverage, not the production build configuration. |
+| `publication` | Current publishable files and complete fetched Git history, including bounded WAT gzip expansion; redaction, unsafe input, archive and deterministic packaging regression tests. |
 | `wasm` | Release compilation of the canonical canister for `wasm32-unknown-unknown`. |
 | `python` | Explicit standard-library suite: paid transport, public API/build contracts, optimized builders, original paid instruction evidence, and browser example compaction. Runs with site packages disabled. |
 | `frontend` | TypeScript, public Candid parity, mocked query scheduling, all 91 published profiles and budgets, calibration approval policy, and rejection of invalid query evidence/prefix assets. |
@@ -47,9 +51,10 @@ receipt replay, refund, and upgrade unit coverage remains in the Rust suite.
 
 ## Additional verification
 
-The basic CI does not run model inference, browser E2E, or all experimental
-feature combinations. The recorded carry test explicitly marked ignored in Rust
-also needs its external fixtures. Existing asset-dependent commands retain their
+The basic CI does not run model inference, browser E2E, or every individual
+feature combination. The all-feature job checks the combined feature set;
+production builds retain their explicit feature selection. The recorded carry
+test explicitly marked ignored in Rust also needs its external fixtures. Existing asset-dependent commands retain their
 full checks:
 
 - `npm run test:query --prefix frontend`: prefix integrity/cache and recorded-wire replay.
@@ -64,6 +69,9 @@ documented in [Optimized build](OPTIMIZED_BUILD.md); frozen historical builders
 still depend on archived inputs.
 
 Additional arithmetic and migration tools do not run in this basic CI. Pinned
-browser assets are supplied through the reviewed source package. Once the
-four basic jobs have passed on GitHub, configure `main` to require them and PRs.
-Adding this workflow alone does not enable branch protection or deploy anything.
+browser assets are supplied through the reviewed source package. The `main`
+protection requires all six jobs from GitHub Actions and a PR,
+with zero required approving reviews for solo maintenance. Force pushes and
+branch deletion are disabled, and the restrictions apply to administrators.
+Repository Secret scanning and Push protection are enabled separately. These
+settings perform no canister upgrade or site deployment.
