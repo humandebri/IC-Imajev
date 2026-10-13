@@ -31,11 +31,13 @@ def run(args, cwd=ROOT):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("suite", choices=["rust", "wasm", "python", "frontend", "all"])
+    parser.add_argument("suite", choices=["rust", "rust-all-features", "wasm", "python", "frontend", "publication", "all"])
     suite = parser.parse_args().suite
     if suite in ("rust", "all"):
         run(["cargo", "test", "--workspace", "--locked"])
         run(["cargo", "test", "-p", "imajev-client", "--example", "paid_update_args", "--locked"])
+    if suite in ("rust-all-features", "all"):
+        run(["cargo", "test", "--workspace", "--locked", "--all-features"])
     if suite in ("wasm", "all"):
         run(["cargo", "build", "--release", "--locked", "--target", "wasm32-unknown-unknown", "-p", "imajev-inference"])
     if suite in ("python", "all"):
@@ -43,6 +45,9 @@ def main():
         run([sys.executable, "-S", "-B", "-m", "unittest", "-v", *PYTHON_TESTS], ROOT / "scripts")
     if suite in ("frontend", "all"):
         run(["node", "scripts/check-ci.mjs"], ROOT / "frontend")
+    if suite in ("publication", "all"):
+        run([sys.executable, "-S", "-B", "scripts/check_publication.py", "--history"])
+        run([sys.executable, "-S", "-B", "-m", "unittest", "-v", "test_publication", "test_public_release"], ROOT / "scripts")
 
 
 if __name__ == "__main__":
